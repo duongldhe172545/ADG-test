@@ -1,0 +1,8 @@
+# NotebookLM Web Chatbot Dependencies
+
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+apscheduler>=3.10.0
+python-dotenv>=1.0.0
+sse-starlette>=1.8.0
+notebooklm-mcp-server

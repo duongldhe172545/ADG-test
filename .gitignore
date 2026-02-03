@@ -1,0 +1,8 @@
+
+__pycache__/
+*.pyc
+stdout.txt
+stderr.txt
+notebooks_list.txt
+temp_config.json
+update_opencode.py
