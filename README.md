@@ -1,83 +1,135 @@
-# NotebookLM MCP Server for Antigravity
+# ADG Knowledge Management System
 
-This repository contains the configuration and workflows to set up the **NotebookLM MCP Server** for use with **Antigravity**, **Opencode** (and other MCP clients).
-
-It specifically addresses and fixes the "invalid trailing data" error caused by the startup banner of the `notebooklm-mcp-server` package.
+Enterprise Knowledge Management System powered by NotebookLM.
 
 ## Features
 
-- **Automated Setup Workflow**: A comprehensive workflow (`.agent/workflows/setup-notebooklm-mcp.md`) to install and configure the server.
-- **Banner Suppression Fix**: Includes a wrapper script (`run_mcp.py`) that filters out the ASCII art banner from `stdout`, ensuring clean JSON-RPC communication.
-- **Antigravity Integration**: Ready-to-use configuration for Antigravity's `mcp_config.json`.
+- 🤖 **AI-Powered Chat** - Query documents using NotebookLM
+- 📤 **Document Upload** - Upload files to Google Drive with OAuth
+- 📁 **Folder Management** - Organize documents in structured folders
+- 🔐 **Secure Authentication** - Google OAuth2 for user access
+- ⏰ **Auto Session Refresh** - Background scheduler keeps sessions alive
 
-## Prerequisites
+## Project Structure
 
-- Python 3.10+
-- `pip`
-- An active Google account with access to [NotebookLM](https://notebooklm.google.com/)
+```
+adg-knowledge-management/
+├── backend/                    # Python backend
+│   ├── api/                    # API routes
+│   │   ├── v1/                 # Versioned API endpoints
+│   │   │   ├── auth.py         # OAuth authentication
+│   │   │   ├── chat.py         # NotebookLM chat
+│   │   │   ├── documents.py    # File upload/management
+│   │   │   └── health.py       # Health checks
+│   │   └── router.py           # Main API router
+│   ├── core/                   # Core modules
+│   │   └── auth/               # Authentication
+│   │       └── oauth.py        # OAuth2 service
+│   ├── services/               # Business logic
+│   │   ├── gdrive_service.py   # Google Drive operations
+│   │   ├── notebooklm_service.py  # NotebookLM integration
+│   │   └── scheduler_service.py   # Background jobs
+│   ├── models/                 # Pydantic models
+│   │   ├── requests.py         # Request schemas
+│   │   └── responses.py        # Response schemas
+│   ├── config.py               # Centralized configuration
+│   └── main.py                 # Application entry point
+├── frontend/                   # Frontend assets
+│   ├── static/                 # CSS, JS, images
+│   └── templates/              # HTML templates
+├── tests/                      # Test suite
+├── docs/                       # Documentation
+└── scripts/                    # Utility scripts
+```
 
-## Installation
+## Quick Start
 
-You can use the provided workflow in Antigravity or follow these manual steps:
+### 1. Install Dependencies
 
-1.  **Install the package**:
-    ```bash
-    pip install notebooklm-mcp-server
-    ```
+```bash
+pip install -r requirements.txt
+```
 
-2.  **Clone this repository** (or copy the files) to your desired location (e.g., `d:\antigravity\notebooklm`).
+### 2. Configure Environment
 
-3.  **Authenticate**:
-    ```bash
-    notebooklm-mcp-auth
-    ```
-    Follow the browser prompts to log in.
+```bash
+cp .env.example .env
+# Edit .env with your credentials
+```
 
-4.  **Configure Antigravity**:
-    Add the following to your `C:\Users\Administrator\.gemini\antigravity\mcp_config.json`:
+### 3. Authenticate NotebookLM
 
-    ```json
-    {
-      "mcpServers": {
-        "notebooklm-mcp-server": {
-          "command": "python",
-          "args": [
-            "-u",
-            "-W",
-            "ignore",
-            "d:\\antigravity\\notebooklm\\run_mcp.py"
-          ],
-          "env": {
-            "PYTHONUNBUFFERED": "1",
-            "PYTHONWARNINGS": "ignore"
-          }
-        }
-      }
-    }
-    ```
-    *Note: Adjust the path to `run_mcp.py` if you placed it elsewhere.*
+```bash
+notebooklm-mcp-auth
+```
 
-5.  **Reload Antigravity**:
-    Restart the application or reload the window (`Ctrl+Shift+P` -> `Developer: Reload Window`).
+### 4. Run the Server
 
-## Usage
+```bash
+# Development
+python -m backend.main
 
-Once configured, you can use Antigravity to interact with your NotebookLM notebooks.
+# Or with uvicorn directly
+uvicorn backend.main:app --reload --port 8080
+```
 
-- **List Notebooks**: Ask "List my notebooks"
-- **Query Notebooks**: Ask questions about your documents.
-- **Add Sources**: Add URLs or text to your notebooks.
+### 5. Access the Application
 
-## Troubleshooting
+- Chat UI: http://localhost:8080/
+- Upload UI: http://localhost:8080/upload
+- API Docs: http://localhost:8080/docs (debug mode only)
 
-### "Invalid trailing data" Error
-This error occurs when the server prints non-JSON text (like a banner) to `stdout`. The included `run_mcp.py` script fixes this by intercepting `stdout` and removing the banner. Ensure your config points to this script, not the module directly.
+## API Endpoints
 
-### Authentication Issues
-If you see auth errors, try running `notebooklm-mcp-auth` again and ensure you complete the login process in the browser.
+### Authentication
+- `GET /api/v1/auth/login` - Start OAuth login
+- `GET /api/v1/auth/callback` - OAuth callback
+- `GET /api/v1/auth/status` - Check auth status
+- `POST /api/v1/auth/logout` - Logout
 
-## Files
+### Chat
+- `POST /api/v1/chat` - Sync chat
+- `POST /api/v1/chat/stream` - SSE streaming chat
+- `GET /api/v1/chat/notebooks` - List notebooks
+- `GET /api/v1/chat/sources/{notebook_id}` - Get sources
 
-- `run_mcp.py`: Wrapper script to suppress the startup banner.
-- `.agent/workflows/setup-notebooklm-mcp.md`: Antigravity workflow for automated setup.
-- `list_notebooks.py`: Utility script to list notebooks (for testing).
+### Documents
+- `GET /api/v1/documents/folders` - List folder tree
+- `POST /api/v1/documents/upload` - Upload file
+- `GET /api/v1/documents/files/{folder_id}` - List files
+
+### Health
+- `GET /api/v1/health` - System health check
+- `GET /api/v1/health/ping` - Simple ping
+
+## Configuration
+
+All configuration is done via environment variables. See `.env.example` for all options.
+
+### Required Variables
+
+| Variable | Description |
+|----------|-------------|
+| `OAUTH_CLIENT_ID` | Google OAuth Client ID |
+| `OAUTH_CLIENT_SECRET` | Google OAuth Client Secret |
+| `GDRIVE_ROOT_FOLDER_ID` | Root folder for document storage |
+| `NOTEBOOK_ID` | Default NotebookLM notebook ID |
+
+## Development
+
+### Running Tests
+
+```bash
+pytest
+```
+
+### Code Structure
+
+- **config.py** - Centralized Pydantic settings
+- **services/** - Business logic (testable, reusable)
+- **api/** - HTTP routes only (thin layer)
+- **models/** - Request/response schemas
+
+## License
+
+Proprietary - ADG Internal Use Only

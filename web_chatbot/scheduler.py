@@ -101,27 +101,103 @@ def refresh_auth():
         
         # Check for specific auth errors
         if "401" in error_msg or "Unauthorized" in error_msg or "RPC Error 16" in error_msg:
-            logger.error("🔑 Session expired! Please run 'notebooklm-mcp-auth'")
+            logger.error("🔑 Session expired! Attempting headless re-auth...")
+            # Try headless re-auth automatically
+            run_headless_token_refresh()
+
+
+def run_headless_token_refresh():
+    """
+    Attempt to refresh tokens using headless Chrome.
+    This uses the saved Chrome profile from initial manual auth.
+    """
+    try:
+        from notebooklm_mcp.auth_cli import run_headless_auth
+        
+        logger.info("🔄 Attempting headless token refresh...")
+        
+        # Run headless auth on a different port to avoid conflicts
+        result = run_headless_auth(port=9223, timeout=60)
+        
+        if result:
+            _health_checker.update_status(True)
+            logger.info("✅ Headless token refresh successful! New tokens cached.")
+            return True
+        else:
+            _health_checker.update_status(False, "Headless auth returned None")
+            logger.warning("⚠️ Headless auth failed - may need manual re-auth")
+            return False
+            
+    except Exception as e:
+        error_msg = str(e)
+        _health_checker.update_status(False, f"Headless auth error: {error_msg}")
+        logger.error(f"❌ Headless token refresh failed: {error_msg}")
+        return False
+
+
+def refresh_tokens_job():
+    """
+    Scheduled job that attempts to refresh tokens.
+    First checks if current tokens work, then refreshes if needed.
+    """
+    from notebooklm_mcp.auth import load_cached_tokens
+    
+    logger.info(f"⏰ Scheduled token refresh at {datetime.now().isoformat()}")
+    
+    try:
+        cached = load_cached_tokens()
+        if not cached:
+            logger.warning("No cached tokens - attempting headless refresh")
+            run_headless_token_refresh()
+            return
+        
+        # Check if tokens are still valid with a quick ping
+        from notebooklm_mcp.api_client import NotebookLMClient
+        
+        client = NotebookLMClient(
+            cookies=cached.cookies,
+            csrf_token=cached.csrf_token,
+            session_id=cached.session_id
+        )
+        
+        notebooks = client.list_notebooks()
+        
+        if notebooks is not None:
+            logger.info(f"✅ Current tokens still valid - {len(notebooks)} notebooks found")
+            _health_checker.update_status(True)
+        else:
+            logger.warning("⚠️ Tokens may be expired - refreshing...")
+            run_headless_token_refresh()
+            
+    except Exception as e:
+        error_msg = str(e)
+        logger.warning(f"⚠️ Token check failed: {error_msg}")
+        
+        # If auth error, try headless refresh
+        if "401" in error_msg or "Unauthorized" in error_msg or "RPC Error" in error_msg:
+            run_headless_token_refresh()
+        else:
+            _health_checker.update_status(False, error_msg)
 
 
 def start_scheduler():
-    """Start the background scheduler"""
+    """Start the background scheduler with auto token refresh"""
     scheduler = BackgroundScheduler()
     
-    # Add auth refresh job
+    # Add token refresh job - checks and refreshes tokens automatically
     scheduler.add_job(
-        refresh_auth,
+        refresh_tokens_job,
         trigger=IntervalTrigger(minutes=AUTH_REFRESH_INTERVAL_MINUTES),
-        id="auth_refresh",
-        name="NotebookLM Auth Refresh",
+        id="token_refresh",
+        name="NotebookLM Token Auto-Refresh",
         replace_existing=True
     )
     
     scheduler.start()
-    logger.info(f"⏰ Scheduler started - auth refresh every {AUTH_REFRESH_INTERVAL_MINUTES} minutes")
+    logger.info(f"⏰ Scheduler started - auto token refresh every {AUTH_REFRESH_INTERVAL_MINUTES} minutes")
     
-    # Run initial health check
-    refresh_auth()
+    # Run initial token check
+    refresh_tokens_job()
     
     return scheduler
 

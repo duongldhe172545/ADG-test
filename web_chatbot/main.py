@@ -296,6 +296,201 @@ async def list_notebooks():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================================================================
+# Upload Page Route
+# =============================================================================
+
+@app.get("/upload")
+async def upload_page():
+    """Serve the upload wizard UI"""
+    return FileResponse("static/upload.html")
+
+
+# =============================================================================
+# Google Drive API Endpoints
+# =============================================================================
+
+# Google Drive folder ID for root
+GDRIVE_ROOT_FOLDER_ID = os.getenv("GDRIVE_ROOT_FOLDER_ID", "1I_NuYcJcDFxff-7x3oJseXqe3NFZ_9Ca")
+
+
+def get_gdrive_client_for_read():
+    """Get Google Drive client for reading (Service Account or OAuth)"""
+    from gdrive_client import GoogleDriveClient
+    import oauth_config
+    
+    # Try OAuth first (user's credentials)
+    credentials = oauth_config.get_valid_credentials()
+    if credentials:
+        return GoogleDriveClient.from_oauth_credentials(credentials)
+    
+    # Fallback to Service Account for folder listing
+    service_file = os.getenv("GDRIVE_SERVICE_ACCOUNT_FILE", "test-adg-486208-bd963fa46e5e.json")
+    if not os.path.exists(service_file):
+        parent_path = os.path.join(os.path.dirname(__file__), "..", service_file)
+        if os.path.exists(parent_path):
+            service_file = parent_path
+    
+    if os.path.exists(service_file):
+        return GoogleDriveClient(service_file)
+    
+    return None
+
+
+@app.get("/api/drive/folders")
+async def list_drive_folders():
+    """List folder structure from Google Drive"""
+    try:
+        gdrive = get_gdrive_client_for_read()
+        if not gdrive:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        
+        def build_folder_tree(parent_id: str, depth: int = 0, max_depth: int = 5) -> list:
+            """Recursively build folder tree"""
+            if depth >= max_depth:
+                return []
+            
+            folders = gdrive.list_folders(parent_id)
+            result = []
+            for folder in folders:
+                children = build_folder_tree(folder['id'], depth + 1, max_depth)
+                result.append({
+                    'id': folder['id'],
+                    'name': folder['name'],
+                    'children': children
+                })
+            return result
+        
+        # Build tree starting from root
+        tree = build_folder_tree(GDRIVE_ROOT_FOLDER_ID)
+        
+        return {
+            "root_folder_id": GDRIVE_ROOT_FOLDER_ID,
+            "folders": tree
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+from fastapi import UploadFile, File, Form
+import tempfile
+import shutil
+
+
+# =============================================================================
+# OAuth2 Endpoints for Google Drive
+# =============================================================================
+
+from fastapi.responses import RedirectResponse
+import oauth_config
+
+
+@app.get("/api/drive/oauth/login")
+async def oauth_login():
+    """Redirect user to Google OAuth login"""
+    if not oauth_config.OAUTH_CLIENT_ID or not oauth_config.OAUTH_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=500, 
+            detail="OAuth not configured. Set OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET in .env"
+        )
+    
+    auth_url, state = oauth_config.get_authorization_url()
+    return RedirectResponse(url=auth_url)
+
+
+@app.get("/api/drive/oauth/callback")
+async def oauth_callback(code: str = None, error: str = None):
+    """Handle OAuth callback from Google"""
+    if error:
+        return RedirectResponse(url=f"/upload?error={error}")
+    
+    if not code:
+        return RedirectResponse(url="/upload?error=no_code")
+    
+    try:
+        credentials = oauth_config.exchange_code_for_tokens(code)
+        email = oauth_config.get_user_email(credentials)
+        
+        # Redirect back to upload page with success
+        return RedirectResponse(url=f"/upload?auth=success&email={email or 'user'}")
+    except Exception as e:
+        return RedirectResponse(url=f"/upload?error={str(e)}")
+
+
+@app.get("/api/drive/oauth/status")
+async def oauth_status():
+    """Check OAuth authentication status"""
+    credentials = oauth_config.get_valid_credentials()
+    
+    if credentials and credentials.valid:
+        email = oauth_config.get_user_email(credentials)
+        return {
+            "authenticated": True,
+            "email": email,
+            "has_refresh_token": bool(credentials.refresh_token)
+        }
+    
+    return {"authenticated": False}
+
+
+@app.post("/api/drive/oauth/logout")
+async def oauth_logout():
+    """Clear OAuth tokens"""
+    oauth_config.clear_tokens()
+    return {"success": True, "message": "Logged out"}
+
+
+def get_gdrive_client_oauth():
+    """Get Google Drive client using OAuth credentials"""
+    from gdrive_client import GoogleDriveClient
+    
+    credentials = oauth_config.get_valid_credentials()
+    if not credentials:
+        raise HTTPException(
+            status_code=401, 
+            detail="Not authenticated. Please login with Google first."
+        )
+    
+    return GoogleDriveClient.from_oauth_credentials(credentials)
+
+
+# Main upload endpoint using OAuth
+@app.post("/api/drive/upload")
+async def upload_to_drive(
+    file: UploadFile = File(...),
+    folder_id: str = Form(...)
+):
+    """Upload file to Google Drive using OAuth (user's quota)"""
+    try:
+        gdrive = get_gdrive_client_oauth()
+        
+        # Save uploaded file to temp location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
+            shutil.copyfileobj(file.file, tmp)
+            tmp_path = tmp.name
+        
+        try:
+            # Upload to Google Drive with original filename
+            result = gdrive.upload_file(tmp_path, folder_id, custom_name=file.filename)
+            
+            return {
+                "success": True,
+                "id": result.get('id'),
+                "name": result.get('name'),
+                "mimeType": result.get('mimeType'),
+                "webViewLink": result.get('webViewLink')
+            }
+        finally:
+            # Cleanup temp file
+            import os
+            os.unlink(tmp_path)
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Mount static files (must be after routes)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

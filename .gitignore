@@ -1,8 +1,33 @@
-
+# Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+
+# Environment files - NEVER commit these!
+.env
+.env.*
+!.env.example
+
+# Service account credentials - NEVER commit!
+*-*.json
+test-*.json
+*service-account*.json
+*credentials*.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp files
 stdout.txt
 stderr.txt
 notebooks_list.txt
 temp_config.json
 update_opencode.py
+
+# OS
+.DS_Store
+Thumbs.db
