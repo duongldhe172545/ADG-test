@@ -4,21 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Knowledge Asset - ADG KMS</title>
+    <title>Upload Knowledge Asset - ADG Marketing Hub</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0f0f0f;
-            --bg-secondary: #1a1a1a;
-            --bg-tertiary: #242424;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --accent: #6366f1;
-            --accent-hover: #818cf8;
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: #1e293b;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --accent: #3b82f6;
+            --accent-light: #dbeafe;
             --success: #22c55e;
             --warning: #f59e0b;
             --error: #ef4444;
-            --border: #333;
+            --border: #e2e8f0;
         }
 
         * {
@@ -32,815 +33,1226 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar - Dark (consistent with dashboard) */
+        .sidebar {
+            width: 220px;
+            background: var(--bg-sidebar);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .sidebar-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .sidebar-logo-text {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-logo-sub {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.25rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.3);
+            color: white;
+            border-left: 3px solid var(--accent);
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .user-email {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 220px;
+            min-height: 100vh;
         }
 
         /* Header */
         .header {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
+            padding: 0.75rem 1.5rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
-        .header h1 {
-            font-size: 1.25rem;
-            font-weight: 600;
+        .header-search {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            width: 300px;
+        }
+
+        .header-search input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            width: 100%;
+            outline: none;
+        }
+
+        .header-actions {
             display: flex;
             align-items: center;
             gap: 0.75rem;
         }
 
-        .header h1 span {
-            color: var(--accent);
-        }
-
-        .nav-links {
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
             display: flex;
-            gap: 1.5rem;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
+            align-items: center;
+            gap: 0.5rem;
             text-decoration: none;
-            font-size: 0.875rem;
-            transition: color 0.2s;
         }
 
-        .nav-links a:hover,
-        .nav-links a.active {
+        .btn-outline {
+            background: transparent;
             color: var(--text-primary);
+            border: 1px solid var(--border);
         }
 
-        /* Main Layout */
-        .main-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
+        .btn-outline:hover {
+            background: var(--bg-primary);
         }
 
-        .page-title {
-            margin-bottom: 2rem;
+        .btn-primary {
+            background: var(--accent);
+            color: white;
         }
 
-        .page-title h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-primary:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+        }
+
+        /* Page Content */
+        .page-content {
+            padding: 1.5rem 2rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-title h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
         }
 
         .page-title p {
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.875rem;
+        }
+
+        /* Auth Status */
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .auth-status.authenticated {
+            border-color: var(--success);
+            background: #dcfce7;
+            color: var(--success);
+        }
+
+        .auth-status.unauthenticated {
+            border-color: var(--warning);
+            background: #fef3c7;
+            color: var(--warning);
         }
 
         /* Upload Grid */
         .upload-grid {
             display: grid;
-            grid-template-columns: 1fr 1.5fr;
-            gap: 2rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
         }
 
-        /* Cards */
+        /* Card */
         .card {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 1.5rem;
         }
 
         .card-header {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            margin-bottom: 1.25rem;
+            align-items: center;
+            margin-bottom: 1rem;
         }
 
         .card-title {
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .badge {
+        .file-badge {
             background: var(--accent);
             color: white;
-            font-size: 0.75rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .file-badge.empty {
+            background: var(--border);
+            color: var(--text-secondary);
         }
 
         /* Drop Zone */
         .drop-zone {
             border: 2px dashed var(--border);
             border-radius: 12px;
-            padding: 3rem;
+            padding: 2.5rem;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             margin-bottom: 1rem;
         }
 
         .drop-zone:hover,
         .drop-zone.dragover {
             border-color: var(--accent);
-            background: rgba(99, 102, 241, 0.05);
+            background: var(--accent-light);
         }
 
         .drop-zone-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.6;
-        }
-
-        .drop-zone p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .drop-zone strong {
-            color: var(--accent);
-        }
-
-        /* File Preview */
-        .file-preview {
-            display: none;
-            padding: 1rem;
-            background: var(--bg-tertiary);
-            border-radius: 8px;
-            margin-bottom: 1rem;
-        }
-
-        .file-preview.active {
+            width: 56px;
+            height: 56px;
+            background: var(--accent-light);
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            justify-content: center;
+            margin: 0 auto 0.75rem;
+            font-size: 1.5rem;
+        }
+
+        .drop-zone-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .drop-zone-hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* File List */
+        .file-list {
+            margin-bottom: 1rem;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem;
+            background: var(--bg-primary);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
         }
 
         .file-icon {
-            width: 48px;
-            height: 48px;
+            width: 40px;
+            height: 40px;
             background: linear-gradient(135deg, #ef4444, #dc2626);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 700;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
         }
 
-        .file-info {
+        .file-icon.docx {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .file-icon.pptx {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .file-icon.xlsx {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+
+        .file-details {
             flex: 1;
         }
 
         .file-name {
+            font-size: 0.85rem;
             font-weight: 500;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.125rem;
         }
 
         .file-meta {
+            font-size: 0.7rem;
             color: var(--text-secondary);
-            font-size: 0.8rem;
         }
 
         .file-remove {
-            background: none;
+            width: 28px;
+            height: 28px;
             border: none;
-            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 1.25rem;
-            transition: color 0.2s;
+            color: var(--text-secondary);
         }
 
         .file-remove:hover {
+            background: #fee2e2;
             color: var(--error);
         }
 
-        /* Folder Tree */
-        .folder-tree {
-            max-height: 400px;
-            overflow-y: auto;
+        /* Folder Selector */
+        .folder-section {
+            background: var(--bg-primary);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
         }
 
-        .folder-item {
-            display: flex;
-            align-items: center;
-            padding: 0.6rem 0.75rem;
-            cursor: pointer;
-            border-radius: 6px;
-            margin-bottom: 2px;
-            transition: all 0.15s;
-        }
-
-        .folder-item:hover {
-            background: var(--bg-tertiary);
-        }
-
-        .folder-item.selected {
-            background: rgba(99, 102, 241, 0.15);
-            border: 1px solid var(--accent);
-        }
-
-        .folder-item.child {
-            padding-left: calc(0.75rem + 1.25rem * var(--depth, 1));
-        }
-
-        .folder-icon {
-            margin-right: 0.5rem;
-        }
-
-        .folder-name {
-            font-size: 0.875rem;
-        }
-
-        .folder-toggle {
-            margin-left: auto;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-        }
-
-        /* Loading */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            color: var(--text-secondary);
-        }
-
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 0.75rem;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Actions */
-        .actions {
+        .folder-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border);
+            margin-bottom: 0.75rem;
         }
 
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
+        .folder-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .btn-secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
+        .folder-select {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
             border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            background: var(--bg-secondary);
+            cursor: pointer;
         }
 
-        .btn-secondary:hover {
+        /* Collapsible Folder Tree */
+        .folder-tree-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             background: var(--bg-secondary);
         }
 
-        .btn-primary {
-            background: var(--accent);
-            color: white;
+        .folder-tree {
+            padding: 0.5rem;
+        }
+
+        .folder-tree-item {
+            user-select: none;
+        }
+
+        .folder-tree-row {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.25rem;
+            padding: 0.375rem 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.15s;
         }
 
-        .btn-primary:hover {
-            background: var(--accent-hover);
+        .folder-tree-row:hover {
+            background: var(--accent-light);
         }
 
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .folder-tree-row.selected {
+            background: var(--accent);
+            color: white;
         }
 
-        /* Status Messages */
-        .status-message {
-            padding: 1rem;
-            border-radius: 8px;
+        .folder-toggle {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .folder-toggle.has-children {
+            cursor: pointer;
+        }
+
+        .folder-toggle.has-children:hover {
+            color: var(--accent);
+        }
+
+        .folder-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .folder-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .folder-children {
+            margin-left: 1.25rem;
+            display: none;
+            border-left: 1px dashed var(--border);
+            padding-left: 0.5rem;
+        }
+
+        .folder-children.expanded {
+            display: block;
+        }
+
+        .folder-path {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* Upload Progress */
+        .upload-progress {
+            display: none;
             margin-top: 1rem;
+        }
+
+        .upload-progress.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        /* Upload Result */
+        .upload-result {
+            display: none;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .upload-result.success {
+            display: block;
+            background: #dcfce7;
+            border: 1px solid var(--success);
+        }
+
+        .upload-result.error {
+            display: block;
+            background: #fee2e2;
+            border: 1px solid var(--error);
+        }
+
+        .result-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .result-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .result-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Right Panel - Metadata */
+        .metadata-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .metadata-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 0.35rem;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+        }
+
+        .form-hint {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Notebooks List */
+        .notebooks-list {
+            margin-bottom: 1rem;
+        }
+
+        .notebook-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .notebook-item:hover {
+            background: var(--accent-light);
+        }
+
+        .notebook-item.selected {
+            background: var(--accent-light);
+            border: 2px solid var(--accent);
+        }
+
+        .notebook-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
+
+        .notebook-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .notebook-sources {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        /* Card Footer */
+        .card-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            margin-top: 1rem;
+        }
+
+        /* Hidden file input */
+        .file-input {
             display: none;
         }
 
-        .status-message.success {
-            display: block;
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid var(--success);
-            color: var(--success);
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .upload-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .status-message.error {
-            display: block;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--error);
-            color: var(--error);
-        }
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-tertiary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 3px;
-        }
-
-        /* Auth Section */
-        .auth-section {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .auth-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .auth-status.authenticated {
-            color: var(--success);
-        }
-
-        .auth-status .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--text-secondary);
-        }
-
-        .auth-status.authenticated .dot {
-            background: var(--success);
-        }
-
-        .btn-google {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: white;
-            color: #333;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: box-shadow 0.2s;
-        }
-
-        .btn-google:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-logout {
-            padding: 0.5rem 0.75rem;
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            border-radius: 6px;
-            font-size: 0.8rem;
-            cursor: pointer;
-        }
-
-        .btn-logout:hover {
-            border-color: var(--error);
-            color: var(--error);
-        }
-
-        /* Login Required Overlay */
-        .login-required {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .login-required h3 {
-            margin-bottom: 1rem;
-            color: var(--warning);
-        }
-
-        .login-required p {
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
+            .main-content {
+                margin-left: 0;
+            }
         }
     </style>
 </head>
 
 <body>
-    <header class="header">
-        <h1>📁 <span>ADG</span> Knowledge Base</h1>
-        <div class="auth-section" id="authSection">
-            <div class="auth-status" id="authStatus">
-                <span class="dot"></span>
-                <span id="authText">Checking...</span>
-            </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="/dashboard" class="sidebar-logo">
+                <div class="sidebar-logo-icon">✨</div>
+                <div>
+                    <div class="sidebar-logo-text">ADG Admin</div>
+                    <div class="sidebar-logo-sub">Knowledge Hub</div>
+                </div>
+            </a>
         </div>
-        <nav class="nav-links">
-            <a href="/">💬 Chat</a>
-            <a href="/upload" class="active">📤 Upload</a>
-            <a href="#">📊 Dashboard</a>
-            <a href="#">⚙️ Settings</a>
+
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="nav-item">
+                <span>🏠</span> Dashboard
+            </a>
+            <a href="/sources" class="nav-item">
+                <span>📄</span> Sources
+            </a>
+            <a href="/" class="nav-item">
+                <span>💬</span> Chat
+            </a>
+            <a href="/upload" class="nav-item active">
+                <span>📤</span> Upload
+            </a>
+            <a href="/document" class="nav-item">
+                <span>📑</span> Document Viewer
+            </a>
         </nav>
-    </header>
 
-    <main class="main-container">
-        <div class="page-title">
-            <h2>Upload Knowledge Asset</h2>
-            <p>Add new documents to the internal knowledge base</p>
-        </div>
-
-        <div class="upload-grid">
-            <!-- Left: File Upload -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">📄 File Source</span>
-                    <span class="badge" id="fileCount">No file</span>
-                </div>
-
-                <div class="file-preview" id="filePreview">
-                    <div class="file-icon" id="fileIconText">PDF</div>
-                    <div class="file-info">
-                        <div class="file-name" id="fileName">document.pdf</div>
-                        <div class="file-meta" id="fileMeta">0 KB</div>
-                    </div>
-                    <button class="file-remove" onclick="clearFile()">✕</button>
-                </div>
-
-                <div class="drop-zone" id="dropZone">
-                    <div class="drop-zone-icon">📁</div>
-                    <p><strong>Drag & drop</strong> file here<br>or click to browse</p>
-                    <p style="margin-top: 1rem; font-size: 0.8rem;">Supports PDF, DOCX, PPTX, XLSX, TXT</p>
-                </div>
-
-                <input type="file" id="fileInput" accept=".pdf,.docx,.pptx,.xlsx,.txt" style="display:none">
-            </div>
-
-            <!-- Right: Folder Selection -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">📂 Select Destination Folder</span>
-                </div>
-
-                <div class="folder-tree" id="folderTree">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading folders...
-                    </div>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">AD</div>
+                <div class="user-details">
+                    <div class="user-name" id="userName">Guest</div>
+                    <div class="user-email" id="userEmail">Not signed in</div>
                 </div>
             </div>
         </div>
+    </aside>
 
-        <div id="statusMessage" class="status-message"></div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="header">
+            <div class="header-search">
+                <span>🔍</span>
+                <input type="text" placeholder="Search assets...">
+            </div>
+            <div class="header-actions">
+                <div class="auth-status" id="authStatus" style="display: none;">
+                    <span id="authIcon">⏳</span>
+                    <span id="authText">Checking...</span>
+                </div>
+                <button class="btn btn-outline" id="loginBtn" style="display: none;">
+                    🔐 Sign in with Google
+                </button>
+            </div>
+        </header>
 
-        <div class="actions">
-            <button class="btn btn-secondary" onclick="window.location.href='/'">← Back to Chat</button>
-            <button class="btn btn-primary" id="uploadBtn" onclick="uploadFile()" disabled>
-                Upload to Drive
-                <span>→</span>
-            </button>
+        <div class="page-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h1>📤 Upload Knowledge Asset</h1>
+                    <p>Add new documents to the knowledge base with automated sync to NotebookLM.</p>
+                </div>
+            </div>
+
+            <div class="upload-grid">
+                <!-- Left Panel: File Upload -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📁 FILE SOURCE</span>
+                        <span class="file-badge empty" id="fileBadge">No file</span>
+                    </div>
+
+                    <input type="file" class="file-input" id="fileInput" multiple
+                        accept=".pdf,.doc,.docx,.pptx,.xlsx,.txt">
+
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-icon">☁️</div>
+                        <div class="drop-zone-text">Drag & drop files here</div>
+                        <div class="drop-zone-hint">or click to browse • PDF, DOCX, PPTX, XLSX</div>
+                    </div>
+
+                    <div class="file-list" id="fileList"></div>
+
+                    <div class="folder-section">
+                        <div class="folder-header">
+                            <span class="folder-title">📁 Upload Destination</span>
+                        </div>
+                        <div class="folder-tree-container">
+                            <div class="folder-tree" id="folderTree">
+                                <div style="text-align: center; padding: 1rem; color: var(--text-secondary);">
+                                    Loading folders...
+                                </div>
+                            </div>
+                        </div>
+                        <select class="folder-select" id="folderSelect" style="display: none;">
+                            <option value="">Select folder</option>
+                        </select>
+                        <div class="folder-path" id="folderPath">Select a folder for your upload</div>
+                    </div>
+
+                    <div class="upload-progress" id="uploadProgress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">Uploading...</div>
+                    </div>
+
+                    <div class="upload-result" id="uploadResult"></div>
+
+                    <div class="card-footer">
+                        <button class="btn btn-outline" id="clearBtn">Clear All</button>
+                        <button class="btn btn-primary" id="uploadBtn" disabled>
+                            📤 Upload to Drive
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Notebook Assignment -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📓 Add to Notebooks</span>
+                    </div>
+
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Select notebooks to add this document as a source.
+                    </p>
+
+                    <div class="notebooks-list" id="notebooksList">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            Loading notebooks...
+                        </div>
+                    </div>
+
+                    <div class="metadata-section">
+                        <div class="metadata-title">📋 Quick Metadata</div>
+                        <div class="form-group">
+                            <label class="form-label">Document Title (optional)</label>
+                            <input type="text" class="form-input" id="docTitle" placeholder="Auto-detect from filename">
+                            <div class="form-hint">Leave blank to use the uploaded filename.</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tags</label>
+                            <input type="text" class="form-input" id="docTags"
+                                placeholder="e.g., Q4, Strategy, Marketing">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
     <script>
-        // State
-        let selectedFile = null;
-        let selectedFolderId = null;
-        let selectedFolderName = null;
-        let folderData = {};
+        const API_BASE = window.location.origin;
+
+        // Elements
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const fileBadge = document.getElementById('fileBadge');
+        const folderSelect = document.getElementById('folderSelect');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const uploadResult = document.getElementById('uploadResult');
+        const authStatus = document.getElementById('authStatus');
+        const authIcon = document.getElementById('authIcon');
+        const authText = document.getElementById('authText');
+        const loginBtn = document.getElementById('loginBtn');
+        const notebooksList = document.getElementById('notebooksList');
+
+        let selectedFiles = [];
+        let selectedFolderId = '';
         let isAuthenticated = false;
+        let notebooks = [];
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             checkAuthStatus();
-            handleAuthCallback();
             loadFolders();
-            setupDropZone();
+            loadNotebooks();
+            setupDragDrop();
         });
 
-        // Check OAuth callback from URL
-        function handleAuthCallback() {
-            const params = new URLSearchParams(window.location.search);
-            const auth = params.get('auth');
-            const email = params.get('email');
-            const error = params.get('error');
-
-            if (auth === 'success') {
-                showStatus('success', `✅ Login successful! Welcome, ${email}`);
-                // Clean URL and auto-hide message after 3s
-                window.history.replaceState({}, document.title, '/upload');
-                setTimeout(() => {
-                    document.getElementById('statusMessage').className = 'status-message';
-                    document.getElementById('statusMessage').innerHTML = '';
-                }, 3000);
-            } else if (error) {
-                showStatus('error', `❌ Login failed: ${error}`);
-                window.history.replaceState({}, document.title, '/upload');
-            }
-        }
-
-        // Check if user is authenticated
+        // Check authentication
         async function checkAuthStatus() {
-            const authSection = document.getElementById('authSection');
-            const authStatus = document.getElementById('authStatus');
-            const authText = document.getElementById('authText');
-
             try {
-                const response = await fetch('/api/drive/oauth/status');
+                const response = await fetch(`${API_BASE}/api/v1/auth/status`);
                 const data = await response.json();
 
                 if (data.authenticated) {
                     isAuthenticated = true;
-                    authStatus.classList.add('authenticated');
-                    authText.textContent = data.email || 'Connected';
-                    authSection.innerHTML = `
-                        <div class="auth-status authenticated">
-                            <span class="dot"></span>
-                            <span>${data.email || 'Connected'}</span>
-                        </div>
-                        <button class="btn-logout" onclick="logout()">Logout</button>
-                    `;
-                    enableUploadUI();
+                    // Hide auth status when authenticated - clean header
+                    authStatus.style.display = 'none';
+                    loginBtn.style.display = 'none';
+                    document.getElementById('userName').textContent = data.email?.split('@')[0] || 'User';
+                    document.getElementById('userEmail').textContent = data.email || '';
                 } else {
                     isAuthenticated = false;
-                    authSection.innerHTML = `
-                        <div class="auth-status">
-                            <span class="dot"></span>
-                            <span>Not connected</span>
-                        </div>
-                        <button class="btn-google" onclick="loginWithGoogle()">
-                            <svg width="18" height="18" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                            </svg>
-                            Login with Google
-                        </button>
-                    `;
-                    disableUploadUI();
+                    authStatus.style.display = 'flex';
+                    authStatus.className = 'auth-status unauthenticated';
+                    authIcon.textContent = '⚠️';
+                    authText.textContent = 'Not signed in';
+                    loginBtn.style.display = 'flex';
+                    document.getElementById('userName').textContent = 'Guest';
+                    document.getElementById('userEmail').textContent = 'Not signed in';
                 }
-            } catch (error) {
-                authText.textContent = 'Error checking auth';
-                disableUploadUI();
+
+                updateUploadButton();
+            } catch (e) {
+                isAuthenticated = false;
+                authStatus.style.display = 'flex';
+                authStatus.className = 'auth-status unauthenticated';
+                authIcon.textContent = '❌';
+                authText.textContent = 'Auth error';
+                loginBtn.style.display = 'flex';
+                document.getElementById('userName').textContent = 'Guest';
+                document.getElementById('userEmail').textContent = 'Not signed in';
             }
         }
 
-        // Login with Google
-        function loginWithGoogle() {
-            window.location.href = '/api/drive/oauth/login';
-        }
+        // Login
+        loginBtn.addEventListener('click', () => {
+            window.location.href = `${API_BASE}/api/v1/auth/login`;
+        });
 
-        // Logout
-        async function logout() {
-            try {
-                await fetch('/api/drive/oauth/logout', { method: 'POST' });
-                window.location.reload();
-            } catch (error) {
-                showStatus('error', 'Failed to logout');
-            }
-        }
+        // Load folders
+        const folderTree = document.getElementById('folderTree');
 
-        // Enable/disable upload UI based on auth
-        function enableUploadUI() {
-            document.getElementById('dropZone').style.pointerEvents = 'auto';
-            document.getElementById('dropZone').style.opacity = '1';
-        }
-
-        function disableUploadUI() {
-            document.getElementById('dropZone').style.pointerEvents = 'none';
-            document.getElementById('dropZone').style.opacity = '0.5';
-        }
-
-        // Show status message
-        function showStatus(type, message) {
-            const statusEl = document.getElementById('statusMessage');
-            statusEl.className = `status-message ${type}`;
-            statusEl.innerHTML = message;
-        }
-
-        // Load folders from API
         async function loadFolders() {
-            const tree = document.getElementById('folderTree');
             try {
-                const response = await fetch('/api/drive/folders');
+                const response = await fetch(`${API_BASE}/api/v1/documents/folders`);
                 const data = await response.json();
-                folderData = data;
-                renderFolderTree(data.folders);
-            } catch (error) {
-                tree.innerHTML = `<div class="loading" style="color: var(--error)">Failed to load folders</div>`;
-            }
-        }
 
-        // Render folder tree
-        function renderFolderTree(folders, parentElement = null, depth = 0) {
-            const container = parentElement || document.getElementById('folderTree');
-            if (!parentElement) container.innerHTML = '';
+                folderTree.innerHTML = '';
 
-            folders.forEach(folder => {
-                const item = document.createElement('div');
-                item.className = `folder-item ${depth > 0 ? 'child' : ''}`;
-                item.style.setProperty('--depth', depth);
-                item.dataset.id = folder.id;
-                item.dataset.name = folder.name;
+                // Render tree item recursively
+                function createTreeItem(folder, isRoot = false) {
+                    const hasChildren = folder.children && folder.children.length > 0;
 
-                const hasChildren = folder.children && folder.children.length > 0;
+                    const item = document.createElement('div');
+                    item.className = 'folder-tree-item';
 
-                item.innerHTML = `
-                    <span class="folder-icon">${hasChildren ? '📁' : '📂'}</span>
-                    <span class="folder-name">${folder.name}</span>
-                    ${hasChildren ? '<span class="folder-toggle">▼</span>' : ''}
-                `;
+                    const row = document.createElement('div');
+                    row.className = 'folder-tree-row';
+                    row.dataset.folderId = folder.id;
+                    row.dataset.folderName = folder.name;
 
-                // Click on folder name to select
-                item.onclick = (e) => {
-                    e.stopPropagation();
-                    // If clicking on toggle, don't select
-                    if (e.target.classList.contains('folder-toggle')) return;
-                    selectFolder(folder.id, folder.name);
-                };
+                    // Toggle arrow
+                    const toggle = document.createElement('span');
+                    toggle.className = 'folder-toggle' + (hasChildren ? ' has-children' : '');
+                    toggle.textContent = hasChildren ? '▶' : '';
 
-                container.appendChild(item);
+                    // Folder icon
+                    const icon = document.createElement('span');
+                    icon.className = 'folder-icon';
+                    icon.textContent = '📁';
 
-                if (hasChildren) {
-                    const childContainer = document.createElement('div');
-                    childContainer.className = 'folder-children';
-                    childContainer.id = `children-${folder.id}`;
-                    childContainer.style.display = 'block';
-                    renderFolderTree(folder.children, childContainer, depth + 1);
-                    container.appendChild(childContainer);
+                    // Folder name
+                    const name = document.createElement('span');
+                    name.className = 'folder-name';
+                    name.textContent = folder.name;
 
-                    // Toggle click handler
-                    const toggle = item.querySelector('.folder-toggle');
-                    if (toggle) {
-                        toggle.onclick = (e) => {
+                    row.appendChild(toggle);
+                    row.appendChild(icon);
+                    row.appendChild(name);
+                    item.appendChild(row);
+
+                    // Children container
+                    if (hasChildren) {
+                        const children = document.createElement('div');
+                        children.className = 'folder-children' + (isRoot ? ' expanded' : '');
+
+                        for (const child of folder.children) {
+                            children.appendChild(createTreeItem(child));
+                        }
+
+                        item.appendChild(children);
+
+                        // Toggle expand/collapse
+                        toggle.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            const children = document.getElementById(`children-${folder.id}`);
-                            if (children) {
-                                const isVisible = children.style.display !== 'none';
-                                children.style.display = isVisible ? 'none' : 'block';
-                                toggle.textContent = isVisible ? '▶' : '▼';
-                            }
-                        };
+                            const isExpanded = children.classList.toggle('expanded');
+                            toggle.textContent = isExpanded ? '▼' : '▶';
+                        });
+
+                        // Set initial toggle state
+                        if (isRoot) toggle.textContent = '▼';
+                    }
+
+                    // Select folder on click
+                    row.addEventListener('click', () => {
+                        // Remove previous selection
+                        document.querySelectorAll('.folder-tree-row.selected').forEach(el => el.classList.remove('selected'));
+                        row.classList.add('selected');
+
+                        selectedFolderId = folder.id;
+                        document.getElementById('folderPath').textContent = `Will upload to: 📁 ${folder.name}`;
+                        updateUploadButton();
+                    });
+
+                    return item;
+                }
+
+                // Add root folder first
+                if (data.root_id) {
+                    const rootItem = createTreeItem({ id: data.root_id, name: 'Root Folder', children: data.folders }, true);
+                    folderTree.appendChild(rootItem);
+                } else if (data.folders) {
+                    for (const folder of data.folders) {
+                        folderTree.appendChild(createTreeItem(folder, true));
                     }
                 }
-            });
+            } catch (e) {
+                folderTree.innerHTML = '<div style="text-align: center; padding: 1rem; color: var(--error);">Failed to load folders</div>';
+            }
+        }
+        // Load notebooks
+        async function loadNotebooks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/notebooks`);
+                const data = await response.json();
+
+                notebooks = data.notebooks || [];
+
+                if (notebooks.length === 0) {
+                    notebooksList.innerHTML = '<div style="text-align: center; padding: 1rem; color: var(--text-secondary);">No notebooks found</div>';
+                    return;
+                }
+
+                notebooksList.innerHTML = notebooks.map(nb => `
+                    <label class="notebook-item">
+                        <input type="checkbox" value="${nb.id}" class="notebook-checkbox">
+                        <span class="notebook-name">${nb.title || 'Untitled'}</span>
+                        <span class="notebook-sources">${nb.source_count || 0} sources</span>
+                    </label>
+                `).join('');
+            } catch (e) {
+                notebooksList.innerHTML = '<div style="color: var(--error);">Failed to load notebooks</div>';
+            }
         }
 
-        // Select folder
-        function selectFolder(id, name) {
-            document.querySelectorAll('.folder-item').forEach(el => {
-                el.classList.remove('selected');
-            });
-            document.querySelector(`[data-id="${id}"]`)?.classList.add('selected');
-            selectedFolderId = id;
-            selectedFolderName = name;
-            updateUploadButton();
-        }
+        // Drag and drop
+        function setupDragDrop() {
+            dropZone.addEventListener('click', () => fileInput.click());
 
-        // Setup drag & drop
-        function setupDropZone() {
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
-
-            dropZone.onclick = () => fileInput.click();
-
-            dropZone.ondragover = (e) => {
+            dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropZone.classList.add('dragover');
-            };
+            });
 
-            dropZone.ondragleave = () => {
+            dropZone.addEventListener('dragleave', () => {
                 dropZone.classList.remove('dragover');
-            };
+            });
 
-            dropZone.ondrop = (e) => {
+            dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('dragover');
-                const file = e.dataTransfer.files[0];
-                if (file) handleFile(file);
-            };
+                handleFiles(e.dataTransfer.files);
+            });
 
-            fileInput.onchange = () => {
-                const file = fileInput.files[0];
-                if (file) handleFile(file);
-            };
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
         }
 
-        // Handle file selection
-        function handleFile(file) {
-            selectedFile = file;
-
-            const ext = file.name.split('.').pop().toUpperCase();
-            const sizeKB = (file.size / 1024).toFixed(1);
-            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-            const sizeText = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
-
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('fileMeta').textContent = `${sizeText} • Uploaded just now`;
-            document.getElementById('fileIconText').textContent = ext;
-            document.getElementById('fileCount').textContent = '1 File Selected';
-
-            // Color based on type
-            const iconColors = {
-                'PDF': 'linear-gradient(135deg, #ef4444, #dc2626)',
-                'DOCX': 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                'PPTX': 'linear-gradient(135deg, #f97316, #ea580c)',
-                'XLSX': 'linear-gradient(135deg, #22c55e, #16a34a)',
-                'TXT': 'linear-gradient(135deg, #6b7280, #4b5563)'
-            };
-            document.getElementById('fileIconText').style.background = iconColors[ext] || iconColors['TXT'];
-
-            document.getElementById('dropZone').style.display = 'none';
-            document.getElementById('filePreview').classList.add('active');
-
-            updateUploadButton();
-        }
-
-        // Clear file
-        function clearFile() {
-            selectedFile = null;
-            document.getElementById('dropZone').style.display = 'block';
-            document.getElementById('filePreview').classList.remove('active');
-            document.getElementById('fileInput').value = '';
-            document.getElementById('fileCount').textContent = 'No file';
-            updateUploadButton();
-        }
-
-        // Update upload button state
-        function updateUploadButton() {
-            const btn = document.getElementById('uploadBtn');
-            btn.disabled = !(selectedFile && selectedFolderId);
-        }
-
-        // Upload file to Google Drive
-        async function uploadFile() {
-            if (!selectedFile || !selectedFolderId) return;
-
-            const btn = document.getElementById('uploadBtn');
-            const statusEl = document.getElementById('statusMessage');
-
-            btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Uploading...';
-            statusEl.className = 'status-message';
-            statusEl.style.display = 'none';
-
-            try {
-                const formData = new FormData();
-                formData.append('file', selectedFile);
-                formData.append('folder_id', selectedFolderId);
-
-                // Use OAuth endpoint
-                const response = await fetch('/api/drive/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    statusEl.className = 'status-message success';
-                    statusEl.innerHTML = `
-                        ✅ <strong>Upload successful!</strong><br>
-                        File: ${result.name}<br>
-                        Folder: ${selectedFolderName}<br>
-                        <a href="${result.webViewLink}" target="_blank" style="color: var(--success)">View on Google Drive →</a>
-                    `;
-                    clearFile();
-                } else {
-                    throw new Error(result.detail || 'Upload failed');
+        // Handle files
+        function handleFiles(files) {
+            for (const file of files) {
+                if (!selectedFiles.find(f => f.name === file.name)) {
+                    selectedFiles.push(file);
                 }
-            } catch (error) {
-                statusEl.className = 'status-message error';
-                statusEl.textContent = `❌ Error: ${error.message}`;
+            }
+            renderFileList();
+            updateUploadButton();
+        }
+
+        // Render file list
+        function renderFileList() {
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
+                fileBadge.textContent = 'No file';
+                fileBadge.className = 'file-badge empty';
+                return;
             }
 
-            btn.disabled = false;
-            btn.innerHTML = 'Upload to Drive <span>→</span>';
-            updateUploadButton();
+            fileBadge.textContent = `${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}`;
+            fileBadge.className = 'file-badge';
+
+            fileList.innerHTML = selectedFiles.map((file, index) => {
+                const ext = file.name.split('.').pop().toLowerCase();
+                const iconClass = ext === 'pdf' ? 'pdf' : ext === 'docx' || ext === 'doc' ? 'docx' : ext === 'pptx' ? 'pptx' : ext === 'xlsx' ? 'xlsx' : 'pdf';
+                const size = formatFileSize(file.size);
+
+                return `
+                    <div class="file-item">
+                        <div class="file-icon ${iconClass}">${ext.toUpperCase().slice(0, 3)}</div>
+                        <div class="file-details">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-meta">${size}</div>
+                        </div>
+                        <button class="file-remove" onclick="removeFile(${index})">✕</button>
+                    </div>
+                `;
+            }).join('');
         }
+
+        // Remove file
+        window.removeFile = function (index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+            updateUploadButton();
+        };
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Clear all
+        clearBtn.addEventListener('click', () => {
+            selectedFiles = [];
+            fileInput.value = '';
+            renderFileList();
+            updateUploadButton();
+            uploadResult.className = 'upload-result';
+            uploadResult.innerHTML = '';
+        });
+
+        // Update upload button
+        function updateUploadButton() {
+            const canUpload = selectedFiles.length > 0 && selectedFolderId && isAuthenticated;
+            uploadBtn.disabled = !canUpload;
+        }
+
+        // Upload
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFiles.length || !selectedFolderId) return;
+
+            uploadBtn.disabled = true;
+            uploadProgress.className = 'upload-progress active';
+            uploadResult.className = 'upload-result';
+
+            let successCount = 0;
+            let errorCount = 0;
+            const results = [];
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                progressText.textContent = `Uploading ${file.name}... (${i + 1}/${selectedFiles.length})`;
+                progressFill.style.width = `${((i + 0.5) / selectedFiles.length) * 100}%`;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('folder_id', selectedFolderId);
+
+                    const response = await fetch(`${API_BASE}/api/v1/documents/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        results.push({ name: file.name, success: true, link: data.webViewLink });
+                        successCount++;
+                    } else {
+                        const err = await response.json();
+                        results.push({ name: file.name, success: false, error: err.detail });
+                        errorCount++;
+                    }
+                } catch (e) {
+                    results.push({ name: file.name, success: false, error: e.message });
+                    errorCount++;
+                }
+            }
+
+            progressFill.style.width = '100%';
+            progressText.textContent = 'Complete!';
+
+            // Show result
+            setTimeout(() => {
+                uploadProgress.className = 'upload-progress';
+
+                if (errorCount === 0) {
+                    uploadResult.className = 'upload-result success';
+                    uploadResult.innerHTML = `
+                        <div class="result-title">✅ Upload Successful!</div>
+                        <div class="result-text">${successCount} file${successCount > 1 ? 's' : ''} uploaded to Google Drive.</div>
+                        ${results.filter(r => r.link).map(r => `<a href="${r.link}" target="_blank" class="result-link">${r.name}</a>`).join('<br>')}
+                    `;
+                } else {
+                    uploadResult.className = 'upload-result error';
+                    uploadResult.innerHTML = `
+                        <div class="result-title">⚠️ Upload completed with errors</div>
+                        <div class="result-text">${successCount} succeeded, ${errorCount} failed.</div>
+                    `;
+                }
+
+                // Clear files on success
+                if (errorCount === 0) {
+                    selectedFiles = [];
+                    fileInput.value = '';
+                    renderFileList();
+                }
+
+                updateUploadButton();
+            }, 500);
+        });
     </script>
 </body>
 

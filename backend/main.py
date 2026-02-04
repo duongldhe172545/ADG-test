@@ -124,6 +124,48 @@ async def upload_page():
     return HTMLResponse("<h1>ADG KMS - Upload UI not found</h1>")
 
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page():
+    """Serve the dashboard UI"""
+    template_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "frontend", "templates", "dashboard.html"
+    )
+    
+    if os.path.exists(template_path):
+        return FileResponse(template_path)
+    
+    return HTMLResponse("<h1>ADG KMS - Dashboard UI not found</h1>")
+
+
+@app.get("/sources", response_class=HTMLResponse)
+async def sources_page():
+    """Serve the source selection UI"""
+    template_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "frontend", "templates", "sources.html"
+    )
+    
+    if os.path.exists(template_path):
+        return FileResponse(template_path)
+    
+    return HTMLResponse("<h1>ADG KMS - Sources UI not found</h1>")
+
+
+@app.get("/document", response_class=HTMLResponse)
+async def document_page():
+    """Serve the document viewer UI"""
+    template_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "frontend", "templates", "document.html"
+    )
+    
+    if os.path.exists(template_path):
+        return FileResponse(template_path)
+    
+    return HTMLResponse("<h1>ADG KMS - Document Viewer not found</h1>")
+
+
 # =============================================================================
 # Static Files
 # =============================================================================

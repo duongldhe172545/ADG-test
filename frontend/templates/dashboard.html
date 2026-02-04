@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ADG Marketing Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: #1e293b;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent: #3b82f6;
+            --accent-light: #dbeafe;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: var(--bg-sidebar);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .sidebar-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .sidebar-logo-text {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-logo-sub {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.25rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.3);
+            color: white;
+            border-left: 3px solid var(--accent);
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .user-email {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 220px;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-search {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            width: 300px;
+        }
+
+        .header-search input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            width: 100%;
+            outline: none;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .content {
+            padding: 1.5rem 2rem;
+        }
+
+        .content-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .content-header p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-icon.blue {
+            background: var(--accent-light);
+        }
+
+        .stat-icon.green {
+            background: #dcfce7;
+        }
+
+        .stat-icon.orange {
+            background: #fef3c7;
+        }
+
+        .stat-icon.purple {
+            background: #f3e8ff;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .item:last-child {
+            border-bottom: none;
+        }
+
+        .item-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .item-icon.warning {
+            background: #fef3c7;
+        }
+
+        .item-icon.gold {
+            background: linear-gradient(135deg, #fef08a, #fde047);
+        }
+
+        .item-content {
+            flex: 1;
+        }
+
+        .item-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .item-meta {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="/dashboard" class="sidebar-logo">
+                <div class="sidebar-logo-icon">✨</div>
+                <div>
+                    <div class="sidebar-logo-text">ADG Admin</div>
+                    <div class="sidebar-logo-sub">Knowledge Hub</div>
+                </div>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="nav-item active"><span>🏠</span> Dashboard</a>
+            <a href="/sources" class="nav-item"><span>📄</span> Sources</a>
+            <a href="/" class="nav-item"><span>💬</span> Chat</a>
+            <a href="/upload" class="nav-item"><span>📤</span> Upload</a>
+            <a href="/document" class="nav-item"><span>📑</span> Document Viewer</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">AD</div>
+                <div class="user-details">
+                    <div class="user-name">Admin</div>
+                    <div class="user-email">admin@adg.vn</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <main class="main-content">
+        <header class="header">
+            <div class="header-search"><span>🔍</span><input type="text" placeholder="Search..."></div>
+            <div class="header-actions"><span>🔔</span>
+                <div class="header-avatar">AD</div>
+            </div>
+        </header>
+        <div class="content">
+            <div class="content-header">
+                <h1>🏠 Dashboard</h1>
+                <p>Welcome back! Here's your knowledge base overview.</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">📁</div>
+                    <div class="stat-value">156</div>
+                    <div class="stat-label">Total Assets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">📄</div>
+                    <div class="stat-value">89</div>
+                    <div class="stat-label">Active Documents</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">⚠️</div>
+                    <div class="stat-value">7</div>
+                    <div class="stat-label">Pending Review</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">💬</div>
+                    <div class="stat-value">342</div>
+                    <div class="stat-label">AI Queries (7d)</div>
+                </div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <div class="card-title">⚠️ Critical Alerts</div>
+                    <div class="item">
+                        <div class="item-icon warning">⏰</div>
+                        <div class="item-content">
+                            <div class="item-title">3 documents expiring soon</div>
+                            <div class="item-meta">Review required by Jan 15</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <div class="item-icon warning">❌</div>
+                        <div class="item-content">
+                            <div class="item-title">Sync failed: Marketing Q4</div>
+                            <div class="item-meta">2 hours ago</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <div class="item-icon warning">📋</div>
+                        <div class="item-content">
+                            <div class="item-title">5 drafts need approval</div>
+                            <div class="item-meta">From: Brand Team</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">⭐ Recent Golden Answers</div>
+                    <div class="item">
+                        <div class="item-icon gold">✨</div>
+                        <div class="item-content">
+                            <div class="item-title">"What is Q3 channel strategy?"</div>
+                            <div class="item-meta">From: 2024 B2B Strategy.pdf</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <div class="item-icon gold">✨</div>
+                        <div class="item-content">
+                            <div class="item-title">"LinkedIn organic best practices"</div>
+                            <div class="item-meta">From: Social Playbook.docx</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <div class="item-icon gold">✨</div>
+                        <div class="item-content">
+                            <div class="item-title">"Brand color guidelines"</div>
+                            <div class="item-meta">From: Brand Guidelines v3.pdf</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

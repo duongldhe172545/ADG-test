@@ -79,6 +79,10 @@ class Settings(BaseSettings):
     # NotebookLM Settings
     # ==========================================================================
     NOTEBOOK_ID: str = Field(default="", description="Default NotebookLM notebook ID")
+    ALLOWED_NOTEBOOKS: str = Field(
+        default="",
+        description="Comma-separated list of notebook IDs to show in UI (empty = show all)"
+    )
     
     # ==========================================================================
     # Scheduler Settings

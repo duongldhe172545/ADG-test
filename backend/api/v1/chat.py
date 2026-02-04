@@ -134,15 +134,8 @@ async def get_sources(notebook_id: str):
         notebooklm = get_notebooklm_service()
         sources = notebooklm.get_sources(notebook_id)
         
-        result = []
-        for src in sources:
-            result.append({
-                "id": src.id if hasattr(src, 'id') else str(src),
-                "title": src.title if hasattr(src, 'title') else "Untitled",
-                "type": src.type if hasattr(src, 'type') else "unknown"
-            })
-        
-        return {"sources": result, "count": len(result)}
+        # Service already returns formatted dictionaries
+        return {"sources": sources, "count": len(sources)}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

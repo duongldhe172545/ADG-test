@@ -60,9 +60,12 @@ def get_gdrive_service_for_read():
 
 
 @router.get("/folders")
-async def list_folders():
+async def list_folders(depth: int = 5):
     """
     List folder structure from Google Drive.
+    
+    Args:
+        depth: Maximum folder depth to load (default 5 for comprehensive loading)
     
     Returns a tree structure of folders for the upload destination selector.
     """
@@ -81,20 +84,26 @@ async def list_folders():
             detail="GDRIVE_ROOT_FOLDER_ID not configured"
         )
     
+    # Allow deeper nesting for full folder tree
+    max_depth = min(depth, 10)
+    
     try:
-        def build_folder_tree(parent_id: str, depth: int = 0, max_depth: int = 5) -> List[Dict[str, Any]]:
-            """Recursively build folder tree"""
-            if depth >= max_depth:
+        def build_folder_tree(parent_id: str, current_depth: int = 0) -> List[Dict[str, Any]]:
+            """Recursively build folder tree with limited depth"""
+            if current_depth >= max_depth:
                 return []
             
             folders = gdrive.list_folders(parent_id)
             result = []
             
             for folder in folders:
+                # Always try to load children if we haven't reached max depth
+                children = build_folder_tree(folder['id'], current_depth + 1)
                 item = {
                     "id": folder['id'],
                     "name": folder['name'],
-                    "children": build_folder_tree(folder['id'], depth + 1, max_depth)
+                    "children": children,
+                    "hasChildren": len(children) > 0 or current_depth >= max_depth - 1
                 }
                 result.append(item)
             
@@ -105,6 +114,42 @@ async def list_folders():
         return {
             "root_id": root_folder_id,
             "folders": folders
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/folders/{folder_id}/children")
+async def get_folder_children(folder_id: str):
+    """
+    Get immediate children of a folder (lazy loading).
+    
+    Use this to load subfolders on-demand when user expands a folder.
+    """
+    gdrive = get_gdrive_service_for_read()
+    
+    if not gdrive:
+        raise HTTPException(
+            status_code=503,
+            detail="Google Drive not available"
+        )
+    
+    try:
+        folders = gdrive.list_folders(folder_id)
+        
+        children = [
+            {
+                "id": folder['id'],
+                "name": folder['name'],
+                "hasChildren": True
+            }
+            for folder in folders
+        ]
+        
+        return {
+            "parent_id": folder_id,
+            "children": children
         }
         
     except Exception as e:

@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Source Selection - ADG Marketing Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: #1e293b;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --accent: #3b82f6;
+            --accent-light: #dbeafe;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar - Dark */
+        .sidebar {
+            width: 220px;
+            background: var(--bg-sidebar);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .sidebar-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .sidebar-logo-text {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-logo-sub {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.25rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.3);
+            color: white;
+            border-left: 3px solid var(--accent);
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .user-email {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 220px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-search {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            width: 300px;
+        }
+
+        .header-search input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            width: 100%;
+            outline: none;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .header-icon:hover {
+            background: var(--bg-primary);
+        }
+
+        .header-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Content */
+        .content {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            padding-bottom: 100px;
+        }
+
+        .content-header {
+            margin-bottom: 1.25rem;
+        }
+
+        .content-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .content-header p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Filters */
+        .filters-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 280px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.625rem 1rem;
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            width: 100%;
+            outline: none;
+        }
+
+        .filter-select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.625rem 1rem;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 0.625rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-outline {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-primary);
+        }
+
+        /* Documents Table */
+        .documents-table {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 40px 2fr 80px 110px 80px 100px 40px;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 40px 2fr 80px 110px 80px 100px 40px;
+            gap: 1rem;
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .table-row:hover {
+            background: var(--bg-primary);
+        }
+
+        .table-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .doc-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .doc-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .doc-icon.pdf {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .doc-icon.docx {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .doc-icon.pptx {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .doc-icon.xlsx {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+
+        .doc-details h4 {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.125rem;
+        }
+
+        .doc-details span {
+            font-size: 0.7rem;
+            color: var(--text-light);
+        }
+
+        .doc-type,
+        .doc-date {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .status-badge.active {
+            background: #dcfce7;
+            color: var(--success);
+        }
+
+        .status-badge.draft {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        .data-class {
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .data-class.internal {
+            color: var(--accent);
+        }
+
+        .data-class.public {
+            color: var(--success);
+        }
+
+        .data-class.confidential {
+            color: var(--error);
+        }
+
+        .row-menu {
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .pagination-btn {
+            padding: 0.4rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .pagination-btn:hover {
+            background: var(--bg-primary);
+        }
+
+        /* Bottom Action Bar */
+        .action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 220px;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 0.875rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .selected-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .selected-count {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: white;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        @media (max-width: 1024px) {
+
+            .table-header,
+            .table-row {
+                grid-template-columns: 40px 2fr 80px 80px;
+            }
+
+            .table-header>*:nth-child(5),
+            .table-header>*:nth-child(6),
+            .table-header>*:nth-child(7),
+            .table-row>*:nth-child(5),
+            .table-row>*:nth-child(6),
+            .table-row>*:nth-child(7) {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .action-bar {
+                left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="/dashboard" class="sidebar-logo">
+                <div class="sidebar-logo-icon">✨</div>
+                <div>
+                    <div class="sidebar-logo-text">ADG Admin</div>
+                    <div class="sidebar-logo-sub">Knowledge Hub</div>
+                </div>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="nav-item">
+                <span>🏠</span> Dashboard
+            </a>
+            <a href="/sources" class="nav-item active">
+                <span>📄</span> Sources
+            </a>
+            <a href="/" class="nav-item">
+                <span>💬</span> Chat
+            </a>
+            <a href="/upload" class="nav-item">
+                <span>📤</span> Upload
+            </a>
+            <a href="/document" class="nav-item">
+                <span>📑</span> Document Viewer
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">AD</div>
+                <div class="user-details">
+                    <div class="user-name">Admin</div>
+                    <div class="user-email">admin@adg.vn</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="header">
+            <div class="header-search">
+                <span>🔍</span>
+                <input type="text" id="searchInput" placeholder="Search documents...">
+            </div>
+            <div class="header-actions">
+                <div class="header-icon">🔔</div>
+                <div class="header-avatar">AD</div>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="content-header">
+                <h1>📄 Source Selection</h1>
+                <p>Select documents to include in your AI chat context.</p>
+            </div>
+
+            <div class="filters-bar">
+                <div class="search-box">
+                    <span>🔍</span>
+                    <input type="text" placeholder="Search by title, keyword...">
+                </div>
+                <select class="filter-select" id="typeFilter">
+                    <option value="">All Types</option>
+                    <option value="PDF">PDF</option>
+                    <option value="DOCX">DOCX</option>
+                    <option value="PPTX">PPTX</option>
+                </select>
+                <select class="filter-select" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Draft">Draft</option>
+                </select>
+                <a href="/upload" class="btn btn-outline">📤 Upload New</a>
+            </div>
+
+            <div class="documents-table">
+                <div class="table-header">
+                    <div><input type="checkbox" id="selectAll"></div>
+                    <div>TITLE</div>
+                    <div>TYPE</div>
+                    <div>DATE</div>
+                    <div>STATUS</div>
+                    <div>CLASS</div>
+                    <div></div>
+                </div>
+                <div id="tableBody">
+                    <div class="table-row">
+                        <div><input type="checkbox" checked></div>
+                        <div class="doc-info">
+                            <div class="doc-icon pdf">PDF</div>
+                            <div class="doc-details">
+                                <h4>Q3 Marketing Plan 2024</h4>
+                                <span>v2.4 • 1.2 MB</span>
+                            </div>
+                        </div>
+                        <div class="doc-type">PDF</div>
+                        <div class="doc-date">Oct 24, 2024</div>
+                        <div><span class="status-badge active">Active</span></div>
+                        <div class="data-class internal">🔒 Internal</div>
+                        <div class="row-menu">⋮</div>
+                    </div>
+                    <div class="table-row">
+                        <div><input type="checkbox" checked></div>
+                        <div class="doc-info">
+                            <div class="doc-icon docx">DOC</div>
+                            <div class="doc-details">
+                                <h4>Tone of Voice Guidelines</h4>
+                                <span>v1.0 • 490 KB</span>
+                            </div>
+                        </div>
+                        <div class="doc-type">DOCX</div>
+                        <div class="doc-date">Sep 10, 2024</div>
+                        <div><span class="status-badge active">Active</span></div>
+                        <div class="data-class public">🌐 Public</div>
+                        <div class="row-menu">⋮</div>
+                    </div>
+                    <div class="table-row">
+                        <div><input type="checkbox"></div>
+                        <div class="doc-info">
+                            <div class="doc-icon pptx">PPT</div>
+                            <div class="doc-details">
+                                <h4>Winter Campaign Draft</h4>
+                                <span>v0.8 • 15 MB</span>
+                            </div>
+                        </div>
+                        <div class="doc-type">PPTX</div>
+                        <div class="doc-date">Nov 01, 2024</div>
+                        <div><span class="status-badge draft">Draft</span></div>
+                        <div class="data-class confidential">🔐 Confidential</div>
+                        <div class="row-menu">⋮</div>
+                    </div>
+                    <div class="table-row">
+                        <div><input type="checkbox" checked></div>
+                        <div class="doc-info">
+                            <div class="doc-icon pdf">PDF</div>
+                            <div class="doc-details">
+                                <h4>Competitor Analysis Q4</h4>
+                                <span>v1.0 • 2.4 MB</span>
+                            </div>
+                        </div>
+                        <div class="doc-type">PDF</div>
+                        <div class="doc-date">Nov 15, 2024</div>
+                        <div><span class="status-badge active">Active</span></div>
+                        <div class="data-class internal">🔒 Internal</div>
+                        <div class="row-menu">⋮</div>
+                    </div>
+                    <div class="table-row">
+                        <div><input type="checkbox"></div>
+                        <div class="doc-info">
+                            <div class="doc-icon xlsx">XLS</div>
+                            <div class="doc-details">
+                                <h4>2025 Budget Proposal</h4>
+                                <span>v0.5 • 890 KB</span>
+                            </div>
+                        </div>
+                        <div class="doc-type">XLSX</div>
+                        <div class="doc-date">Dec 02, 2024</div>
+                        <div><span class="status-badge draft">Draft</span></div>
+                        <div class="data-class confidential">🔐 Confidential</div>
+                        <div class="row-menu">⋮</div>
+                    </div>
+                </div>
+                <div class="pagination">
+                    <span>Showing 1-5 of 24</span>
+                    <div>
+                        <span class="pagination-btn">← Prev</span>
+                        <span class="pagination-btn">Next →</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="action-bar">
+            <div class="selected-info">
+                <span class="selected-count" id="selectedCount">3 documents selected</span>
+            </div>
+            <div>
+                <a href="/" class="btn btn-primary">💬 Start Chat Session →</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Select all checkbox
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.table-row input[type="checkbox"]');
+        const selectedCount = document.getElementById('selectedCount');
+
+        selectAll.addEventListener('change', () => {
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateSelectedCount();
+        });
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateSelectedCount);
+        });
+
+        function updateSelectedCount() {
+            const count = document.querySelectorAll('.table-row input[type="checkbox"]:checked').length;
+            selectedCount.textContent = `${count} document${count !== 1 ? 's' : ''} selected`;
+        }
+
+        updateSelectedCount();
+    </script>
+</body>
+
+</html>
