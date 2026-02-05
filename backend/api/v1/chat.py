@@ -139,3 +139,58 @@ async def get_sources(notebook_id: str):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sources/{notebook_id}/{source_id}/content")
+async def get_source_content(notebook_id: str, source_id: str):
+    """
+    Get full text content of a source document.
+    
+    Returns the complete text content of the specified source.
+    """
+    try:
+        notebooklm = get_notebooklm_service()
+        client = notebooklm.get_client()
+        # API only takes source_id, returns dict
+        result = client.get_source_fulltext(source_id)
+        
+        # Extract content from result dict - key is 'content' not 'text'
+        content = result.get('content', '') if isinstance(result, dict) else str(result)
+        
+        return {
+            "source_id": source_id,
+            "notebook_id": notebook_id,
+            "content": content,
+            "type": "fulltext"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sources/{notebook_id}/{source_id}/guide")
+async def get_source_guide(notebook_id: str, source_id: str):
+    """
+    Get AI-generated guide/summary of a source document.
+    
+    Returns a structured summary and key points from the source.
+    """
+    try:
+        notebooklm = get_notebooklm_service()
+        client = notebooklm.get_client()
+        # API only takes source_id
+        result = client.get_source_guide(source_id)
+        
+        # Extract guide from result
+        guide = result.get('guide', '') if isinstance(result, dict) else str(result)
+        
+        return {
+            "source_id": source_id,
+            "notebook_id": notebook_id,
+            "guide": guide,
+            "type": "guide"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
