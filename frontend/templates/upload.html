@@ -280,8 +280,9 @@
         /* Upload Grid */
         .upload-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 1.5rem;
+            max-width: 600px;
         }
 
         /* Card */
@@ -763,9 +764,7 @@
             <a href="/upload" class="nav-item active">
                 <span>📤</span> Upload
             </a>
-            <a href="/document" class="nav-item">
-                <span>📑</span> Document Viewer
-            </a>
+
         </nav>
 
         <div class="sidebar-footer">
@@ -858,36 +857,7 @@
                     </div>
                 </div>
 
-                <!-- Right Panel: Notebook Assignment -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">📓 Add to Notebooks</span>
-                    </div>
 
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                        Select notebooks to add this document as a source.
-                    </p>
-
-                    <div class="notebooks-list" id="notebooksList">
-                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                            Loading notebooks...
-                        </div>
-                    </div>
-
-                    <div class="metadata-section">
-                        <div class="metadata-title">📋 Quick Metadata</div>
-                        <div class="form-group">
-                            <label class="form-label">Document Title (optional)</label>
-                            <input type="text" class="form-input" id="docTitle" placeholder="Auto-detect from filename">
-                            <div class="form-hint">Leave blank to use the uploaded filename.</div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Tags</label>
-                            <input type="text" class="form-input" id="docTags"
-                                placeholder="e.g., Q4, Strategy, Marketing">
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </main>

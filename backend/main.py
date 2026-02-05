@@ -173,20 +173,6 @@ async def sources_page():
     return HTMLResponse("<h1>ADG KMS - Sources UI not found</h1>")
 
 
-@app.get("/document", response_class=HTMLResponse)
-async def document_page():
-    """Serve the document viewer UI"""
-    template_path = os.path.join(
-        os.path.dirname(__file__),
-        "..", "frontend", "templates", "document.html"
-    )
-    
-    if os.path.exists(template_path):
-        return FileResponse(template_path)
-    
-    return HTMLResponse("<h1>ADG KMS - Document Viewer not found</h1>")
-
-
 # =============================================================================
 # Static Files
 # =============================================================================
