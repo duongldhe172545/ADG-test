@@ -160,6 +160,49 @@ class NotebookLMService:
             print(f"⚠️ Error getting sources: {e}")
             return []
     
+    async def add_drive_source(
+        self, 
+        notebook_id: str, 
+        document_id: str, 
+        title: str,
+        mime_type: str = 'application/pdf'
+    ) -> dict:
+        """
+        Add a Google Drive file as a source to a notebook.
+        
+        Args:
+            notebook_id: ID of the notebook to add source to
+            document_id: Google Drive file ID
+            title: Title/filename for the source
+            mime_type: MIME type of the file
+            
+        Returns:
+            Dict with source info or error
+        """
+        def sync_add():
+            try:
+                client = self.get_client()
+                # Use add_drive_source method for Google Drive files
+                result = client.add_drive_source(
+                    notebook_id=notebook_id,
+                    document_id=document_id,
+                    title=title,
+                    mime_type=mime_type
+                )
+                print(f"✅ Added Drive source to notebook {notebook_id}: {title}")
+                return {"success": True, "source": result}
+            except AttributeError as ae:
+                # Method might not exist in client version
+                print(f"⚠️ add_drive_source not available: {ae}")
+                return {"success": False, "error": "Method not available"}
+            except Exception as e:
+                print(f"⚠️ Error adding source: {e}")
+                return {"success": False, "error": str(e)}
+        
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(self._executor, sync_add)
+        return result
+    
     def is_authenticated(self) -> bool:
         """Check if NotebookLM is properly authenticated"""
         try:

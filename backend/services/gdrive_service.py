@@ -202,6 +202,34 @@ class GoogleDriveService:
         print(f"✅ Uploaded file: {file_name} (ID: {file.get('id')})")
         return file
     
+    def share_file_public(self, file_id: str) -> bool:
+        """
+        Share a file publicly with "Anyone with the link can view" permission.
+        
+        This is required for NotebookLM to access files from Google Drive.
+        
+        Args:
+            file_id: ID of the file to share
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            permission = {
+                'type': 'anyone',
+                'role': 'reader'
+            }
+            self.service.permissions().create(
+                fileId=file_id,
+                body=permission,
+                supportsAllDrives=True
+            ).execute()
+            print(f"🔓 Shared file publicly: {file_id}")
+            return True
+        except Exception as e:
+            print(f"⚠️ Failed to share file: {e}")
+            return False
+    
     def delete_file(self, file_id: str) -> None:
         """Delete a file or folder by ID"""
         self.service.files().delete(

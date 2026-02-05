@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADG Knowledge Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #242424;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent: #8ab4f8;
+            --accent-hover: #aecbfa;
+            --accent-purple: #c58af9;
+            --border: #333333;
+            --success: #81c995;
+            --error: #f28b82;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .logo-text span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .nav-links a.active {
+            color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        /* Hero Section */
+        .hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 24px;
+            background: radial-gradient(ellipse at center top, rgba(138, 180, 248, 0.08) 0%, transparent 50%);
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .hero-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            max-width: 700px;
+        }
+
+        .hero h1 .gradient-text {
+            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 550px;
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(138, 180, 248, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+        }
+
+        /* Features Grid */
+        .features {
+            padding: 80px 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 48px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, rgba(138, 180, 248, 0.2), rgba(197, 138, 249, 0.2));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 24px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .hero p {
+                font-size: 16px;
+            }
+
+            .header {
+                padding: 12px 16px;
+            }
+
+            .nav-links a {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">📚</div>
+            <span class="logo-text"><span>ADG</span> Knowledge</span>
+        </div>
+        <nav class="nav-links">
+            <a href="/" class="active">Trang chủ</a>
+            <a href="/chatbot">💬 Chat AI</a>
+            <a href="/sources">📁 Tài liệu</a>
+            <a href="/upload">📤 Upload</a>
+            <a href="/dashboard">📊 Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="hero">
+        <div class="hero-badge">
+            <span class="dot"></span>
+            Powered by NotebookLM
+        </div>
+        <h1>Hệ thống Quản trị <span class="gradient-text">Tri thức Marketing</span></h1>
+        <p>
+            Tìm kiếm, hỏi đáp và khai thác kho tài liệu marketing của ADG một cách thông minh.
+            AI trích xuất câu trả lời chính xác có nguồn từ tài liệu gốc.
+        </p>
+        <div class="hero-buttons">
+            <a href="/chatbot" class="btn btn-primary">
+                💬 Bắt đầu Chat
+            </a>
+            <a href="/sources" class="btn btn-secondary">
+                📁 Xem tài liệu
+            </a>
+        </div>
+    </main>
+
+    <section class="features">
+        <h2>Tính năng chính</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>Hỏi đáp AI thông minh</h3>
+                <p>Đặt câu hỏi bằng ngôn ngữ tự nhiên và nhận câu trả lời chính xác với trích dẫn nguồn từ tài liệu gốc.
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📂</div>
+                <h3>Quản lý tài liệu tập trung</h3>
+                <p>Tổ chức tài liệu theo cấu trúc phòng ban: D2Com, B2B, S2B2C, MARCOM với versioning và metadata chuẩn
+                    hóa.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3>Đồng bộ tự động</h3>
+                <p>Upload tài liệu lên Google Drive và tự động cập nhật vào NotebookLM tương ứng theo phòng ban.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Golden Answers</h3>
+                <p>Kho câu trả lời chuẩn đã được xác thực với độ tin cậy cao, sẵn sàng cho mọi thắc mắc thường gặp.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Phân quyền an toàn</h3>
+                <p>Kiểm soát truy cập theo nguyên tắc Least Privilege, đảm bảo bảo mật dữ liệu nội bộ.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>KPI & Analytics</h3>
+                <p>Theo dõi Time-to-Find, Metadata Coverage, User Adoption và các chỉ số hiệu quả hệ thống.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>© 2026 ADG Marketing Knowledge Management System • Phiên bản 1.0</p>
+    </footer>
+</body>
+
+</html>

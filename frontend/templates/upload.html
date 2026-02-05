@@ -1062,7 +1062,7 @@
         // Load notebooks
         async function loadNotebooks() {
             try {
-                const response = await fetch(`${API_BASE}/api/v1/notebooks`);
+                const response = await fetch(`${API_BASE}/api/v1/chat/notebooks`);
                 const data = await response.json();
 
                 notebooks = data.notebooks || [];
@@ -1200,6 +1200,15 @@
                     const formData = new FormData();
                     formData.append('file', file);
                     formData.append('folder_id', selectedFolderId);
+
+                    // Get selected notebooks
+                    const selectedNotebooks = Array.from(
+                        document.querySelectorAll('.notebook-checkbox:checked')
+                    ).map(cb => cb.value);
+
+                    if (selectedNotebooks.length > 0) {
+                        formData.append('notebook_ids', selectedNotebooks.join(','));
+                    }
 
                     const response = await fetch(`${API_BASE}/api/v1/documents/upload`, {
                         method: 'POST',

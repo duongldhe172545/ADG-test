@@ -4,22 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Source Selection - ADG Marketing Hub</title>
+    <title>Tài liệu Google Drive - ADG KMS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #f8fafc;
-            --bg-secondary: #ffffff;
-            --bg-sidebar: #1e293b;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --text-light: #94a3b8;
-            --accent: #3b82f6;
-            --accent-light: #dbeafe;
-            --success: #22c55e;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --border: #e2e8f0;
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #242424;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent: #8ab4f8;
+            --accent-hover: #aecbfa;
+            --accent-purple: #c58af9;
+            --border: #333333;
+            --success: #81c995;
+            --error: #f28b82;
         }
 
         * {
@@ -29,392 +28,293 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-        }
-
-        /* Sidebar - Dark */
-        .sidebar {
-            width: 220px;
-            background: var(--bg-sidebar);
-            color: white;
-            display: flex;
-            flex-direction: column;
             height: 100vh;
-            position: fixed;
-            left: 0;
-            top: 0;
-        }
-
-        .sidebar-header {
-            padding: 1.25rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: white;
-        }
-
-        .sidebar-logo-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        .sidebar-logo-text {
-            font-weight: 700;
-            font-size: 0.9rem;
-        }
-
-        .sidebar-logo-sub {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .sidebar-nav {
-            padding: 1rem 0;
-            flex: 1;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.25rem;
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-        }
-
-        .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .nav-item.active {
-            background: rgba(59, 130, 246, 0.3);
-            color: white;
-            border-left: 3px solid var(--accent);
-        }
-
-        .sidebar-footer {
-            padding: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-        }
-
-        .user-details {
-            flex: 1;
-        }
-
-        .user-name {
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .user-email {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            margin-left: 220px;
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         /* Header */
         .header {
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
-            padding: 0.75rem 1.5rem;
+            padding: 12px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 100;
         }
 
-        .header-left {
+        .logo {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 10px;
         }
 
-        .notebook-selector {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .notebook-selector label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .notebook-select {
-            padding: 0.5rem 1rem;
-            border: 1px solid var(--border);
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
             border-radius: 8px;
-            font-size: 0.85rem;
-            background: var(--bg-primary);
-            min-width: 250px;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .header-icon {
-            width: 36px;
-            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .logo-text span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 6px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .nav-links a.active {
+            color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .auth-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .auth-btn.login {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .auth-btn.logout {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .user-email {
+            font-size: 12px;
             color: var(--text-secondary);
         }
 
-        .header-icon:hover {
-            background: var(--bg-primary);
-        }
-
-        .header-avatar {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        /* Content */
-        .content {
+        /* Main Layout */
+        .main-container {
             flex: 1;
-            padding: 1.5rem 2rem;
             display: flex;
-            gap: 1.5rem;
+            overflow: hidden;
         }
 
-        /* Sources List - Left Panel */
-        .sources-panel {
-            flex: 1;
+        /* Folder Tree Panel */
+        .folder-panel {
+            width: 300px;
+            min-width: 200px;
+            max-width: 450px;
             background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            max-height: calc(100vh - 150px);
         }
 
         .panel-header {
-            padding: 1rem;
+            padding: 12px 16px;
             border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .panel-title {
-            font-size: 1rem;
+            font-size: 13px;
             font-weight: 600;
-        }
-
-        .source-count {
-            font-size: 0.8rem;
             color: var(--text-secondary);
-            background: var(--bg-primary);
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .sources-list {
+        .panel-content {
             flex: 1;
             overflow-y: auto;
-            padding: 0.5rem;
+            padding: 8px;
         }
 
-        .source-item {
+        /* Folder Tree */
+        .folder-tree {
+            font-size: 13px;
+        }
+
+        .tree-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            border-radius: 8px;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: background 0.2s;
-            margin-bottom: 0.25rem;
+            transition: background 0.15s;
+            margin-bottom: 2px;
         }
 
-        .source-item:hover {
-            background: var(--bg-primary);
+        .tree-item:hover {
+            background: var(--bg-tertiary);
         }
 
-        .source-item.selected {
-            background: var(--accent-light);
+        .tree-item.selected {
+            background: rgba(138, 180, 248, 0.15);
             border: 1px solid var(--accent);
         }
 
-        .source-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+        .tree-item.folder {
+            font-weight: 500;
+        }
+
+        .tree-item .icon {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .tree-item .name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tree-item .size {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .tree-children {
+            margin-left: 20px;
+            border-left: 1px dashed var(--border);
+            padding-left: 8px;
+        }
+
+        .tree-children.collapsed {
+            display: none;
+        }
+
+        .expand-btn {
+            width: 16px;
+            height: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.25rem;
-            background: var(--bg-primary);
-        }
-
-        .source-icon.pdf {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-
-        .source-icon.doc {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-
-        .source-icon.url {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: white;
-        }
-
-        .source-icon.text {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-            color: white;
-        }
-
-        .source-details {
-            flex: 1;
-        }
-
-        .source-title {
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 0.125rem;
-        }
-
-        .source-type {
-            font-size: 0.7rem;
-            color: var(--text-light);
-        }
-
-        .source-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .source-btn {
-            padding: 0.375rem 0.625rem;
-            font-size: 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--bg-secondary);
+            font-size: 10px;
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
 
-        .source-btn:hover {
+        .expand-btn.expanded {
+            transform: rotate(90deg);
+        }
+
+        /* Resizer */
+        .resizer {
+            width: 4px;
+            background: var(--border);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .resizer:hover,
+        .resizer.active {
             background: var(--accent);
-            color: white;
-            border-color: var(--accent);
         }
 
-        /* Document Viewer - Right Panel */
-        .viewer-panel {
-            flex: 1.5;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+        /* Preview Panel */
+        .preview-panel {
+            flex: 1;
+            min-width: 400px;
             display: flex;
             flex-direction: column;
-            max-height: calc(100vh - 150px);
+            background: var(--bg-secondary);
         }
 
-        .viewer-header {
-            padding: 1rem;
+        .preview-header {
+            padding: 12px 16px;
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .viewer-title {
-            font-size: 1rem;
+        .preview-title {
+            font-size: 14px;
             font-weight: 600;
-        }
-
-        .viewer-tabs {
             display: flex;
-            gap: 0.5rem;
+            align-items: center;
+            gap: 8px;
         }
 
-        .viewer-tab {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.8rem;
-            border: 1px solid var(--border);
+        .preview-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preview-btn {
+            padding: 6px 12px;
+            font-size: 12px;
             border-radius: 6px;
-            background: var(--bg-secondary);
             cursor: pointer;
             transition: all 0.2s;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        .viewer-tab.active {
+        .preview-btn:hover {
             background: var(--accent);
-            color: white;
+            color: var(--bg-primary);
             border-color: var(--accent);
         }
 
-        .viewer-content {
+        .preview-content {
             flex: 1;
-            overflow-y: auto;
-            padding: 1.5rem;
+            overflow: hidden;
+            background: var(--bg-primary);
         }
 
-        .viewer-empty {
+        .preview-empty {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -422,41 +322,62 @@
             height: 100%;
             color: var(--text-secondary);
             text-align: center;
+            padding: 40px;
         }
 
-        .viewer-empty-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
+        .preview-empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
             opacity: 0.5;
         }
 
-        .viewer-empty-text {
-            font-size: 0.9rem;
+        .preview-empty h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
         }
 
-        .document-content {
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
+            margin: auto;
+        }
+
+        .preview-text {
+            padding: 20px;
+            font-size: 14px;
             line-height: 1.7;
-            font-size: 0.9rem;
             white-space: pre-wrap;
+            overflow-y: auto;
+            height: 100%;
         }
 
+        /* Loading */
         .loading {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
+            padding: 40px;
             color: var(--text-secondary);
         }
 
-        .loading::after {
-            content: '';
-            width: 24px;
-            height: 24px;
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
             border: 3px solid var(--border);
             border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-left: 0.75rem;
+            margin-bottom: 12px;
         }
 
         @keyframes spin {
@@ -465,328 +386,432 @@
             }
         }
 
-        /* Empty state */
-        .empty-state {
+        /* Auth Required */
+        .auth-required {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 3rem;
+            height: 100%;
             color: var(--text-secondary);
             text-align: center;
+            padding: 40px;
         }
 
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
+        .auth-required-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .auth-required h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .auth-required .auth-btn {
+            margin-top: 20px;
+            padding: 10px 24px;
+            font-size: 14px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
         }
 
         /* Responsive */
-        @media (max-width: 1024px) {
-            .content {
-                flex-direction: column;
-            }
-
-            .sources-panel,
-            .viewer-panel {
-                max-height: 50vh;
-            }
-        }
-
         @media (max-width: 768px) {
-            .sidebar {
-                display: none;
-            }
-
-            .main-content {
-                margin-left: 0;
+            .folder-panel {
+                width: 250px;
             }
         }
     </style>
 </head>
 
 <body>
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <a href="/dashboard" class="sidebar-logo">
-                <div class="sidebar-logo-icon">✨</div>
-                <div>
-                    <div class="sidebar-logo-text">ADG Admin</div>
-                    <div class="sidebar-logo-sub">Knowledge Hub</div>
-                </div>
-            </a>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">📁</div>
+            <span class="logo-text"><span>ADG</span> Tài liệu</span>
         </div>
-
-        <nav class="sidebar-nav">
-            <a href="/dashboard" class="nav-item">
-                <span>🏠</span> Dashboard
-            </a>
-            <a href="/sources" class="nav-item active">
-                <span>📄</span> Sources
-            </a>
-            <a href="/" class="nav-item">
-                <span>💬</span> Chat
-            </a>
-            <a href="/upload" class="nav-item">
-                <span>📤</span> Upload
-            </a>
-            <a href="/document" class="nav-item">
-                <span>📑</span> Document Viewer
-            </a>
+        <nav class="nav-links">
+            <a href="/">Trang chủ</a>
+            <a href="/chatbot">💬 Chat</a>
+            <a href="/sources" class="active">📁 Tài liệu</a>
+            <a href="/upload">📤 Upload</a>
         </nav>
-
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <div class="user-avatar">AD</div>
-                <div class="user-details">
-                    <div class="user-name">Admin</div>
-                    <div class="user-email">admin@adg.vn</div>
-                </div>
-            </div>
+        <div class="auth-section" id="authSection">
+            <button class="auth-btn login" id="loginBtn" onclick="handleLogin()">
+                <span>🔐</span> Đăng nhập Google
+            </button>
         </div>
-    </aside>
+    </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="header">
-            <div class="header-left">
-                <div class="notebook-selector">
-                    <label>📓 Notebook:</label>
-                    <select class="notebook-select" id="notebookSelect">
-                        <option value="">Loading notebooks...</option>
-                    </select>
+    <main class="main-container">
+        <!-- Folder Tree Panel -->
+        <aside class="folder-panel" id="folderPanel">
+            <div class="panel-header">
+                📂 Thư mục
+            </div>
+            <div class="panel-content" id="folderContent">
+                <div class="auth-required" id="authPrompt">
+                    <div class="auth-required-icon">🔒</div>
+                    <h3>Đăng nhập để xem tài liệu</h3>
+                    <p>Kết nối với Google Drive để duyệt và xem tài liệu</p>
+                    <button class="auth-btn login" onclick="handleLogin()">
+                        🔐 Đăng nhập Google
+                    </button>
                 </div>
+                <div class="folder-tree" id="folderTree" style="display: none;"></div>
             </div>
-            <div class="header-actions">
-                <div class="header-icon">🔄</div>
-                <div class="header-avatar">AD</div>
-            </div>
-        </header>
+        </aside>
 
-        <div class="content">
-            <!-- Sources List Panel -->
-            <div class="sources-panel">
-                <div class="panel-header">
-                    <span class="panel-title">📄 Document Sources</span>
-                    <span class="source-count" id="sourceCount">0 sources</span>
-                </div>
-                <div class="sources-list" id="sourcesList">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📓</div>
-                        <div>Select a notebook to view sources</div>
-                    </div>
-                </div>
-            </div>
+        <div class="resizer" id="resizer"></div>
 
-            <!-- Document Viewer Panel -->
-            <div class="viewer-panel">
-                <div class="viewer-header">
-                    <span class="viewer-title" id="viewerTitle">📖 Document Viewer</span>
-                    <div class="viewer-tabs">
-                        <button class="viewer-tab active" id="tabContent" onclick="switchTab('content')">Full
-                            Text</button>
-                        <button class="viewer-tab" id="tabGuide" onclick="switchTab('guide')">AI Guide</button>
-                    </div>
+        <!-- Preview Panel -->
+        <section class="preview-panel" id="previewPanel">
+            <div class="preview-header">
+                <div class="preview-title" id="previewTitle">
+                    📄 Xem trước
                 </div>
-                <div class="viewer-content" id="viewerContent">
-                    <div class="viewer-empty">
-                        <div class="viewer-empty-icon">📄</div>
-                        <div class="viewer-empty-text">Click "View" on a source to see its content</div>
-                    </div>
+                <div class="preview-actions" id="previewActions" style="display: none;">
+                    <a class="preview-btn" id="openInDriveBtn" href="#" target="_blank">
+                        🔗 Mở trong Drive
+                    </a>
+                    <a class="preview-btn" id="downloadBtn" href="#" target="_blank">
+                        ⬇️ Tải xuống
+                    </a>
                 </div>
             </div>
-        </div>
+            <div class="preview-content" id="previewContent">
+                <div class="preview-empty">
+                    <div class="preview-empty-icon">📄</div>
+                    <h3>Chọn file để xem</h3>
+                    <p>Click vào file trong thư mục bên trái để xem nội dung</p>
+                </div>
+            </div>
+        </section>
     </main>
 
     <script>
-        // Use same origin - frontend served from same server as API
         const API_BASE = window.location.origin;
 
-        let currentNotebookId = null;
-        let currentSourceId = null;
-        let currentTab = 'content';
+        // State
+        let isAuthenticated = false;
+        let userEmail = null;
+        let selectedFileId = null;
+        let folderCache = {};
 
-        const notebookSelect = document.getElementById('notebookSelect');
-        const sourcesList = document.getElementById('sourcesList');
-        const sourceCount = document.getElementById('sourceCount');
-        const viewerContent = document.getElementById('viewerContent');
-        const viewerTitle = document.getElementById('viewerTitle');
+        // DOM Elements
+        const authSection = document.getElementById('authSection');
+        const loginBtn = document.getElementById('loginBtn');
+        const authPrompt = document.getElementById('authPrompt');
+        const folderTree = document.getElementById('folderTree');
+        const previewContent = document.getElementById('previewContent');
+        const previewTitle = document.getElementById('previewTitle');
+        const previewActions = document.getElementById('previewActions');
+        const openInDriveBtn = document.getElementById('openInDriveBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
 
-        // Load notebooks on page load
-        async function loadNotebooks() {
-            try {
-                // Use /api/notebooks (same as chat.html)
-                const response = await fetch(`${API_BASE}/api/notebooks`);
-                const data = await response.json();
+        // ========================================================================
+        // Resizable Panel
+        // ========================================================================
+        function initResizer() {
+            const resizer = document.getElementById('resizer');
+            const folderPanel = document.getElementById('folderPanel');
+            let isResizing = false;
 
-                notebookSelect.innerHTML = '<option value="">-- Select a notebook --</option>';
-
-                if (data.notebooks && data.notebooks.length > 0) {
-                    data.notebooks.forEach(nb => {
-                        const option = document.createElement('option');
-                        option.value = nb.id;
-                        option.textContent = `${nb.title || 'Untitled'} (${nb.source_count} sources)`;
-                        notebookSelect.appendChild(option);
-                    });
-                } else {
-                    notebookSelect.innerHTML = '<option value="">No notebooks found</option>';
-                }
-            } catch (e) {
-                console.error('Error loading notebooks:', e);
-                notebookSelect.innerHTML = '<option value="">Error loading notebooks</option>';
-            }
-        }
-
-        // Load sources for selected notebook
-        async function loadSources(notebookId) {
-            if (!notebookId) {
-                sourcesList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📓</div>
-                        <div>Select a notebook to view sources</div>
-                    </div>`;
-                sourceCount.textContent = '0 sources';
-                return;
-            }
-
-            sourcesList.innerHTML = '<div class="loading">Loading sources...</div>';
-
-            try {
-                // Use /api/sources (same as chat.html legacy API)
-                const response = await fetch(`${API_BASE}/api/sources/${notebookId}`);
-                const data = await response.json();
-
-                if (data.sources && data.sources.length > 0) {
-                    sourceCount.textContent = `${data.count} sources`;
-                    sourcesList.innerHTML = data.sources.map(source => `
-                        <div class="source-item" data-source-id="${escapeHtml(source.id)}" data-source-title="${escapeHtml(source.title)}">
-                            <div class="source-icon ${getIconClass(source.type)}">${getIconText(source.type)}</div>
-                            <div class="source-details">
-                                <div class="source-title">${escapeHtml(source.title)}</div>
-                                <div class="source-type">${source.type}</div>
-                            </div>
-                            <div class="source-actions">
-                                <button class="source-btn view-btn">👁️ View</button>
-                            </div>
-                        </div>
-                    `).join('');
-
-                    // Add click handlers for view buttons
-                    sourcesList.querySelectorAll('.view-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const item = btn.closest('.source-item');
-                            const sourceId = item.dataset.sourceId;
-                            const sourceTitle = item.dataset.sourceTitle;
-                            console.log('View clicked:', sourceId, sourceTitle);
-                            viewSource(sourceId, sourceTitle);
-                        });
-                    });
-
-                } else {
-                    sourcesList.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📭</div>
-                            <div>No sources found in this notebook</div>
-                        </div>`;
-                    sourceCount.textContent = '0 sources';
-                }
-            } catch (e) {
-                console.error('Error loading sources:', e);
-                sourcesList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚠️</div>
-                        <div>Error loading sources</div>
-                    </div>`;
-            }
-        }
-
-        // View source content
-        async function viewSource(sourceId, title) {
-            currentSourceId = sourceId;
-            viewerTitle.textContent = `📖 ${title}`;
-
-            // Highlight selected source
-            document.querySelectorAll('.source-item').forEach(item => {
-                item.classList.toggle('selected', item.dataset.sourceId === sourceId);
+            resizer.addEventListener('mousedown', () => {
+                isResizing = true;
+                document.body.style.cursor = 'col-resize';
+                resizer.classList.add('active');
             });
 
-            loadContent(currentTab);
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = e.clientX;
+                if (newWidth >= 200 && newWidth <= 450) {
+                    folderPanel.style.width = newWidth + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isResizing = false;
+                document.body.style.cursor = '';
+                resizer.classList.remove('active');
+            });
         }
 
-        // Load content based on tab
-        async function loadContent(tab) {
-            if (!currentNotebookId || !currentSourceId) {
-                console.log('loadContent: missing notebookId or sourceId', currentNotebookId, currentSourceId);
-                return;
-            }
-
-            viewerContent.innerHTML = '<div class="loading">Loading content...</div>';
-
-            const endpoint = tab === 'guide'
-                ? `${API_BASE}/api/v1/chat/sources/${currentNotebookId}/${currentSourceId}/guide`
-                : `${API_BASE}/api/v1/chat/sources/${currentNotebookId}/${currentSourceId}/content`;
-
-            console.log('Fetching:', endpoint);
-
+        // ========================================================================
+        // Authentication
+        // ========================================================================
+        async function checkAuthStatus() {
             try {
-                const response = await fetch(endpoint);
-                console.log('Response status:', response.status);
+                const response = await fetch(`${API_BASE}/api/drive/auth/status`);
                 const data = await response.json();
-                console.log('Response data:', data);
 
-                const content = tab === 'guide' ? data.guide : data.content;
+                isAuthenticated = data.authenticated;
+                userEmail = data.email;
 
+                updateAuthUI();
 
-                if (content) {
-                    viewerContent.innerHTML = `<div class="document-content">${escapeHtml(content)}</div>`;
-                } else {
-                    viewerContent.innerHTML = `
-                        <div class="viewer-empty">
-                            <div class="viewer-empty-icon">📄</div>
-                            <div class="viewer-empty-text">No content available</div>
-                        </div>`;
+                if (isAuthenticated) {
+                    loadFolders();
                 }
             } catch (e) {
-                console.error('Error loading content:', e);
-                viewerContent.innerHTML = `
-                    <div class="viewer-empty">
-                        <div class="viewer-empty-icon">⚠️</div>
-                        <div class="viewer-empty-text">Error loading content: ${e.message}</div>
-                    </div>`;
+                console.error('Auth check failed:', e);
             }
         }
 
-        // Switch tabs
-        function switchTab(tab) {
-            currentTab = tab;
-            document.getElementById('tabContent').classList.toggle('active', tab === 'content');
-            document.getElementById('tabGuide').classList.toggle('active', tab === 'guide');
-
-            if (currentSourceId) {
-                loadContent(tab);
+        function updateAuthUI() {
+            if (isAuthenticated) {
+                authSection.innerHTML = `
+                    <span class="user-email">📧 ${userEmail || 'User'}</span>
+                    <button class="auth-btn logout" onclick="handleLogout()">Đăng xuất</button>
+                `;
+                authPrompt.style.display = 'none';
+                folderTree.style.display = 'block';
+            } else {
+                authSection.innerHTML = `
+                    <button class="auth-btn login" onclick="handleLogin()">
+                        <span>🔐</span> Đăng nhập Google
+                    </button>
+                `;
+                authPrompt.style.display = 'flex';
+                folderTree.style.display = 'none';
             }
         }
 
-        // Helper functions
-        function getIconClass(type) {
-            if (!type) return '';
-            const t = type.toLowerCase();
-            if (t.includes('pdf')) return 'pdf';
-            if (t.includes('doc') || t.includes('google')) return 'doc';
-            if (t.includes('url') || t.includes('web')) return 'url';
-            return 'text';
+        function handleLogin() {
+            window.location.href = `${API_BASE}/api/drive/oauth/login?return_url=${encodeURIComponent('/sources')}`;
         }
 
-        function getIconText(type) {
-            if (!type) return '📄';
-            const t = type.toLowerCase();
-            if (t.includes('pdf')) return 'PDF';
-            if (t.includes('doc') || t.includes('google')) return 'DOC';
-            if (t.includes('url') || t.includes('web')) return '🔗';
-            return '📝';
+        async function handleLogout() {
+            try {
+                await fetch(`${API_BASE}/api/drive/oauth/logout`, { method: 'POST' });
+                isAuthenticated = false;
+                userEmail = null;
+                updateAuthUI();
+            } catch (e) {
+                console.error('Logout failed:', e);
+            }
+        }
+
+        function handleAuthCallback() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('auth') === 'success') {
+                isAuthenticated = true;
+                userEmail = params.get('email');
+                updateAuthUI();
+                loadFolders();
+                // Clean URL
+                window.history.replaceState({}, '', '/sources');
+            }
+        }
+
+        // ========================================================================
+        // Folder Loading
+        // ========================================================================
+        async function loadFolders(parentId = null) {
+            if (!isAuthenticated) return;
+
+            const container = parentId ? document.querySelector(`[data-folder-id="${parentId}"] .tree-children`) : folderTree;
+
+            if (!container) return;
+
+            container.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Đang tải...</div>';
+
+            try {
+                const url = parentId
+                    ? `${API_BASE}/api/drive/folders?parent_id=${parentId}`
+                    : `${API_BASE}/api/drive/folders`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const items = data.folders || data.items || [];
+
+                if (items.length === 0) {
+                    container.innerHTML = '<div style="color: var(--text-secondary); font-size: 12px; padding: 10px;">Không có mục nào</div>';
+                    return;
+                }
+
+                container.innerHTML = items.map(item => createTreeItem(item)).join('');
+
+                // Add event listeners
+                container.querySelectorAll('.tree-item').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleItemClick(el);
+                    });
+                });
+
+                container.querySelectorAll('.expand-btn').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleFolder(el);
+                    });
+                });
+
+            } catch (e) {
+                console.error('Error loading folders:', e);
+                container.innerHTML = '<div style="color: var(--error); font-size: 12px; padding: 10px;">Lỗi tải thư mục</div>';
+            }
+        }
+
+        function createTreeItem(item) {
+            const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
+            const icon = getFileIcon(item.mimeType, item.name);
+            const size = item.size ? formatFileSize(parseInt(item.size)) : '';
+
+            return `
+                <div class="tree-item ${isFolder ? 'folder' : 'file'}" 
+                     data-id="${item.id}" 
+                     data-folder-id="${isFolder ? item.id : ''}"
+                     data-mime-type="${item.mimeType || ''}"
+                     data-name="${escapeHtml(item.name)}"
+                     data-web-view-link="${item.webViewLink || ''}">
+                    ${isFolder ? '<span class="expand-btn">▶</span>' : '<span style="width: 16px;"></span>'}
+                    <span class="icon">${icon}</span>
+                    <span class="name">${escapeHtml(item.name)}</span>
+                    ${size ? `<span class="size">${size}</span>` : ''}
+                </div>
+                ${isFolder ? '<div class="tree-children collapsed"></div>' : ''}
+            `;
+        }
+
+        function toggleFolder(expandBtn) {
+            const expanded = expandBtn.classList.toggle('expanded');
+            const treeItem = expandBtn.closest('.tree-item');
+            const folderId = treeItem.dataset.folderId;
+            const children = treeItem.nextElementSibling;
+
+            if (children && children.classList.contains('tree-children')) {
+                children.classList.toggle('collapsed', !expanded);
+
+                // Load children if not loaded yet
+                if (expanded && children.children.length === 0) {
+                    loadFolders(folderId);
+                }
+            }
+        }
+
+        function handleItemClick(el) {
+            const isFolder = el.classList.contains('folder');
+
+            // Update selection
+            document.querySelectorAll('.tree-item.selected').forEach(item => item.classList.remove('selected'));
+            el.classList.add('selected');
+
+            if (isFolder) {
+                // Toggle folder
+                const expandBtn = el.querySelector('.expand-btn');
+                if (expandBtn) toggleFolder(expandBtn);
+            } else {
+                // Preview file
+                previewFile(el.dataset.id, el.dataset.name, el.dataset.mimeType, el.dataset.webViewLink);
+            }
+        }
+
+        // ========================================================================
+        // File Preview
+        // ========================================================================
+        function previewFile(fileId, fileName, mimeType, webViewLink) {
+            selectedFileId = fileId;
+            previewTitle.innerHTML = `📄 ${escapeHtml(fileName)}`;
+            previewActions.style.display = 'flex';
+
+            // Set action buttons
+            if (webViewLink) {
+                openInDriveBtn.href = webViewLink;
+            }
+            downloadBtn.href = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+            // Determine preview method
+            const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+
+            if (isPreviewable(mimeType)) {
+                previewContent.innerHTML = `<iframe class="preview-iframe" src="${previewUrl}" allowfullscreen></iframe>`;
+            } else if (isImage(mimeType)) {
+                previewContent.innerHTML = `<img class="preview-image" src="https://drive.google.com/uc?id=${fileId}" alt="${escapeHtml(fileName)}">`;
+            } else {
+                previewContent.innerHTML = `
+                    <div class="preview-empty">
+                        <div class="preview-empty-icon">${getFileIcon(mimeType, fileName)}</div>
+                        <h3>${escapeHtml(fileName)}</h3>
+                        <p>Không thể xem trước loại file này</p>
+                        <a class="preview-btn" href="https://drive.google.com/uc?export=download&id=${fileId}" target="_blank" style="margin-top: 20px;">
+                            ⬇️ Tải xuống để xem
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        function isPreviewable(mimeType) {
+            if (!mimeType) return false;
+            const previewable = [
+                'application/pdf',
+                'application/vnd.google-apps.document',
+                'application/vnd.google-apps.spreadsheet',
+                'application/vnd.google-apps.presentation',
+                'application/vnd.openxmlformats-officedocument',
+                'application/msword',
+                'application/vnd.ms-excel',
+                'application/vnd.ms-powerpoint',
+                'text/plain',
+                'text/html',
+                'video/'
+            ];
+            return previewable.some(p => mimeType.includes(p));
+        }
+
+        function isImage(mimeType) {
+            return mimeType && mimeType.startsWith('image/');
+        }
+
+        // ========================================================================
+        // Helpers
+        // ========================================================================
+        function getFileIcon(mimeType, name) {
+            if (!mimeType) {
+                const ext = name.split('.').pop().toLowerCase();
+                const icons = { pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', ppt: '📙', pptx: '📙', txt: '📝', jpg: '🖼️', png: '🖼️', gif: '🖼️', mp4: '🎬', mp3: '🎵' };
+                return icons[ext] || '📄';
+            }
+
+            if (mimeType.includes('folder')) return '📁';
+            if (mimeType.includes('pdf')) return '📕';
+            if (mimeType.includes('document') || mimeType.includes('word')) return '📘';
+            if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return '📗';
+            if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return '📙';
+            if (mimeType.includes('image')) return '🖼️';
+            if (mimeType.includes('video')) return '🎬';
+            if (mimeType.includes('audio')) return '🎵';
+            if (mimeType.includes('text')) return '📝';
+            return '📄';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
         function escapeHtml(text) {
@@ -796,21 +821,14 @@
             return div.innerHTML;
         }
 
-        // Event listeners
-        notebookSelect.addEventListener('change', (e) => {
-            currentNotebookId = e.target.value;
-            currentSourceId = null;
-            viewerContent.innerHTML = `
-                <div class="viewer-empty">
-                    <div class="viewer-empty-icon">📄</div>
-                    <div class="viewer-empty-text">Click "View" on a source to see its content</div>
-                </div>`;
-            viewerTitle.textContent = '📖 Document Viewer';
-            loadSources(currentNotebookId);
-        });
-
+        // ========================================================================
         // Initialize
-        loadNotebooks();
+        // ========================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initResizer();
+            handleAuthCallback();
+            checkAuthStatus();
+        });
     </script>
 </body>
 

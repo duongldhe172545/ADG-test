@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotebookLM Chatbot - ADG KMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #242424;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent: #8ab4f8;
+            --accent-hover: #aecbfa;
+            --accent-purple: #c58af9;
+            --border: #333333;
+            --success: #81c995;
+            --error: #f28b82;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .logo-text span {
+            color: var(--accent);
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notebook-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .notebook-selector label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .notebook-select {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            outline: none;
+            min-width: 180px;
+        }
+
+        .notebook-select option {
+            background: var(--bg-secondary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 6px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .nav-links a.active {
+            color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .status-dot.error {
+            background: var(--error);
+        }
+
+        /* Main 3-Panel Layout */
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Panel Base Styles */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        /* Resizer */
+        .resizer {
+            width: 4px;
+            background: var(--border);
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .resizer:hover,
+        .resizer.active {
+            background: var(--accent);
+        }
+
+        /* Sources Panel */
+        .sources-panel {
+            width: 260px;
+            min-width: 180px;
+            max-width: 400px;
+            border-right: 1px solid var(--border);
+        }
+
+        .source-toggle-all {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+
+        .source-toggle-all label {
+            font-size: 12px;
+            color: var(--accent);
+            cursor: pointer;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .source-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .source-item.selected {
+            background: rgba(138, 180, 248, 0.15);
+            border: 1px solid var(--accent);
+        }
+
+        .source-item input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--accent);
+            margin-top: 2px;
+        }
+
+        .source-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .source-title {
+            font-size: 12px;
+            color: var(--text-primary);
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
+        .source-type {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Viewer Panel */
+        .viewer-panel {
+            width: 400px;
+            min-width: 250px;
+            max-width: 600px;
+            border-right: 1px solid var(--border);
+        }
+
+        .viewer-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 24px;
+        }
+
+        .viewer-empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .viewer-content {
+            font-size: 13px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        .viewer-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            flex: 1;
+            min-width: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .message.assistant .message-avatar {
+            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+        }
+
+        .message-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .message-role {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .message-text {
+            background: var(--bg-secondary);
+            padding: 16px 20px;
+            border-radius: 16px;
+            line-height: 1.7;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-text {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+
+        .message.assistant .message-text {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+        }
+
+        /* Markdown Styles */
+        .message-text h1,
+        .message-text h2,
+        .message-text h3 {
+            margin: 16px 0 8px 0;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .message-text h1 {
+            font-size: 1.4em;
+        }
+
+        .message-text h2 {
+            font-size: 1.25em;
+        }
+
+        .message-text h3 {
+            font-size: 1.1em;
+        }
+
+        .message-text h1:first-child,
+        .message-text h2:first-child,
+        .message-text h3:first-child {
+            margin-top: 0;
+        }
+
+        .message-text p {
+            margin: 8px 0;
+        }
+
+        .message-text ul,
+        .message-text ol {
+            margin: 12px 0;
+            padding-left: 24px;
+        }
+
+        .message-text ul {
+            list-style-type: disc;
+        }
+
+        .message-text ol {
+            list-style-type: decimal;
+        }
+
+        .message-text li {
+            margin: 6px 0;
+            line-height: 1.6;
+        }
+
+        .message-text ul li::marker {
+            color: var(--accent);
+        }
+
+        .message-text ol li::marker {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .message-text strong {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .message-text code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        /* Markdown Tables */
+        .md-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 14px;
+            overflow-x: auto;
+            display: block;
+        }
+
+        .md-table thead {
+            background: var(--bg-tertiary);
+        }
+
+        .md-table th,
+        .md-table td {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            text-align: left;
+            min-width: 100px;
+        }
+
+        .md-table th {
+            font-weight: 600;
+            color: var(--accent);
+            background: rgba(138, 180, 248, 0.1);
+        }
+
+        .md-table tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .md-table tbody tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 0;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+            height: 100%;
+        }
+
+        .welcome-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        .welcome h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .welcome p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 6px 6px 6px 16px;
+            align-items: center;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--accent);
+        }
+
+        .input-field {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            max-height: 100px;
+        }
+
+        .input-field::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent);
+            color: var(--bg-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .send-button:hover {
+            background: var(--accent-hover);
+        }
+
+        .send-button:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+        }
+
+        .send-button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .viewer-panel {
+                display: none;
+            }
+
+            .sources-panel {
+                width: 220px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .sources-panel {
+                display: none;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">📚</div>
+            <span class="logo-text"><span>ADG</span> Chat</span>
+        </div>
+        <div class="header-center">
+            <div class="notebook-selector">
+                <label>📓</label>
+                <select class="notebook-select" id="notebookSelect" disabled>
+                    <option value="">Đang tải notebooks...</option>
+                </select>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <nav class="nav-links">
+                <a href="/">Trang chủ</a>
+                <a href="/chatbot" class="active">💬 Chat</a>
+                <a href="/sources">📁 Tài liệu</a>
+                <a href="/upload">📤 Upload</a>
+            </nav>
+            <div class="status-badge">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Kết nối...</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Panel 1: Sources List -->
+        <aside class="panel sources-panel" id="sourcesPanel">
+            <div class="panel-header">
+                📄 Tài liệu
+            </div>
+            <div class="panel-content">
+                <div class="source-toggle-all">
+                    <input type="checkbox" id="toggleAllSources" checked>
+                    <label for="toggleAllSources">Chọn tất cả</label>
+                </div>
+                <div id="sourceList">
+                    <div style="color: var(--text-secondary); font-size: 12px; padding: 20px 0; text-align: center;">
+                        Chọn notebook để xem tài liệu
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="resizer" id="resizer1"></div>
+
+        <!-- Panel 2: Source Viewer -->
+        <section class="panel viewer-panel" id="viewerPanel">
+            <div class="panel-header">
+                📖 Xem nội dung
+            </div>
+            <div class="panel-content" id="viewerContent">
+                <div class="viewer-empty">
+                    <div class="viewer-empty-icon">📄</div>
+                    <p>Click vào tài liệu bên trái<br>để xem nội dung</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="resizer" id="resizer2"></div>
+
+        <!-- Panel 3: Chat -->
+        <section class="panel chat-panel" id="chatPanel">
+            <div class="panel-header">
+                💬 Chat AI
+            </div>
+            <div class="messages" id="messages">
+                <div class="welcome">
+                    <div class="welcome-icon">💬</div>
+                    <h2>Xin chào!</h2>
+                    <p>Hỏi bất cứ điều gì về tài liệu trong notebook</p>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea class="input-field" id="messageInput" placeholder="Nhập câu hỏi..." rows="1"></textarea>
+                    <button class="send-button" id="sendButton">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // DOM Elements
+        const notebookSelect = document.getElementById('notebookSelect');
+        const sourceList = document.getElementById('sourceList');
+        const viewerContent = document.getElementById('viewerContent');
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const toggleAllSources = document.getElementById('toggleAllSources');
+
+        // State
+        let currentNotebookId = localStorage.getItem('selectedNotebookId') || '';
+        let sources = [];
+        let selectedSourceIds = [];
+        let selectedSourceForViewer = null;
+
+        // ========================================================================
+        // Resizable Panels
+        // ========================================================================
+        function initResizers() {
+            const resizer1 = document.getElementById('resizer1');
+            const resizer2 = document.getElementById('resizer2');
+            const sourcesPanel = document.getElementById('sourcesPanel');
+            const viewerPanel = document.getElementById('viewerPanel');
+
+            let isResizing = false;
+            let currentResizer = null;
+
+            function startResize(resizer) {
+                isResizing = true;
+                currentResizer = resizer;
+                document.body.style.cursor = 'col-resize';
+                resizer.classList.add('active');
+            }
+
+            function stopResize() {
+                isResizing = false;
+                document.body.style.cursor = '';
+                if (currentResizer) currentResizer.classList.remove('active');
+                currentResizer = null;
+            }
+
+            function resize(e) {
+                if (!isResizing) return;
+
+                if (currentResizer === resizer1) {
+                    const newWidth = e.clientX;
+                    if (newWidth >= 180 && newWidth <= 400) {
+                        sourcesPanel.style.width = newWidth + 'px';
+                    }
+                } else if (currentResizer === resizer2) {
+                    const sourcesWidth = sourcesPanel.offsetWidth;
+                    const newWidth = e.clientX - sourcesWidth - 4;
+                    if (newWidth >= 250 && newWidth <= 600) {
+                        viewerPanel.style.width = newWidth + 'px';
+                    }
+                }
+            }
+
+            resizer1.addEventListener('mousedown', () => startResize(resizer1));
+            resizer2.addEventListener('mousedown', () => startResize(resizer2));
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+        }
+
+        // ========================================================================
+        // API Functions
+        // ========================================================================
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/chat/notebooks`);
+                if (response.ok) {
+                    statusDot.className = 'status-dot';
+                    statusText.textContent = 'Đã kết nối';
+                    return true;
+                }
+            } catch (e) { }
+            statusDot.className = 'status-dot error';
+            statusText.textContent = 'Mất kết nối';
+            return false;
+        }
+
+        async function loadNotebooks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/chat/notebooks`);
+                const data = await response.json();
+
+                notebookSelect.innerHTML = '';
+                if (data.notebooks && data.notebooks.length > 0) {
+                    data.notebooks.forEach(nb => {
+                        const option = document.createElement('option');
+                        option.value = nb.id;
+                        option.textContent = nb.title || 'Untitled';
+                        notebookSelect.appendChild(option);
+                    });
+
+                    notebookSelect.disabled = false;
+
+                    if (currentNotebookId && data.notebooks.find(n => n.id === currentNotebookId)) {
+                        notebookSelect.value = currentNotebookId;
+                    } else {
+                        currentNotebookId = data.notebooks[0].id;
+                        notebookSelect.value = currentNotebookId;
+                    }
+
+                    loadSources(currentNotebookId);
+                } else {
+                    notebookSelect.innerHTML = '<option>Không có notebook</option>';
+                }
+            } catch (e) {
+                notebookSelect.innerHTML = '<option>Lỗi tải notebooks</option>';
+            }
+        }
+
+        async function loadSources(notebookId) {
+            sourceList.innerHTML = '<div style="color: var(--text-secondary); font-size: 12px; padding: 20px 0; text-align: center;">Đang tải...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/chat/sources/${notebookId}`);
+                const data = await response.json();
+
+                sources = data.sources || [];
+                selectedSourceIds = sources.map(s => s.id);
+                renderSources();
+            } catch (e) {
+                sourceList.innerHTML = '<div style="color: var(--error); font-size: 12px; padding: 20px 0; text-align: center;">Lỗi tải tài liệu</div>';
+            }
+        }
+
+        function renderSources() {
+            if (sources.length === 0) {
+                sourceList.innerHTML = '<div style="color: var(--text-secondary); font-size: 12px; padding: 20px 0; text-align: center;">Không có tài liệu</div>';
+                return;
+            }
+
+            sourceList.innerHTML = sources.map(source => `
+                <div class="source-item ${selectedSourceForViewer === source.id ? 'selected' : ''}" 
+                     data-id="${source.id}" onclick="selectSourceForViewer('${source.id}')">
+                    <input type="checkbox" ${selectedSourceIds.includes(source.id) ? 'checked' : ''} 
+                           onclick="event.stopPropagation(); toggleSource('${source.id}')">
+                    <div class="source-info">
+                        <div class="source-title">${source.title || 'Untitled'}</div>
+                        <div class="source-type">${source.type || 'unknown'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleSource(sourceId) {
+            const idx = selectedSourceIds.indexOf(sourceId);
+            if (idx >= 0) {
+                selectedSourceIds.splice(idx, 1);
+            } else {
+                selectedSourceIds.push(sourceId);
+            }
+            toggleAllSources.checked = selectedSourceIds.length === sources.length;
+        }
+
+        async function selectSourceForViewer(sourceId) {
+            selectedSourceForViewer = sourceId;
+            renderSources();
+
+            viewerContent.innerHTML = '<div class="viewer-loading">Đang tải nội dung...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/chat/sources/${currentNotebookId}/${sourceId}/content`);
+                const data = await response.json();
+
+                if (data.content) {
+                    viewerContent.innerHTML = `<div class="viewer-content">${escapeHtml(data.content)}</div>`;
+                } else {
+                    viewerContent.innerHTML = '<div class="viewer-empty"><div class="viewer-empty-icon">📄</div><p>Không có nội dung</p></div>';
+                }
+            } catch (e) {
+                viewerContent.innerHTML = '<div class="viewer-empty" style="color: var(--error);"><p>Lỗi tải nội dung</p></div>';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========================================================================
+        // Chat Functions
+        // ========================================================================
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !currentNotebookId) return;
+
+            // Clear welcome
+            const welcome = messagesContainer.querySelector('.welcome');
+            if (welcome) welcome.remove();
+
+            // Add user message
+            addMessage('user', message);
+            messageInput.value = '';
+            sendButton.disabled = true;
+
+            // Add typing indicator
+            const typingId = addTypingIndicator();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        notebook_id: currentNotebookId,
+                        source_ids: selectedSourceIds.length < sources.length ? selectedSourceIds : null
+                    })
+                });
+
+                removeTypingIndicator(typingId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage('assistant', data.response);
+                } else {
+                    addMessage('assistant', 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.');
+                }
+            } catch (e) {
+                removeTypingIndicator(typingId);
+                addMessage('assistant', 'Không thể kết nối. Vui lòng kiểm tra lại.');
+            }
+
+            sendButton.disabled = false;
+        }
+
+        function addMessage(role, content) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = `
+                <div class="message-avatar">${role === 'user' ? '👤' : '🤖'}</div>
+                <div class="message-content">
+                    <div class="message-role">${role === 'user' ? 'Bạn' : 'AI'}</div>
+                    <div class="message-text">${parseMarkdown(content)}</div>
+                </div>
+            `;
+            messagesContainer.appendChild(div);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addTypingIndicator() {
+            const id = 'typing-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'message assistant';
+            div.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="message-role">AI</div>
+                    <div class="message-text">Đang suy nghĩ...</div>
+                </div>
+            `;
+            messagesContainer.appendChild(div);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return id;
+        }
+
+        function removeTypingIndicator(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // Enhanced markdown parser with table support (copied from chat.html)
+        function parseMarkdown(text) {
+            if (!text) return '';
+
+            let html = text;
+
+            // Parse tables BEFORE escaping HTML
+            // Match table blocks (consecutive lines containing |)
+            const tableRegex = /^(\|[^\n]+\|\n?)+/gm;
+            html = html.replace(tableRegex, (tableBlock) => {
+                const rows = tableBlock.trim().split('\n').filter(r => r.trim());
+                if (rows.length < 1) return tableBlock;
+
+                let tableHtml = '<table class="md-table">';
+                let inBody = false;
+                let headerDone = false;
+
+                rows.forEach((row, index) => {
+                    // Check if this is a separator row (contains only |, -, :, spaces)
+                    const isSeparator = /^\|[\s\-:|]+\|?$/.test(row.trim()) && row.includes('-');
+
+                    if (isSeparator) {
+                        // Skip separator row, but mark header as done
+                        if (!headerDone) {
+                            tableHtml += '</thead>';
+                            headerDone = true;
+                        }
+                        return;
+                    }
+
+                    // Split cells (handle both starting and not starting with |)
+                    let cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
+
+                    if (cells.length === 0) return;
+
+                    // First non-separator row is header
+                    if (!headerDone && index === 0) {
+                        tableHtml += '<thead><tr>';
+                        cells.forEach(cell => {
+                            tableHtml += `<th>${cell}</th>`;
+                        });
+                        tableHtml += '</tr>';
+                    } else {
+                        // Body rows
+                        if (!inBody) {
+                            tableHtml += '<tbody>';
+                            inBody = true;
+                        }
+                        tableHtml += '<tr>';
+                        cells.forEach(cell => {
+                            tableHtml += `<td>${cell}</td>`;
+                        });
+                        tableHtml += '</tr>';
+                    }
+                });
+
+                if (inBody) tableHtml += '</tbody>';
+                tableHtml += '</table>';
+                return tableHtml;
+            });
+
+            // Escape HTML (preserve table tags)
+            html = html
+                .replace(/&(?!amp;|lt;|gt;)/g, '&amp;')
+                .replace(/<(?!\/?(?:table|thead|tbody|tr|th|td|strong|em|code|ul|ol|li|h[1-6]|br|p)[^>]*>)/g, '&lt;');
+
+            // Headers
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+            // Bold and Italic
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+            html = html.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+            html = html.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '<em>$1</em>');
+
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // Bullet lists: * item, - item, • item
+            html = html.replace(/^[\*\-•] (.+)$/gm, '<li class="bullet">$1</li>');
+
+            // Numbered lists: 1. item, 1) item
+            html = html.replace(/^\d+[\.)] (.+)$/gm, '<li class="numbered">$1</li>');
+
+            // Wrap consecutive list items in ul/ol
+            html = html.replace(/(<li class="bullet">.+<\/li>\n?)+/g, '<ul>$&</ul>');
+            html = html.replace(/(<li class="numbered">.+<\/li>\n?)+/g, '<ol>$&</ol>');
+
+            // Paragraphs and line breaks
+            html = html.replace(/\n\n+/g, '</p><p>');
+            html = html.replace(/\n/g, '<br>');
+
+            // Wrap in paragraph
+            html = '<p>' + html + '</p>';
+
+            // Cleanup
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p>(<h[1-6]>)/g, '$1');
+            html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<[uo]l>)/g, '$1');
+            html = html.replace(/(<\/[uo]l>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<table)/g, '$1');
+            html = html.replace(/(<\/table>)<\/p>/g, '$1');
+            html = html.replace(/<br>(<table)/g, '$1');
+            html = html.replace(/(<\/table>)<br>/g, '$1');
+            html = html.replace(/<br>(<[uo]l>)/g, '$1');
+            html = html.replace(/(<\/[uo]l>)<br>/g, '$1');
+
+            return html;
+        }
+
+        // ========================================================================
+        // Event Listeners
+        // ========================================================================
+        notebookSelect.addEventListener('change', (e) => {
+            currentNotebookId = e.target.value;
+            localStorage.setItem('selectedNotebookId', currentNotebookId);
+            loadSources(currentNotebookId);
+            selectedSourceForViewer = null;
+            viewerContent.innerHTML = '<div class="viewer-empty"><div class="viewer-empty-icon">📄</div><p>Click vào tài liệu bên trái<br>để xem nội dung</p></div>';
+        });
+
+        toggleAllSources.addEventListener('change', (e) => {
+            selectedSourceIds = e.target.checked ? sources.map(s => s.id) : [];
+            renderSources();
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // ========================================================================
+        // Initialize
+        // ========================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initResizers();
+            checkHealth();
+            loadNotebooks();
+        });
+    </script>
+</body>
+
+</html>
