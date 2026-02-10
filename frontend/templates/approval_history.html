@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch sử phê duyệt - ADG Marketing Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: #1e293b;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent: #3b82f6;
+            --accent-light: #dbeafe;
+            --success: #22c55e;
+            --success-light: rgba(34, 197, 94, 0.1);
+            --warning: #f59e0b;
+            --warning-light: rgba(245, 158, 11, 0.1);
+            --error: #ef4444;
+            --error-light: rgba(239, 68, 68, 0.1);
+            --border: #e2e8f0;
+            --bg-tertiary: #f1f5f9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: var(--bg-sidebar);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .sidebar-logo .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-logo .logo-text {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .sidebar-logo .logo-text span {
+            color: #818cf8;
+        }
+
+        .sidebar-logo .logo-sub {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 2px;
+        }
+
+        nav {
+            flex: 1;
+            padding: 1rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.4);
+            padding: 0.75rem 0.75rem 0.35rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0.75rem;
+            border-radius: 0.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(99, 102, 241, 0.3);
+            color: white;
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .user-email {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .main-content {
+            margin-left: 220px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .page-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .filter-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead tr {
+            background: var(--bg-tertiary);
+        }
+
+        th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.85rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.1s;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-pending {
+            color: var(--warning);
+            background: var(--warning-light);
+        }
+
+        .badge-approved {
+            color: var(--success);
+            background: var(--success-light);
+        }
+
+        .badge-rejected {
+            color: var(--error);
+            background: var(--error-light);
+        }
+
+        .badge-cancelled {
+            color: #6b7280;
+            background: rgba(107, 114, 128, 0.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem !important;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .review-note {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="sidebar-logo">
+                <div class="logo-icon">📚</div>
+                <div>
+                    <div class="logo-text"><span>ADG</span> Marketing Hub</div>
+                    <div class="logo-sub">Knowledge Management</div>
+                </div>
+            </a>
+        </div>
+
+        <nav>
+            <div class="nav-section-title">MENU CHÍNH</div>
+            <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
+            <a href="/chatbot" class="nav-item"><span>💬</span> Chat AI</a>
+            <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
+            <a href="/upload" class="nav-item" id="uploadNavLink" style="display:none;"><span>📤</span> Upload</a>
+            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
+            <a href="/approval-history" class="nav-item active"><span>📋</span> Lịch sử duyệt</a>
+
+            <div class="nav-section-title">QUẢN TRỊ</div>
+            <a href="/admin-dashboard" class="nav-item" id="adminNavLink" style="display:none;"><span>⚙️</span> Admin
+                Panel</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">AD</div>
+                <div class="user-details">
+                    <div class="user-name" id="userName">Guest</div>
+                    <div class="user-email" id="userEmail">Not signed in</div>
+                </div>
+            </div>
+            <a href="javascript:void(0)" onclick="logout()"
+                style="display:block;margin-top:0.5rem;color:rgba(255,255,255,0.5);font-size:0.75rem;text-decoration:none;text-align:center;">🚪
+                Đăng xuất</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">📋 Lịch sử phê duyệt</h1>
+                <p class="page-subtitle">Theo dõi trạng thái yêu cầu upload và phê duyệt tài liệu</p>
+            </div>
+            <button onclick="loadData()" class="filter-btn" style="font-size:0.85rem;">🔄 Làm mới</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal" style="color:var(--accent);">0</div>
+                <div class="stat-label">Tổng yêu cầu</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statPending" style="color:var(--warning);">0</div>
+                <div class="stat-label">⏳ Chờ duyệt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statApproved" style="color:var(--success);">0</div>
+                <div class="stat-label">✅ Đã duyệt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statRejected" style="color:var(--error);">0</div>
+                <div class="stat-label">❌ Từ chối</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">Tất cả</button>
+            <button class="filter-btn" data-filter="pending">⏳ Chờ duyệt</button>
+            <button class="filter-btn" data-filter="approved">✅ Đã duyệt</button>
+            <button class="filter-btn" data-filter="rejected">❌ Từ chối</button>
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Thư mục đích</th>
+                        <th>Người gửi</th>
+                        <th>Trạng thái</th>
+                        <th>Người duyệt</th>
+                        <th>Ngày gửi</th>
+                        <th>Ngày duyệt</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable">
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-state-icon">⏳</div>
+                            <div>Đang tải...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        let allRequests = [];
+        let currentFilter = 'all';
+        let isAdmin = false;
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderTable();
+            });
+        });
+
+        async function checkAuth() {
+            try {
+                const resp = await fetch('/api/v1/rbac/check');
+                const data = await resp.json();
+                if (data.authenticated) {
+                    const email = data.email || '';
+                    const roles = data.roles || [];
+                    document.getElementById('userName').textContent = email.split('@')[0];
+                    document.getElementById('userEmail').textContent = email;
+                    document.getElementById('userAvatar').textContent = email.substring(0, 2).toUpperCase();
+                    isAdmin = roles.includes('admin') || roles.includes('super_admin') || roles.includes('approver');
+
+                    // Show upload link for editor+ roles
+                    if (roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
+                        document.getElementById('uploadNavLink').style.display = 'flex';
+                    }
+                    // Show admin link for admin/super_admin
+                    if (roles.includes('super_admin') || roles.includes('admin')) {
+                        document.getElementById('adminNavLink').style.display = 'flex';
+                    }
+                }
+            } catch (e) { console.log('Auth check failed:', e); }
+        }
+
+        async function loadData() {
+            allRequests = [];
+
+            // Load my own requests (all roles)
+            try {
+                const res = await fetch('/api/v1/approvals/my-requests?limit=200');
+                if (res.ok) {
+                    const data = await res.json();
+                    for (const r of (data.requests || [])) {
+                        r._source = 'mine';
+                        allRequests.push(r);
+                    }
+                }
+            } catch (e) { console.error(e); }
+
+            // If admin/approver, also load full history (includes other users' requests)
+            if (isAdmin) {
+                try {
+                    const res2 = await fetch('/api/v1/approvals/history?limit=200');
+                    if (res2.ok) {
+                        const data2 = await res2.json();
+                        const existingIds = new Set(allRequests.map(r => r.id));
+                        for (const r of (data2.history || [])) {
+                            if (!existingIds.has(r.id)) {
+                                r._source = 'all';
+                                allRequests.push(r);
+                            }
+                        }
+                    }
+                } catch (e) { console.error(e); }
+
+                // Also load pending for admin
+                try {
+                    const res3 = await fetch('/api/v1/approvals/pending');
+                    if (res3.ok) {
+                        const data3 = await res3.json();
+                        const existingIds = new Set(allRequests.map(r => r.id));
+                        for (const r of (data3.pending || [])) {
+                            if (!existingIds.has(r.id)) {
+                                r._source = 'all';
+                                allRequests.push(r);
+                            }
+                        }
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            // Sort by created_at desc
+            allRequests.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            updateStats();
+            renderTable();
+        }
+
+        function updateStats() {
+            const total = allRequests.length;
+            const pending = allRequests.filter(r => r.status === 'pending').length;
+            const approved = allRequests.filter(r => r.status === 'approved').length;
+            const rejected = allRequests.filter(r => r.status === 'rejected').length;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statPending').textContent = pending;
+            document.getElementById('statApproved').textContent = approved;
+            document.getElementById('statRejected').textContent = rejected;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('historyTable');
+            let items = allRequests;
+
+            if (currentFilter !== 'all') {
+                items = items.filter(r => r.status === currentFilter);
+            }
+
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-icon">📋</div><div>Chưa có yêu cầu nào</div></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = items.map(r => {
+                const extra = r.extra_data || {};
+                const requesterEmail = r.requester ? r.requester.email : (r._source === 'mine' ? 'Tôi' : '—');
+                const statusBadge = {
+                    pending: '<span class="badge badge-pending">⏳ Chờ duyệt</span>',
+                    approved: '<span class="badge badge-approved">✅ Đã duyệt</span>',
+                    rejected: '<span class="badge badge-rejected">❌ Từ chối</span>',
+                    cancelled: '<span class="badge badge-cancelled">⏹ Đã hủy</span>',
+                }[r.status] || r.status;
+
+                return `<tr>
+                    <td>📄 ${extra.file_name || '—'}</td>
+                    <td>📁 ${extra.target_folder_name || '—'}</td>
+                    <td>${requesterEmail}</td>
+                    <td>${statusBadge}${r.review_note ? '<div class="review-note">💬 ' + r.review_note + '</div>' : ''}</td>
+                    <td>${r.reviewer ? r.reviewer.email : '—'}</td>
+                    <td>${new Date(r.created_at).toLocaleString('vi')}</td>
+                    <td>${r.reviewed_at ? new Date(r.reviewed_at).toLocaleString('vi') : '—'}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function logout() {
+            await fetch('/api/v1/rbac/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        // Init
+        (async () => {
+            await checkAuth();
+            await loadData();
+        })();
+    </script>
+</body>
+
+</html>

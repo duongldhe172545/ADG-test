@@ -234,7 +234,7 @@ async def create_folder(
     Create a new folder on Google Drive (admin only).
     Also registers as a resource in the RBAC system.
     """
-    from backend.services.gdrive_service import get_gdrive_service
+    from backend.api.v1.documents import get_gdrive_service
     from backend.db.models import Resource
     from backend.config import settings
     

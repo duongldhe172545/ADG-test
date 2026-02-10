@@ -577,8 +577,9 @@
             <a href="/">Trang chủ</a>
             <a href="/chatbot">💬 Chat</a>
             <a href="/sources" class="active">📁 Tài liệu</a>
-            <a href="/upload">📤 Upload</a>
+            <a href="/upload" id="uploadNavLink" style="display:none;">📤 Upload</a>
             <a href="/dashboard">📊 Dashboard</a>
+            <a href="/approval-history">📋 Lịch sử duyệt</a>
             <a href="/admin-dashboard" id="adminNavLink" style="display:none;">⚙️ Admin</a>
         </nav>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -743,6 +744,10 @@
                     document.getElementById('userAvatar').textContent = (data.email || '?').substring(0, 2).toUpperCase();
                     loginBtn.style.display = 'none';
 
+                    // Show upload link for editor+ roles
+                    if (data.roles && data.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
+                        document.getElementById('uploadNavLink').style.display = '';
+                    }
                     // Show admin link for admin/super_admin
                     if (data.roles && (data.roles.includes('super_admin') || data.roles.includes('admin'))) {
                         document.getElementById('adminNavLink').style.display = '';

@@ -32,6 +32,7 @@ PUBLIC_PAGES = {"/", "/login", "/docs", "/redoc", "/openapi.json"}
 PAGE_ROLES = {
     "/admin-dashboard": ["admin", "super_admin"],
     "/upload":          ["editor", "admin", "super_admin"],
+    "/approval-history":["viewer", "editor", "approver", "admin", "super_admin"],
     "/dashboard":       ["viewer", "editor", "approver", "admin", "super_admin"],
     "/sources":         ["viewer", "editor", "approver", "admin", "super_admin"],
     "/chatbot":         ["viewer", "editor", "approver", "admin", "super_admin"],
@@ -250,6 +251,20 @@ async def admin_dashboard_page():
         return FileResponse(template_path)
     
     return HTMLResponse("<h1>ADG KMS - Admin Dashboard not found</h1>")
+
+
+@app.get("/approval-history", response_class=HTMLResponse)
+async def approval_history_page():
+    """Serve the approval history page"""
+    template_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "frontend", "templates", "approval_history.html"
+    )
+    
+    if os.path.exists(template_path):
+        return FileResponse(template_path)
+    
+    return HTMLResponse("<h1>ADG KMS - Approval History not found</h1>")
 
 
 # =============================================================================

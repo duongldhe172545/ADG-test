@@ -132,7 +132,7 @@ async def list_pending(
             "action_type": req.action_type,
             "status": req.status,
             "extra_data": req.extra_data or {},
-            "created_at": req.created_at.isoformat(),
+            "created_at": req.created_at.isoformat() + "Z",
         })
     
     return {"pending": items, "count": len(items)}
@@ -176,11 +176,52 @@ async def list_history(
             "extra_data": req.extra_data or {},
             "reviewer": reviewer_info,
             "review_note": req.review_note,
-            "created_at": req.created_at.isoformat(),
-            "reviewed_at": req.reviewed_at.isoformat() if req.reviewed_at else None,
+            "created_at": req.created_at.isoformat() + "Z",
+            "reviewed_at": (req.reviewed_at.isoformat() + "Z") if req.reviewed_at else None,
         })
     
     return {"history": items}
+
+
+@router.get("/my-requests")
+async def list_my_requests(
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List current user's own approval requests (for editors to track status)"""
+    from uuid import UUID as PyUUID
+    user_id = PyUUID(current_user["id"])
+    
+    result = await db.execute(
+        select(ApprovalRequest)
+        .where(ApprovalRequest.requester_id == user_id)
+        .order_by(ApprovalRequest.created_at.desc())
+        .limit(limit)
+    )
+    requests = result.scalars().all()
+    
+    items = []
+    for req in requests:
+        reviewer_info = None
+        if req.reviewer_id:
+            reviewer_result = await db.execute(select(User).where(User.id == req.reviewer_id))
+            reviewer = reviewer_result.scalars().first()
+            if reviewer:
+                reviewer_info = {"email": reviewer.email, "name": reviewer.name}
+        
+        items.append({
+            "id": str(req.id),
+            "action_type": req.action_type,
+            "status": req.status,
+            "extra_data": req.extra_data or {},
+            "reviewer": reviewer_info,
+            "review_note": req.review_note,
+            "created_at": req.created_at.isoformat() + "Z",
+            "reviewed_at": (req.reviewed_at.isoformat() + "Z") if req.reviewed_at else None,
+        })
+    
+    return {"requests": items}
 
 
 # =============================================================================
@@ -222,12 +263,82 @@ async def approve_request(
         
         pending_folder_id = settings.GDRIVE_PENDING_FOLDER_ID
         
-        gdrive.service.files().update(
+        move_result = gdrive.service.files().update(
             fileId=file_id,
             addParents=target_folder_id,
             removeParents=pending_folder_id,
-            fields="id, parents"
+            fields="id, parents, name, mimeType, webViewLink"
         ).execute()
+        
+        file_name = move_result.get("name", extra_data.get("file_name", ""))
+        file_mime = move_result.get("mimeType", "application/pdf")
+        
+        # Share file publicly so NotebookLM can access it
+        try:
+            gdrive.share_file_public(file_id)
+            print(f"🔓 Shared file publicly: {file_id}")
+        except Exception as share_err:
+            print(f"⚠️ Could not share file publicly: {share_err}")
+        
+        # Sync to NotebookLM (matching direct upload logic)
+        notebook_sync_result = None
+        try:
+            from backend.config.folder_notebook_mapping import FOLDER_NOTEBOOK_MAPPING
+            from backend.services.notebooklm_service import get_notebooklm_service
+            
+            print(f"🔍 [Approval] Checking NotebookLM sync for folder: {target_folder_id}")
+            
+            # Check if target folder is mapped
+            notebook_id = FOLDER_NOTEBOOK_MAPPING.get(target_folder_id)
+            
+            # If not directly mapped, try parent folders
+            if not notebook_id:
+                try:
+                    folder_info = gdrive.service.files().get(
+                        fileId=target_folder_id,
+                        fields='parents'
+                    ).execute()
+                    
+                    for parent_id in folder_info.get('parents', []):
+                        notebook_id = FOLDER_NOTEBOOK_MAPPING.get(parent_id)
+                        if notebook_id:
+                            print(f"✅ Found parent mapping: {parent_id} -> {notebook_id}")
+                            break
+                        
+                        # Also check grandparent (2 levels deep)
+                        try:
+                            gp_info = gdrive.service.files().get(
+                                fileId=parent_id,
+                                fields='parents'
+                            ).execute()
+                            for gp_id in gp_info.get('parents', []):
+                                notebook_id = FOLDER_NOTEBOOK_MAPPING.get(gp_id)
+                                if notebook_id:
+                                    print(f"✅ Found grandparent mapping: {gp_id} -> {notebook_id}")
+                                    break
+                            if notebook_id:
+                                break
+                        except Exception:
+                            pass
+                except Exception as e:
+                    print(f"⚠️ Could not traverse parent folders: {e}")
+            
+            if notebook_id and file_id:
+                print(f"🚀 [Approval] Syncing to notebook: {notebook_id}")
+                notebooklm = get_notebooklm_service()
+                notebook_sync_result = await notebooklm.add_drive_source(
+                    notebook_id=notebook_id,
+                    document_id=file_id,
+                    title=file_name,
+                    mime_type=file_mime
+                )
+                print(f"📚 [Approval] NotebookLM sync: {notebook_sync_result}")
+            else:
+                print(f"⏭️ No mapping found for folder {target_folder_id}, skipping NotebookLM sync")
+        except ImportError as ie:
+            print(f"⚠️ Folder mapping not configured: {ie}")
+        except Exception as sync_error:
+            print(f"⚠️ NotebookLM sync error (non-blocking): {sync_error}")
         
         # Update approval record
         approval.status = "approved"
@@ -239,8 +350,9 @@ async def approve_request(
         
         return {
             "success": True,
-            "message": f"File '{extra_data.get('file_name', '')}' approved and moved",
+            "message": f"File '{file_name}' approved, moved, and synced to NotebookLM",
             "file_id": file_id,
+            "notebook_sync": notebook_sync_result,
         }
         
     except Exception as e:

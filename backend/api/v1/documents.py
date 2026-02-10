@@ -97,30 +97,53 @@ async def list_folders(depth: int = 5, parent_id: str = None):
             }
         
         # Otherwise, build the full folder tree from root
+        # OPTIMIZED: Single API call to get ALL folders, then build tree in-memory
+        # Instead of N recursive API calls (1 per folder), we do 1 call total
+        
+        all_folders = []
+        page_token = None
+        
+        while True:
+            results = gdrive.service.files().list(
+                q="mimeType='application/vnd.google-apps.folder' and trashed=false",
+                fields="nextPageToken, files(id, name, parents)",
+                pageSize=1000,
+                orderBy="name",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                pageToken=page_token,
+            ).execute()
+            
+            all_folders.extend(results.get("files", []))
+            page_token = results.get("nextPageToken")
+            if not page_token:
+                break
+        
+        # Build parent→children index
+        children_map: Dict[str, list] = {}
+        for folder in all_folders:
+            for parent in folder.get("parents", []):
+                children_map.setdefault(parent, []).append(folder)
+        
+        # Recursively build tree starting from root
         max_depth = min(depth, 10)
         
-        def build_folder_tree(folder_id: str, current_depth: int = 0) -> List[Dict[str, Any]]:
-            """Recursively build folder tree with limited depth"""
+        def build_tree(folder_id: str, current_depth: int = 0) -> List[Dict[str, Any]]:
             if current_depth >= max_depth:
                 return []
-            
-            folders = gdrive.list_folders(folder_id)
+            kids = children_map.get(folder_id, [])
             result = []
-            
-            for folder in folders:
-                # Always try to load children if we haven't reached max depth
-                children = build_folder_tree(folder['id'], current_depth + 1)
-                item = {
-                    "id": folder['id'],
-                    "name": folder['name'],
+            for f in sorted(kids, key=lambda x: x["name"]):
+                children = build_tree(f["id"], current_depth + 1)
+                result.append({
+                    "id": f["id"],
+                    "name": f["name"],
                     "children": children,
-                    "hasChildren": len(children) > 0 or current_depth >= max_depth - 1
-                }
-                result.append(item)
-            
+                    "hasChildren": len(children) > 0 or current_depth >= max_depth - 1,
+                })
             return result
         
-        folders = build_folder_tree(root_folder_id)
+        folders = build_tree(root_folder_id)
         
         return {
             "root_id": root_folder_id,

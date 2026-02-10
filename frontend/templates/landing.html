@@ -309,8 +309,9 @@
             <a href="/" class="active">Trang chủ</a>
             <a href="/chatbot">💬 Chat AI</a>
             <a href="/sources">📁 Tài liệu</a>
-            <a href="/upload">📤 Upload</a>
+            <a href="/upload" id="uploadNavLink" style="display:none;">📤 Upload</a>
             <a href="/dashboard">📊 Dashboard</a>
+            <a href="/approval-history">📋 Lịch sử duyệt</a>
             <a href="/admin-dashboard" id="adminNavLink" style="display:none;">⚙️ Admin</a>
         </nav>
         <div style="display:flex;align-items:center;gap:12px;">
@@ -399,6 +400,9 @@
                     const userNav = document.getElementById('userNav');
                     userNav.style.display = 'flex';
                     document.getElementById('userAvatar').textContent = (data.email || '?').substring(0, 2).toUpperCase();
+                    if (data.roles && data.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
+                        document.getElementById('uploadNavLink').style.display = '';
+                    }
                     if (data.roles && (data.roles.includes('super_admin') || data.roles.includes('admin'))) {
                         document.getElementById('adminNavLink').style.display = '';
                     }

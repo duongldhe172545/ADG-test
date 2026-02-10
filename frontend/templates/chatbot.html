@@ -682,8 +682,9 @@
                 <a href="/">Trang chủ</a>
                 <a href="/chatbot" class="active">💬 Chat</a>
                 <a href="/sources">📁 Tài liệu</a>
-                <a href="/upload">📤 Upload</a>
+                <a href="/upload" id="uploadNavLink" style="display:none;">📤 Upload</a>
                 <a href="/dashboard">📊 Dashboard</a>
+                <a href="/approval-history">📋 Lịch sử duyệt</a>
                 <a href="/admin-dashboard" id="adminNavLink" style="display:none;">⚙️ Admin</a>
             </nav>
             <div class="status-badge">
@@ -1183,6 +1184,9 @@
                 const resp = await fetch('/api/v1/rbac/check');
                 const data = await resp.json();
                 if (data.authenticated && data.roles) {
+                    if (data.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
+                        document.getElementById('uploadNavLink').style.display = '';
+                    }
                     if (data.roles.includes('super_admin') || data.roles.includes('admin')) {
                         document.getElementById('adminNavLink').style.display = '';
                     }
