@@ -52,7 +52,7 @@ class Settings(BaseSettings):
         description="OAuth callback URL"
     )
     OAUTH_SCOPES: str = Field(
-        default="https://www.googleapis.com/auth/drive",
+        default="https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/userinfo.profile",
         description="OAuth scopes to request (comma-separated)"
     )
     
@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     GDRIVE_SERVICE_ACCOUNT_FILE: Optional[str] = Field(
         default=None,
         description="Path to service account JSON (optional, for fallback)"
+    )
+    GDRIVE_PENDING_FOLDER_ID: str = Field(
+        default="",
+        description="Folder ID for pending uploads (awaiting approval)"
     )
     
     # ==========================================================================
@@ -101,11 +105,24 @@ class Settings(BaseSettings):
     )
     
     # ==========================================================================
-    # Database Settings (Future)
+    # Database Settings
     # ==========================================================================
     DATABASE_URL: Optional[str] = Field(
         default=None,
-        description="Database connection URL"
+        description="PostgreSQL connection URL (postgresql://user:pass@host:port/db)"
+    )
+    
+    # ==========================================================================
+    # JWT Settings
+    # ==========================================================================
+    JWT_SECRET_KEY: str = Field(
+        default="change-me-in-production-jwt-secret",
+        description="Secret key for JWT tokens"
+    )
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = Field(
+        default=1440,  # 24 hours
+        description="JWT token expiration in minutes"
     )
     
     # ==========================================================================

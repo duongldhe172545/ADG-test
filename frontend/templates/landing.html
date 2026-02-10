@@ -311,7 +311,20 @@
             <a href="/sources">📁 Tài liệu</a>
             <a href="/upload">📤 Upload</a>
             <a href="/dashboard">📊 Dashboard</a>
+            <a href="/admin-dashboard" id="adminNavLink" style="display:none;">⚙️ Admin</a>
         </nav>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <a href="/login" id="loginBtn" class="btn"
+                style="padding:8px 16px;font-size:13px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border);display:none;">🔐
+                Đăng nhập</a>
+            <div id="userNav" style="display:none;align-items:center;gap:8px;">
+                <div id="userAvatar"
+                    style="width:32px;height:32px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:600;">
+                </div>
+                <a href="javascript:logout()"
+                    style="color:var(--text-secondary);font-size:12px;text-decoration:none;">Đăng xuất</a>
+            </div>
+        </div>
     </header>
 
     <main class="hero">
@@ -375,6 +388,33 @@
     <footer class="footer">
         <p>© 2026 ADG Marketing Knowledge Management System • Phiên bản 1.0</p>
     </footer>
+
+    <script>
+        async function checkAuth() {
+            try {
+                const resp = await fetch('/api/v1/rbac/check');
+                const data = await resp.json();
+                if (data.authenticated) {
+                    document.getElementById('loginBtn').style.display = 'none';
+                    const userNav = document.getElementById('userNav');
+                    userNav.style.display = 'flex';
+                    document.getElementById('userAvatar').textContent = (data.email || '?').substring(0, 2).toUpperCase();
+                    if (data.roles && (data.roles.includes('super_admin') || data.roles.includes('admin'))) {
+                        document.getElementById('adminNavLink').style.display = '';
+                    }
+                } else {
+                    document.getElementById('loginBtn').style.display = '';
+                }
+            } catch (e) {
+                document.getElementById('loginBtn').style.display = '';
+            }
+        }
+        async function logout() {
+            await fetch('/api/v1/rbac/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+        checkAuth();
+    </script>
 </body>
 
 </html>

@@ -752,29 +752,27 @@
         </div>
 
         <nav class="sidebar-nav">
-            <a href="/dashboard" class="nav-item">
-                <span>🏠</span> Dashboard
-            </a>
-            <a href="/sources" class="nav-item">
-                <span>📄</span> Sources
-            </a>
-            <a href="/" class="nav-item">
-                <span>💬</span> Chat
-            </a>
-            <a href="/upload" class="nav-item active">
-                <span>📤</span> Upload
-            </a>
+            <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
+            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
+            <a href="/chatbot" class="nav-item"><span>💬</span> Chat AI</a>
+            <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
+            <a href="/upload" class="nav-item active"><span>📤</span> Upload</a>
+            <a href="/admin-dashboard" class="nav-item" id="adminNavLink" style="display:none;"><span>⚙️</span> Admin
+                Panel</a>
 
         </nav>
 
         <div class="sidebar-footer">
             <div class="user-info">
-                <div class="user-avatar">AD</div>
+                <div class="user-avatar" id="userAvatar">AD</div>
                 <div class="user-details">
                     <div class="user-name" id="userName">Guest</div>
                     <div class="user-email" id="userEmail">Not signed in</div>
                 </div>
             </div>
+            <a href="javascript:void(0)" onclick="logoutRBAC()"
+                style="display:block;margin-top:0.5rem;color:rgba(255,255,255,0.5);font-size:0.75rem;text-decoration:none;text-align:center;">🚪
+                Đăng xuất</a>
         </div>
     </aside>
 
@@ -881,61 +879,72 @@
         const authIcon = document.getElementById('authIcon');
         const authText = document.getElementById('authText');
         const loginBtn = document.getElementById('loginBtn');
-        const notebooksList = document.getElementById('notebooksList');
+
 
         let selectedFiles = [];
         let selectedFolderId = '';
         let isAuthenticated = false;
+        let userRoles = [];
         let notebooks = [];
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             checkAuthStatus();
             loadFolders();
-            loadNotebooks();
             setupDragDrop();
         });
 
-        // Check authentication
+        // Check authentication via RBAC endpoint (JWT-based)
         async function checkAuthStatus() {
             try {
-                const response = await fetch(`${API_BASE}/api/v1/auth/status`);
+                const response = await fetch('/api/v1/rbac/check');
                 const data = await response.json();
 
                 if (data.authenticated) {
                     isAuthenticated = true;
-                    // Hide auth status when authenticated - clean header
+                    userRoles = data.roles || [];
+                    const email = data.email || '';
+
+                    // Update sidebar user info
                     authStatus.style.display = 'none';
                     loginBtn.style.display = 'none';
-                    document.getElementById('userName').textContent = data.email?.split('@')[0] || 'User';
-                    document.getElementById('userEmail').textContent = data.email || '';
+                    document.getElementById('userName').textContent = email.split('@')[0] || 'User';
+                    document.getElementById('userEmail').textContent = email;
+                    document.getElementById('userAvatar').textContent = email.substring(0, 2).toUpperCase();
+
+                    // Show admin link for admin/super_admin
+                    if (userRoles.includes('super_admin') || userRoles.includes('admin')) {
+                        document.getElementById('adminNavLink').style.display = 'flex';
+                    }
                 } else {
                     isAuthenticated = false;
+                    userRoles = [];
                     authStatus.style.display = 'flex';
                     authStatus.className = 'auth-status unauthenticated';
                     authIcon.textContent = '⚠️';
-                    authText.textContent = 'Not signed in';
+                    authText.textContent = 'Chưa đăng nhập';
                     loginBtn.style.display = 'flex';
                     document.getElementById('userName').textContent = 'Guest';
-                    document.getElementById('userEmail').textContent = 'Not signed in';
+                    document.getElementById('userEmail').textContent = 'Chưa đăng nhập';
                 }
 
                 updateUploadButton();
             } catch (e) {
                 isAuthenticated = false;
+                userRoles = [];
                 authStatus.style.display = 'flex';
                 authStatus.className = 'auth-status unauthenticated';
                 authIcon.textContent = '❌';
-                authText.textContent = 'Auth error';
+                authText.textContent = 'Lỗi xác thực';
                 loginBtn.style.display = 'flex';
                 document.getElementById('userName').textContent = 'Guest';
-                document.getElementById('userEmail').textContent = 'Not signed in';
+                document.getElementById('userEmail').textContent = 'Chưa đăng nhập';
             }
         }
 
         // Login
         loginBtn.addEventListener('click', () => {
-            window.location.href = `${API_BASE}/api/v1/auth/login`;
+            window.location.href = '/login';
         });
 
         // Load folders
@@ -1016,11 +1025,8 @@
                     return item;
                 }
 
-                // Add root folder first
-                if (data.root_id) {
-                    const rootItem = createTreeItem({ id: data.root_id, name: 'Root Folder', children: data.folders }, true);
-                    folderTree.appendChild(rootItem);
-                } else if (data.folders) {
+                // Show folder children directly (no Root Folder wrapper)
+                if (data.folders) {
                     for (const folder of data.folders) {
                         folderTree.appendChild(createTreeItem(folder, true));
                     }
@@ -1030,29 +1036,7 @@
             }
         }
         // Load notebooks
-        async function loadNotebooks() {
-            try {
-                const response = await fetch(`${API_BASE}/api/v1/chat/notebooks`);
-                const data = await response.json();
 
-                notebooks = data.notebooks || [];
-
-                if (notebooks.length === 0) {
-                    notebooksList.innerHTML = '<div style="text-align: center; padding: 1rem; color: var(--text-secondary);">No notebooks found</div>';
-                    return;
-                }
-
-                notebooksList.innerHTML = notebooks.map(nb => `
-                    <label class="notebook-item">
-                        <input type="checkbox" value="${nb.id}" class="notebook-checkbox">
-                        <span class="notebook-name">${nb.title || 'Untitled'}</span>
-                        <span class="notebook-sources">${nb.source_count || 0} sources</span>
-                    </label>
-                `).join('');
-            } catch (e) {
-                notebooksList.innerHTML = '<div style="color: var(--error);">Failed to load notebooks</div>';
-            }
-        }
 
         // Drag and drop
         function setupDragDrop() {
@@ -1149,7 +1133,12 @@
             uploadBtn.disabled = !canUpload;
         }
 
-        // Upload
+        // Check if user is admin
+        function isAdmin() {
+            return userRoles.includes('super_admin') || userRoles.includes('admin');
+        }
+
+        // Upload - role-based routing
         uploadBtn.addEventListener('click', async () => {
             if (!selectedFiles.length || !selectedFolderId) return;
 
@@ -1157,37 +1146,56 @@
             uploadProgress.className = 'upload-progress active';
             uploadResult.className = 'upload-result';
 
+            const useApproval = !isAdmin(); // Non-admins go through approval
             let successCount = 0;
             let errorCount = 0;
             const results = [];
 
             for (let i = 0; i < selectedFiles.length; i++) {
                 const file = selectedFiles[i];
-                progressText.textContent = `Uploading ${file.name}... (${i + 1}/${selectedFiles.length})`;
+                const action = useApproval ? 'Gửi duyệt' : 'Uploading';
+                progressText.textContent = `${action} ${file.name}... (${i + 1}/${selectedFiles.length})`;
                 progressFill.style.width = `${((i + 0.5) / selectedFiles.length) * 100}%`;
 
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
-                    formData.append('folder_id', selectedFolderId);
 
-                    // Get selected notebooks
-                    const selectedNotebooks = Array.from(
-                        document.querySelectorAll('.notebook-checkbox:checked')
-                    ).map(cb => cb.value);
+                    let endpoint;
+                    if (useApproval) {
+                        // Non-admin: submit for approval
+                        endpoint = '/api/v1/approvals/submit';
+                        formData.append('target_folder_id', selectedFolderId);
+                        // Try to get folder name from selected option
+                        const folderSelect = document.getElementById('folderSelect');
+                        const selectedOption = folderSelect?.options?.[folderSelect.selectedIndex];
+                        formData.append('target_folder_name', selectedOption?.textContent?.trim() || '');
+                    } else {
+                        // Admin: direct upload
+                        endpoint = '/api/v1/documents/upload';
+                        formData.append('folder_id', selectedFolderId);
 
-                    if (selectedNotebooks.length > 0) {
-                        formData.append('notebook_ids', selectedNotebooks.join(','));
+                        // Get selected notebooks
+                        const selectedNotebooks = Array.from(
+                            document.querySelectorAll('.notebook-checkbox:checked')
+                        ).map(cb => cb.value);
+                        if (selectedNotebooks.length > 0) {
+                            formData.append('notebook_ids', selectedNotebooks.join(','));
+                        }
                     }
 
-                    const response = await fetch(`${API_BASE}/api/v1/documents/upload`, {
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         body: formData
                     });
 
                     if (response.ok) {
                         const data = await response.json();
-                        results.push({ name: file.name, success: true, link: data.webViewLink });
+                        if (useApproval) {
+                            results.push({ name: file.name, success: true, pending: true });
+                        } else {
+                            results.push({ name: file.name, success: true, link: data.webViewLink });
+                        }
                         successCount++;
                     } else {
                         const err = await response.json();
@@ -1201,24 +1209,32 @@
             }
 
             progressFill.style.width = '100%';
-            progressText.textContent = 'Complete!';
+            progressText.textContent = 'Hoàn tất!';
 
             // Show result
             setTimeout(() => {
                 uploadProgress.className = 'upload-progress';
 
                 if (errorCount === 0) {
-                    uploadResult.className = 'upload-result success';
-                    uploadResult.innerHTML = `
-                        <div class="result-title">✅ Upload Successful!</div>
-                        <div class="result-text">${successCount} file${successCount > 1 ? 's' : ''} uploaded to Google Drive.</div>
-                        ${results.filter(r => r.link).map(r => `<a href="${r.link}" target="_blank" class="result-link">${r.name}</a>`).join('<br>')}
-                    `;
+                    if (useApproval) {
+                        uploadResult.className = 'upload-result success';
+                        uploadResult.innerHTML = `
+                            <div class="result-title">📋 Đã gửi yêu cầu duyệt!</div>
+                            <div class="result-text">${successCount} file đang chờ admin phê duyệt.</div>
+                        `;
+                    } else {
+                        uploadResult.className = 'upload-result success';
+                        uploadResult.innerHTML = `
+                            <div class="result-title">✅ Upload thành công!</div>
+                            <div class="result-text">${successCount} file đã upload lên Google Drive.</div>
+                            ${results.filter(r => r.link).map(r => `<a href="${r.link}" target="_blank" class="result-link">${r.name}</a>`).join('<br>')}
+                        `;
+                    }
                 } else {
                     uploadResult.className = 'upload-result error';
                     uploadResult.innerHTML = `
-                        <div class="result-title">⚠️ Upload completed with errors</div>
-                        <div class="result-text">${successCount} succeeded, ${errorCount} failed.</div>
+                        <div class="result-title">⚠️ Upload có lỗi</div>
+                        <div class="result-text">${successCount} thành công, ${errorCount} thất bại.</div>
                     `;
                 }
 
@@ -1232,6 +1248,12 @@
                 updateUploadButton();
             }, 500);
         });
+
+        // Logout
+        async function logoutRBAC() {
+            await fetch('/api/v1/rbac/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
     </script>
 </body>
 

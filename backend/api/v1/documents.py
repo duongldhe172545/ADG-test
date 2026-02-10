@@ -60,14 +60,16 @@ def get_gdrive_service_for_read():
 
 
 @router.get("/folders")
-async def list_folders(depth: int = 5):
+async def list_folders(depth: int = 5, parent_id: str = None):
     """
     List folder structure from Google Drive.
     
     Args:
         depth: Maximum folder depth to load (default 5 for comprehensive loading)
+        parent_id: Optional parent folder ID - if provided, returns contents (files + folders) of that folder
     
     Returns a tree structure of folders for the upload destination selector.
+    When parent_id is provided, returns items (files + folders) in that folder.
     """
     gdrive = get_gdrive_service_for_read()
     
@@ -84,16 +86,25 @@ async def list_folders(depth: int = 5):
             detail="GDRIVE_ROOT_FOLDER_ID not configured"
         )
     
-    # Allow deeper nesting for full folder tree
-    max_depth = min(depth, 10)
-    
     try:
-        def build_folder_tree(parent_id: str, current_depth: int = 0) -> List[Dict[str, Any]]:
+        # If parent_id is provided, return files and folders in that parent (lazy loading mode)
+        if parent_id:
+            items = gdrive.list_files(parent_id)  # Returns both files and folders
+            return {
+                "parent_id": parent_id,
+                "items": items,
+                "folders": [item for item in items if item.get('mimeType') == 'application/vnd.google-apps.folder']
+            }
+        
+        # Otherwise, build the full folder tree from root
+        max_depth = min(depth, 10)
+        
+        def build_folder_tree(folder_id: str, current_depth: int = 0) -> List[Dict[str, Any]]:
             """Recursively build folder tree with limited depth"""
             if current_depth >= max_depth:
                 return []
             
-            folders = gdrive.list_folders(parent_id)
+            folders = gdrive.list_folders(folder_id)
             result = []
             
             for folder in folders:
@@ -116,6 +127,45 @@ async def list_folders(depth: int = 5):
             "folders": folders
         }
         
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/search")
+async def search_files(q: str, max_results: int = 50):
+    """
+    Search for files and folders by name.
+    
+    Args:
+        q: Search query string (min 2 chars)
+        max_results: Maximum results (default 50)
+    
+    Only returns results within the NotebookLM-Sources folder tree.
+    """
+    if not q or len(q.strip()) < 2:
+        return {"results": [], "query": q, "total": 0}
+    
+    gdrive = get_gdrive_service_for_read()
+    
+    if not gdrive:
+        raise HTTPException(
+            status_code=503,
+            detail="Google Drive not available. Please authenticate."
+        )
+    
+    try:
+        results = gdrive.search_files(q.strip(), max_results=max_results)
+        
+        folders = [r for r in results if r.get('mimeType') == 'application/vnd.google-apps.folder']
+        files = [r for r in results if r.get('mimeType') != 'application/vnd.google-apps.folder']
+        
+        return {
+            "query": q,
+            "results": results,
+            "folders": folders,
+            "files": files,
+            "total": len(results)
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

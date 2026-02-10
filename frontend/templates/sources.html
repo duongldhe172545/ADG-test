@@ -243,6 +243,124 @@
             transform: rotate(90deg);
         }
 
+        /* Search Box */
+        .search-box {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-input-wrapper {
+            display: flex;
+            align-items: center;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            gap: 8px;
+        }
+
+        .search-input-wrapper:focus-within {
+            border-color: var(--accent);
+        }
+
+        .search-input-wrapper input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .search-input-wrapper input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-clear {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px 4px;
+            display: none;
+        }
+
+        .search-clear:hover {
+            color: var(--text-primary);
+        }
+
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            display: none;
+        }
+
+        .search-result-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 8px 10px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-result-item .row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .search-result-item .icon {
+            font-size: 16px;
+        }
+
+        .search-result-item .name {
+            font-size: 13px;
+            word-break: break-word;
+        }
+
+        .search-result-item .type {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-left: 24px;
+        }
+
+        .search-loading,
+        .search-empty {
+            padding: 12px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .search-load-more {
+            padding: 10px;
+            text-align: center;
+            color: var(--accent);
+            font-size: 12px;
+            cursor: pointer;
+            border-top: 1px solid var(--border);
+        }
+
+        .search-load-more:hover {
+            background: var(--bg-secondary);
+        }
+
         /* Resizer */
         .resizer {
             width: 4px;
@@ -280,6 +398,13 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .preview-path {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-secondary);
         }
 
         .preview-actions {
@@ -453,9 +578,18 @@
             <a href="/chatbot">💬 Chat</a>
             <a href="/sources" class="active">📁 Tài liệu</a>
             <a href="/upload">📤 Upload</a>
+            <a href="/dashboard">📊 Dashboard</a>
+            <a href="/admin-dashboard" id="adminNavLink" style="display:none;">⚙️ Admin</a>
         </nav>
-        <div class="auth-section" id="authSection">
-            <button class="auth-btn login" id="loginBtn" onclick="handleLogin()">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div id="userNav" style="display:none;align-items:center;gap:6px;">
+                <div id="userAvatar"
+                    style="width:28px;height:28px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:white;font-weight:600;">
+                </div>
+                <a href="javascript:logoutRBAC()"
+                    style="color:var(--text-secondary);font-size:11px;text-decoration:none;">🚪</a>
+            </div>
+            <button class="auth-btn login" id="loginBtn" onclick="handleLogin()" style="display:none;">
                 <span>🔐</span> Đăng nhập Google
             </button>
         </div>
@@ -466,6 +600,14 @@
         <aside class="folder-panel" id="folderPanel">
             <div class="panel-header">
                 📂 Thư mục
+            </div>
+            <div class="search-box">
+                <div class="search-input-wrapper">
+                    <span>🔍</span>
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm file, thư mục..." autocomplete="off">
+                    <button class="search-clear" id="searchClear">✕</button>
+                </div>
+                <div class="search-results" id="searchResults"></div>
             </div>
             <div class="panel-content" id="folderContent">
                 <div class="auth-required" id="authPrompt">
@@ -515,9 +657,8 @@
         let userEmail = null;
         let selectedFileId = null;
         let folderCache = {};
+        let searchTimeout = null;
 
-        // DOM Elements
-        const authSection = document.getElementById('authSection');
         const loginBtn = document.getElementById('loginBtn');
         const authPrompt = document.getElementById('authPrompt');
         const folderTree = document.getElementById('folderTree');
@@ -526,6 +667,34 @@
         const previewActions = document.getElementById('previewActions');
         const openInDriveBtn = document.getElementById('openInDriveBtn');
         const downloadBtn = document.getElementById('downloadBtn');
+        const searchInput = document.getElementById('searchInput');
+        const searchClear = document.getElementById('searchClear');
+        const searchResults = document.getElementById('searchResults');
+
+        // ========================================================================
+        // Path Utilities (needed by preview and search)
+        // ========================================================================
+        // Filter path to start from NotebookLM-Sources folder if present
+        function filterPath(path) {
+            if (!path) return '';
+            const rootMarker = 'NotebookLM-Sources';
+            const idx = path.indexOf(rootMarker);
+            if (idx >= 0) {
+                // Start from NotebookLM-Sources
+                return path.slice(idx + rootMarker.length + 1); // Skip the marker itself and the trailing /
+            }
+            // No special marker, return path as-is
+            return path;
+        }
+
+        function truncatePath(path) {
+            if (!path) return '';
+            const parts = path.split('/').filter(p => p); // Split and remove empty
+            if (parts.length === 0) return '';
+            if (parts.length <= 2) return parts.join('/');
+            // Show only last 2 folders
+            return parts.slice(-2).join('/');
+        }
 
         // ========================================================================
         // Resizable Panel
@@ -557,100 +726,109 @@
         }
 
         // ========================================================================
-        // Authentication
+        // Authentication (RBAC-based)
         // ========================================================================
         async function checkAuthStatus() {
             try {
-                const response = await fetch(`${API_BASE}/api/drive/auth/status`);
+                const response = await fetch('/api/v1/rbac/check');
                 const data = await response.json();
 
-                isAuthenticated = data.authenticated;
-                userEmail = data.email;
+                if (data.authenticated) {
+                    isAuthenticated = true;
+                    userEmail = data.email;
 
-                updateAuthUI();
+                    // Show user avatar, hide login button
+                    const userNav = document.getElementById('userNav');
+                    if (userNav) userNav.style.display = 'flex';
+                    document.getElementById('userAvatar').textContent = (data.email || '?').substring(0, 2).toUpperCase();
+                    loginBtn.style.display = 'none';
 
-                if (isAuthenticated) {
-                    loadFolders();
+                    // Show admin link for admin/super_admin
+                    if (data.roles && (data.roles.includes('super_admin') || data.roles.includes('admin'))) {
+                        document.getElementById('adminNavLink').style.display = '';
+                    }
+
+                    if (authPrompt) authPrompt.style.display = 'none';
+                    folderTree.style.display = 'block';
+                } else {
+                    isAuthenticated = false;
+                    loginBtn.style.display = '';
                 }
             } catch (e) {
                 console.error('Auth check failed:', e);
-            }
-        }
-
-        function updateAuthUI() {
-            if (isAuthenticated) {
-                authSection.innerHTML = `
-                    <span class="user-email">📧 ${userEmail || 'User'}</span>
-                    <button class="auth-btn logout" onclick="handleLogout()">Đăng xuất</button>
-                `;
-                authPrompt.style.display = 'none';
-                folderTree.style.display = 'block';
-            } else {
-                authSection.innerHTML = `
-                    <button class="auth-btn login" onclick="handleLogin()">
-                        <span>🔐</span> Đăng nhập Google
-                    </button>
-                `;
-                authPrompt.style.display = 'flex';
-                folderTree.style.display = 'none';
+                loginBtn.style.display = '';
             }
         }
 
         function handleLogin() {
-            window.location.href = `${API_BASE}/api/drive/oauth/login?return_url=${encodeURIComponent('/sources')}`;
-        }
-
-        async function handleLogout() {
-            try {
-                await fetch(`${API_BASE}/api/drive/oauth/logout`, { method: 'POST' });
-                isAuthenticated = false;
-                userEmail = null;
-                updateAuthUI();
-            } catch (e) {
-                console.error('Logout failed:', e);
-            }
+            window.location.href = '/login';
         }
 
         function handleAuthCallback() {
             const params = new URLSearchParams(window.location.search);
             if (params.get('auth') === 'success') {
-                isAuthenticated = true;
-                userEmail = params.get('email');
-                updateAuthUI();
-                loadFolders();
-                // Clean URL
+                // Clean URL and reload auth
                 window.history.replaceState({}, '', '/sources');
+                checkAuthStatus();
+                loadFolders();
             }
         }
 
         // ========================================================================
         // Folder Loading
         // ========================================================================
-        async function loadFolders(parentId = null) {
-            if (!isAuthenticated) return;
+        async function loadFolders(parentId = null, parentPath = '') {
+            // Load folders without requiring authentication (service account fallback)
 
-            const container = parentId ? document.querySelector(`[data-folder-id="${parentId}"] .tree-children`) : folderTree;
+            // Find container: for root, use folderTree; for subfolders, find the tree-children inside wrapper
+            let container;
+            if (parentId) {
+                const folderItem = document.querySelector(`[data-folder-id="${parentId}"]`);
+                // tree-children is sibling of tree-item inside the wrapper
+                container = folderItem ? folderItem.parentElement.querySelector('.tree-children') : null;
+            } else {
+                container = folderTree;
+            }
 
             if (!container) return;
+
+            // Show folder tree and hide auth prompt when loading root
+            if (!parentId) {
+                authPrompt.style.display = 'none';
+                folderTree.style.display = 'block';
+            }
 
             container.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Đang tải...</div>';
 
             try {
                 const url = parentId
-                    ? `${API_BASE}/api/drive/folders?parent_id=${parentId}`
-                    : `${API_BASE}/api/drive/folders`;
+                    ? `${API_BASE}/api/v1/documents/folders?parent_id=${parentId}`
+                    : `${API_BASE}/api/v1/documents/folders`;
 
                 const response = await fetch(url);
+
+                // If 401 or 503, show auth prompt
+                if (response.status === 401 || response.status === 503) {
+                    if (!parentId) {
+                        authPrompt.style.display = 'flex';
+                        folderTree.style.display = 'none';
+                    }
+                    container.innerHTML = '';
+                    return;
+                }
+
                 const data = await response.json();
 
-                const items = data.folders || data.items || [];
+                // data.items contains files+folders (when loading subfolder)
+                // data.folders contains only folders (when loading root tree)
+                const items = data.items || data.folders || [];
 
                 if (items.length === 0) {
                     container.innerHTML = '<div style="color: var(--text-secondary); font-size: 12px; padding: 10px;">Không có mục nào</div>';
                     return;
                 }
 
-                container.innerHTML = items.map(item => createTreeItem(item)).join('');
+                container.innerHTML = items.map(item => createTreeItem(item, parentPath)).join('');
 
                 // Add event listeners
                 container.querySelectorAll('.tree-item').forEach(el => {
@@ -673,24 +851,33 @@
             }
         }
 
-        function createTreeItem(item) {
-            const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
-            const icon = getFileIcon(item.mimeType, item.name);
+        function createTreeItem(item, parentPath = '') {
+            // Detect folder by mimeType OR by presence of children/hasChildren (API returns folders without mimeType)
+            const isFolder = item.mimeType === 'application/vnd.google-apps.folder'
+                || item.children !== undefined
+                || item.hasChildren === true;
+            const icon = getFileIcon(isFolder ? 'application/vnd.google-apps.folder' : item.mimeType, item.name);
             const size = item.size ? formatFileSize(parseInt(item.size)) : '';
+            // Build path for this item (stored in data-path for preview header)
+            const itemPath = parentPath ? `${parentPath}/${item.name}` : item.name;
 
             return `
-                <div class="tree-item ${isFolder ? 'folder' : 'file'}" 
-                     data-id="${item.id}" 
-                     data-folder-id="${isFolder ? item.id : ''}"
-                     data-mime-type="${item.mimeType || ''}"
-                     data-name="${escapeHtml(item.name)}"
-                     data-web-view-link="${item.webViewLink || ''}">
-                    ${isFolder ? '<span class="expand-btn">▶</span>' : '<span style="width: 16px;"></span>'}
-                    <span class="icon">${icon}</span>
-                    <span class="name">${escapeHtml(item.name)}</span>
-                    ${size ? `<span class="size">${size}</span>` : ''}
+                <div class="tree-item-wrapper">
+                    <div class="tree-item ${isFolder ? 'folder' : 'file'}" 
+                         data-id="${item.id}" 
+                         data-folder-id="${isFolder ? item.id : ''}"
+                         data-mime-type="${isFolder ? 'application/vnd.google-apps.folder' : (item.mimeType || '')}"
+                         data-name="${escapeHtml(item.name)}"
+                         data-path="${escapeHtml(itemPath)}"
+                         data-web-view-link="${item.webViewLink || ''}"
+                         title="${escapeHtml(itemPath)}">
+                        ${isFolder ? '<span class="expand-btn">▶</span>' : '<span style="width: 16px;"></span>'}
+                        <span class="icon">${icon}</span>
+                        <span class="name">${escapeHtml(item.name)}</span>
+                        ${size ? `<span class="size">${size}</span>` : ''}
+                    </div>
+                    ${isFolder ? '<div class="tree-children collapsed"></div>' : ''}
                 </div>
-                ${isFolder ? '<div class="tree-children collapsed"></div>' : ''}
             `;
         }
 
@@ -698,14 +885,16 @@
             const expanded = expandBtn.classList.toggle('expanded');
             const treeItem = expandBtn.closest('.tree-item');
             const folderId = treeItem.dataset.folderId;
-            const children = treeItem.nextElementSibling;
+            const folderPath = treeItem.dataset.path || treeItem.dataset.name || '';
+            // tree-children is sibling of tree-item inside the wrapper
+            const children = treeItem.parentElement.querySelector('.tree-children');
 
-            if (children && children.classList.contains('tree-children')) {
+            if (children) {
                 children.classList.toggle('collapsed', !expanded);
 
                 // Load children if not loaded yet
                 if (expanded && children.children.length === 0) {
-                    loadFolders(folderId);
+                    loadFolders(folderId, folderPath);
                 }
             }
         }
@@ -722,17 +911,30 @@
                 const expandBtn = el.querySelector('.expand-btn');
                 if (expandBtn) toggleFolder(expandBtn);
             } else {
-                // Preview file
-                previewFile(el.dataset.id, el.dataset.name, el.dataset.mimeType, el.dataset.webViewLink);
+                // Preview file (include path from data attribute)
+                const filePath = el.dataset.path || el.dataset.name;
+                previewFile(el.dataset.id, el.dataset.name, el.dataset.mimeType, el.dataset.webViewLink, filePath);
             }
         }
 
         // ========================================================================
         // File Preview
         // ========================================================================
-        function previewFile(fileId, fileName, mimeType, webViewLink) {
+        function previewFile(fileId, fileName, mimeType, webViewLink, filePath = '') {
             selectedFileId = fileId;
-            previewTitle.innerHTML = `📄 ${escapeHtml(fileName)}`;
+            // Show path before filename (use truncatePath to show last 2 folders)
+            const displayPath = filePath ? filterPath(filePath) : '';
+            if (displayPath) {
+                // Show folder path (last 2 folders) in smaller text before filename
+                const truncatedPath = truncatePath(displayPath);
+                if (truncatedPath) {
+                    previewTitle.innerHTML = `<span class="preview-path">📁 ${escapeHtml(truncatedPath)}/</span> 📄 ${escapeHtml(fileName)}`;
+                } else {
+                    previewTitle.innerHTML = `📄 ${escapeHtml(fileName)}`;
+                }
+            } else {
+                previewTitle.innerHTML = `📄 ${escapeHtml(fileName)}`;
+            }
             previewActions.style.display = 'flex';
 
             // Set action buttons
@@ -822,13 +1024,153 @@
         }
 
         // ========================================================================
+        // Search
+        // ========================================================================
+        // Store in window scope to persist across function calls
+        window.searchAllResults = [];
+        window.searchShowCount = 5;
+
+        function renderSearchResults(results, showCount) {
+            const toShow = results.slice(0, showCount);
+            const remaining = results.length - showCount;
+
+            let html = toShow.map(item => {
+                const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
+                const icon = isFolder ? '📁' : getFileIcon(item.mimeType, item.name);
+                const displayPath = truncatePath(item.path || '');
+                const fullPath = filterPath(item.path || '');
+                return `
+                    <div class="search-result-item" 
+                         data-id="${item.id}" 
+                         data-mime="${item.mimeType || ''}"
+                         data-name="${escapeHtml(item.name)}"
+                         data-path="${escapeHtml(fullPath)}"
+                         data-weblink="${item.webViewLink || ''}"
+                         title="${escapeHtml(fullPath)}">
+                        <div class="row">
+                            <span class="icon">${icon}</span>
+                            <span class="name">${escapeHtml(item.name)}</span>
+                        </div>
+                        ${displayPath ? `<span class="type">📁 ${displayPath}</span>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            if (remaining > 0) {
+                html += `<div class="search-load-more">▼ Xem thêm ${remaining} kết quả</div>`;
+            }
+
+            return html;
+        }
+
+        function bindSearchEvents() {
+            searchResults.querySelectorAll('.search-result-item').forEach(el => {
+                el.addEventListener('click', () => handleSearchResultClick(el));
+            });
+            const loadMoreBtn = searchResults.querySelector('.search-load-more');
+            if (loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', () => {
+                    window.searchShowCount += 10;
+                    searchResults.innerHTML = renderSearchResults(window.searchAllResults, window.searchShowCount);
+                    bindSearchEvents();
+                });
+            }
+        }
+
+        async function performSearch(query) {
+            if (!query || query.length < 2) {
+                searchResults.style.display = 'none';
+                return;
+            }
+
+            searchResults.style.display = 'block';
+            searchResults.innerHTML = '<div class="search-loading">🔍 Đang tìm kiếm...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/documents/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (!data.results || data.results.length === 0) {
+                    searchResults.innerHTML = '<div class="search-empty">Không tìm thấy kết quả</div>';
+                    return;
+                }
+
+                window.searchAllResults = data.results;
+                window.searchShowCount = 5;
+                searchResults.innerHTML = renderSearchResults(window.searchAllResults, window.searchShowCount);
+                bindSearchEvents();
+
+            } catch (error) {
+                console.error('Search error:', error);
+                searchResults.innerHTML = '<div class="search-empty">Lỗi tìm kiếm</div>';
+            }
+        }
+
+        function clearSearch() {
+            searchInput.value = '';
+            searchClear.style.display = 'none';
+            searchResults.style.display = 'none';
+        }
+
+        function handleSearchResultClick(el) {
+            const id = el.dataset.id;
+            const mimeType = el.dataset.mime;
+            const webLink = el.dataset.weblink;
+            const name = el.dataset.name;
+            const path = el.dataset.path || name;
+
+            clearSearch();
+
+            if (mimeType === 'application/vnd.google-apps.folder') {
+                previewContent.innerHTML = `
+                    <div class="preview-empty">
+                        <div class="preview-empty-icon">📁</div>
+                        <h3>${escapeHtml(name)}</h3>
+                        <p>Thư mục - sử dụng cây bên trái để duyệt</p>
+                        ${webLink ? `<a class="preview-btn" href="${webLink}" target="_blank" style="margin-top: 20px;">🔗 Mở trong Drive</a>` : ''}
+                    </div>
+                `;
+            } else {
+                previewFile(id, name, mimeType, webLink, path);
+            }
+        }
+
+        function initSearch() {
+            if (!searchInput) return;
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value;
+                searchClear.style.display = query ? 'block' : 'none';
+
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => performSearch(query), 300);
+            });
+
+            searchClear.addEventListener('click', clearSearch);
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-box')) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        }
+
+        // ========================================================================
         // Initialize
         // ========================================================================
         document.addEventListener('DOMContentLoaded', () => {
+            initSearch();
             initResizer();
             handleAuthCallback();
             checkAuthStatus();
+            // Always try to load folders (uses service account fallback if not logged in)
+            loadFolders();
         });
+
+        async function logoutRBAC() {
+            await fetch('/api/v1/rbac/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
     </script>
 </body>
 

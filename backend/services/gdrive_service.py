@@ -153,13 +153,77 @@ class GoogleDriveService:
         """
         results = self.service.files().list(
             q=f"'{parent_id}' in parents and trashed=false",
-            fields="files(id, name, mimeType, size, modifiedTime)",
+            fields="files(id, name, mimeType, size, modifiedTime, webViewLink)",
             orderBy="name",
             supportsAllDrives=True,
             includeItemsFromAllDrives=True
         ).execute()
         
         return results.get('files', [])
+    
+    def search_files(self, query: str, max_results: int = 50) -> List[Dict[str, Any]]:
+        """
+        Search for files and folders by name.
+        
+        Args:
+            query: Search query (will match file/folder names)
+            max_results: Maximum number of results to return
+            
+        Returns:
+            List of matching file/folder dicts with full path
+        """
+        search_query = f"name contains '{query}' and trashed=false"
+        
+        results = self.service.files().list(
+            q=search_query,
+            fields="files(id, name, mimeType, size, modifiedTime, webViewLink, parents)",
+            orderBy="name",
+            pageSize=max_results,
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
+        
+        files = results.get('files', [])
+        
+        # Cache for folder info (id -> {name, parents})
+        folder_cache = {}
+        
+        def get_folder_info(folder_id):
+            if folder_id in folder_cache:
+                return folder_cache[folder_id]
+            try:
+                folder = self.service.files().get(
+                    fileId=folder_id,
+                    fields="name, parents",
+                    supportsAllDrives=True
+                ).execute()
+                folder_cache[folder_id] = folder
+                return folder
+            except:
+                return None
+        
+        def build_path(folder_id, depth=0):
+            if depth > 15:  # Limit depth to prevent infinite loops (supports up to 15 levels)
+                return ""
+            folder = get_folder_info(folder_id)
+            if not folder:
+                return ""
+            name = folder.get('name', '')
+            parents = folder.get('parents', [])
+            if parents:
+                parent_path = build_path(parents[0], depth + 1)
+                if parent_path:
+                    return f"{parent_path}/{name}"
+            return name
+        
+        # Add full path to each file
+        for f in files:
+            if f.get('parents'):
+                f['path'] = build_path(f['parents'][0])
+            else:
+                f['path'] = ''
+        
+        return files
     
     # ==========================================================================
     # File Operations

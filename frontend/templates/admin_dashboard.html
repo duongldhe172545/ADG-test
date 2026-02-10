@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - ADG Marketing Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: #1e293b;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent: #3b82f6;
+            --accent-light: #dbeafe;
+            --success: #22c55e;
+            --success-light: #dcfce7;
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --error: #ef4444;
+            --error-light: #fee2e2;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-sidebar);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .sidebar-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .sidebar-logo-text {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-logo-sub {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+            flex: 1;
+        }
+
+        .nav-section {
+            padding: 0.5rem 1.25rem;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 0.5rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1.25rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.3);
+            color: white;
+            border-left: 3px solid var(--accent);
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--error);
+            color: white;
+            font-size: 0.65rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .user-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .user-role {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .logout-btn {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0.4rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: auto;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Main content */
+        .main {
+            margin-left: 240px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            background: var(--bg-secondary);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            padding: 0.25rem;
+            margin-bottom: 1.5rem;
+            width: fit-content;
+        }
+
+        .tab {
+            padding: 0.5rem 1.25rem;
+            border: none;
+            background: none;
+            font-family: inherit;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .tab:hover:not(.active) {
+            background: var(--bg-primary);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Table */
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            font-size: 0.8125rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .badge-admin {
+            background: rgba(139, 92, 246, 0.15);
+            color: #7c3aed;
+        }
+
+        .badge-editor {
+            background: rgba(59, 130, 246, 0.15);
+            color: #2563eb;
+        }
+
+        .badge-viewer {
+            background: rgba(100, 116, 139, 0.15);
+            color: #475569;
+        }
+
+        .badge-super {
+            background: rgba(234, 179, 8, 0.15);
+            color: #b45309;
+        }
+
+        .badge-approver {
+            background: rgba(16, 185, 129, 0.15);
+            color: #059669;
+        }
+
+        .badge-active {
+            background: var(--success-light);
+            color: #16a34a;
+        }
+
+        .badge-inactive {
+            background: var(--error-light);
+            color: #dc2626;
+        }
+
+        .badge-pending {
+            background: var(--warning-light);
+            color: #d97706;
+        }
+
+        .badge-approved {
+            background: var(--success-light);
+            color: #16a34a;
+        }
+
+        .badge-rejected {
+            background: var(--error-light);
+            color: #dc2626;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent);
+            filter: brightness(0.9);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            filter: brightness(0.9);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            filter: brightness(0.9);
+        }
+
+        .btn-outline {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-primary);
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 480px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+            color: var(--text-secondary);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 0.6rem 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.875rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            border-color: var(--accent);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checkbox-label:has(input:checked) {
+            background: var(--accent-light);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .checkbox-label input {
+            display: none;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Tab panels */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 200;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success {
+            background: #065f46;
+            color: #d1fae5;
+        }
+
+        .toast-error {
+            background: #991b1b;
+            color: #fee2e2;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-state-text {
+            font-size: 0.9375rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="sidebar-logo">
+                <div class="sidebar-logo-icon">📚</div>
+                <div>
+                    <div class="sidebar-logo-text">ADG Marketing Hub</div>
+                    <div class="sidebar-logo-sub">Knowledge Management</div>
+                </div>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Menu chính</div>
+            <a href="/" class="nav-item">🏠 Trang chủ</a>
+            <a href="/chatbot" class="nav-item">💬 Chat AI</a>
+            <a href="/sources" class="nav-item">📁 Tài liệu</a>
+            <a href="/upload" class="nav-item">📤 Upload</a>
+            <a href="/dashboard" class="nav-item">📊 Dashboard</a>
+            <div class="nav-section">Quản trị</div>
+            <a href="/admin-dashboard" class="nav-item active" data-tab="users">👥 Quản lý Users</a>
+            <a href="/admin-dashboard#approvals" class="nav-item" data-tab="approvals">📋 Phê duyệt <span
+                    id="pendingBadge" class="nav-badge" style="display:none">0</span></a>
+            <a href="/admin-dashboard#folders" class="nav-item" data-tab="folders">📁 Tạo thư mục</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div>
+                    <div class="user-name" id="userName">Loading...</div>
+                    <div class="user-role" id="userRole">-</div>
+                </div>
+                <button class="logout-btn" onclick="logout()" title="Đăng xuất">🚪</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Admin Dashboard</h1>
+                <p class="page-subtitle">Quản lý người dùng, phê duyệt tài liệu, tạo thư mục</p>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="statUsers">-</div>
+                <div class="stat-label">Tổng Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statActive">-</div>
+                <div class="stat-label">Đang hoạt động</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statPending" style="color:var(--warning)">-</div>
+                <div class="stat-label">Chờ duyệt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statRoles">-</div>
+                <div class="stat-label">Vai trò</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="users">👥 Users</button>
+            <button class="tab" data-tab="approvals">📋 Phê duyệt</button>
+            <button class="tab" data-tab="folders">📁 Thư mục</button>
+        </div>
+
+        <!-- TAB: Users -->
+        <div id="tabUsers" class="tab-panel active">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Danh sách người dùng</div>
+                    <button class="btn btn-primary" onclick="showAddUserModal()">+ Thêm User</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Tên</th>
+                                <th>Vai trò</th>
+                                <th>Trạng thái</th>
+                                <th>Đăng nhập gần nhất</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr>
+                                <td colspan="6" class="empty-state">
+                                    <div class="empty-state-icon">⏳</div>
+                                    <div>Đang tải...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Approvals -->
+        <div id="tabApprovals" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Yêu cầu chờ duyệt</div>
+                    <button class="btn btn-outline btn-sm" onclick="loadPendingApprovals()">🔄 Làm mới</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Người gửi</th>
+                                <th>File</th>
+                                <th>Thư mục đích</th>
+                                <th>Ngày gửi</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvalsTable">
+                            <tr>
+                                <td colspan="5" class="empty-state">
+                                    <div class="empty-state-icon">⏳</div>
+                                    <div>Đang tải...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Lịch sử phê duyệt</div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Người gửi</th>
+                                <th>File</th>
+                                <th>Trạng thái</th>
+                                <th>Người duyệt</th>
+                                <th>Ngày duyệt</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                            <tr>
+                                <td colspan="5" class="empty-state">
+                                    <div class="empty-state-icon">⏳</div>
+                                    <div>Đang tải...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Folders -->
+        <div id="tabFolders" class="tab-panel">
+            <div class="card" style="max-width: 600px;">
+                <div class="card-title" style="margin-bottom:1.5rem;">Tạo thư mục mới trên Google Drive</div>
+                <div class="form-group">
+                    <label class="form-label">Tên thư mục *</label>
+                    <input type="text" class="form-input" id="folderName" placeholder="Nhập tên thư mục...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Thư mục cha (ID)</label>
+                    <input type="text" class="form-input" id="folderParent" placeholder="Để trống = Root folder">
+                    <small style="color:var(--text-secondary);font-size:0.75rem;">Nhập Google Drive Folder ID nếu muốn
+                        tạo bên trong thư mục khác</small>
+                </div>
+                <button class="btn btn-primary" onclick="createFolder()" id="createFolderBtn"
+                    style="margin-top:0.5rem;">📁 Tạo thư mục</button>
+                <div id="folderResult" style="margin-top:1rem;display:none;"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add User Modal -->
+    <div class="modal-overlay" id="addUserModal">
+        <div class="modal">
+            <div class="modal-title">Thêm User mới</div>
+            <div class="form-group">
+                <label class="form-label">Email *</label>
+                <input type="email" class="form-input" id="newUserEmail" placeholder="user@gmail.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tên</label>
+                <input type="text" class="form-input" id="newUserName" placeholder="Nguyễn Văn A">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Vai trò</label>
+                <div class="checkbox-group" id="roleCheckboxes">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="addUser()">Thêm User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Role Modal -->
+    <div class="modal-overlay" id="editRoleModal">
+        <div class="modal">
+            <div class="modal-title">Đổi vai trò</div>
+            <div class="form-group">
+                <label class="form-label">User: <strong id="editRoleEmail"></strong></label>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Vai trò</label>
+                <div class="checkbox-group" id="editRoleCheckboxes">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeEditRoleModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="saveUserRoles()">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API = '/api/v1';
+        let currentUser = null;
+        let allRoles = [];
+
+        // =========================================================================
+        // Init
+        // =========================================================================
+        async function init() {
+            // Check auth
+            const authRes = await fetch(`${API}/rbac/check`);
+            const authData = await authRes.json();
+
+            if (!authData.authenticated) {
+                window.location.href = '/login';
+                return;
+            }
+
+            currentUser = authData;
+
+            // Check admin access
+            if (!authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
+                document.querySelector('.main').innerHTML = `
+                <div class="empty-state" style="margin-top:5rem;">
+                    <div class="empty-state-icon">🚫</div>
+                    <div class="empty-state-text">Bạn không có quyền truy cập trang này.</div>
+                    <a href="/" class="btn btn-primary" style="margin-top:1rem;">← Về trang chủ</a>
+                </div>`;
+                return;
+            }
+
+            // Update sidebar user info
+            document.getElementById('userName').textContent = authData.email.split('@')[0];
+            document.getElementById('userRole').textContent = authData.roles.join(', ');
+            document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
+
+            // Load data
+            loadUsers();
+            loadRoles();
+            loadPendingApprovals();
+            loadHistory();
+
+            // Handle hash-based tab navigation
+            handleHash();
+        }
+
+        // =========================================================================
+        // Tab switching
+        // =========================================================================
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+        });
+
+        document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchTab(item.dataset.tab);
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            const panel = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+            if (panel) panel.classList.add('active');
+        }
+
+        function handleHash() {
+            const hash = window.location.hash.replace('#', '');
+            if (hash) switchTab(hash);
+        }
+
+        // =========================================================================
+        // Users
+        // =========================================================================
+        async function loadUsers() {
+            try {
+                const res = await fetch(`${API}/admin/users`);
+                if (res.status === 401) { window.location.href = '/login'; return; }
+                if (res.status === 403) return;
+                const data = await res.json();
+
+                const users = data.users || [];
+                document.getElementById('statUsers').textContent = users.length;
+                document.getElementById('statActive').textContent = users.filter(u => u.is_active).length;
+
+                if (users.length === 0) {
+                    document.getElementById('usersTable').innerHTML = `
+                    <tr><td colspan="6" class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <div class="empty-state-text">Chưa có user nào. Nhấn "Thêm User" để bắt đầu.</div>
+                    </td></tr>`;
+                    return;
+                }
+
+                document.getElementById('usersTable').innerHTML = users.map(u => `
+                <tr>
+                    <td><strong>${u.email}</strong></td>
+                    <td>${u.name || '—'}</td>
+                    <td>${u.roles.map(r => `<span class="badge badge-${r}">${r}</span>`).join(' ')}</td>
+                    <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                    <td>${u.last_login ? new Date(u.last_login).toLocaleDateString('vi') : '—'}</td>
+                    <td style="display:flex;gap:4px;flex-wrap:wrap;">
+                        <button class="btn btn-outline btn-sm" onclick="showEditRoleModal('${u.id}', '${u.email}', ${JSON.stringify(u.roles).replace(/"/g, '&quot;')})">
+                            ✏️ Đổi Role
+                        </button>
+                        <button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}', ${!u.is_active})">
+                            ${u.is_active ? '⏸ Vô hiệu' : '▶ Kích hoạt'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            } catch (e) {
+                console.error('Load users error:', e);
+            }
+        }
+
+        async function loadRoles() {
+            try {
+                const res = await fetch(`${API}/admin/roles`);
+                if (!res.ok) return;
+                const data = await res.json();
+                allRoles = data.roles || [];
+                document.getElementById('statRoles').textContent = allRoles.length;
+
+                document.getElementById('roleCheckboxes').innerHTML = allRoles.map(r => `
+                <label class="checkbox-label">
+                    <input type="checkbox" name="role" value="${r.name}" ${r.name === 'viewer' ? 'checked' : ''}>
+                    ${r.name}
+                </label>
+            `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        function showAddUserModal() {
+            document.getElementById('addUserModal').classList.add('show');
+        }
+        function closeModal() {
+            document.getElementById('addUserModal').classList.remove('show');
+        }
+
+        async function addUser() {
+            const email = document.getElementById('newUserEmail').value.trim();
+            const name = document.getElementById('newUserName').value.trim();
+            const roles = [...document.querySelectorAll('#roleCheckboxes input:checked')].map(c => c.value);
+
+            if (!email) { showToast('Vui lòng nhập email', 'error'); return; }
+            if (roles.length === 0) { showToast('Vui lòng chọn vai trò', 'error'); return; }
+
+            try {
+                const res = await fetch(`${API}/admin/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, name: name || null, roles })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`✅ Đã thêm user ${email}`, 'success');
+                    closeModal();
+                    document.getElementById('newUserEmail').value = '';
+                    document.getElementById('newUserName').value = '';
+                    loadUsers();
+                } else {
+                    showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Lỗi kết nối', 'error');
+            }
+        }
+
+        async function toggleUser(userId, activate) {
+            try {
+                const res = await fetch(`${API}/admin/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: activate })
+                });
+                if (res.ok) {
+                    showToast(activate ? '✅ User đã kích hoạt' : '⏸ User đã vô hiệu', 'success');
+                    loadUsers();
+                }
+            } catch (e) { showToast('❌ Lỗi', 'error'); }
+        }
+
+        // =========================================================================
+        // Edit Role
+        // =========================================================================
+        let editingUserId = null;
+
+        function showEditRoleModal(userId, email, currentRoles) {
+            editingUserId = userId;
+            document.getElementById('editRoleEmail').textContent = email;
+
+            document.getElementById('editRoleCheckboxes').innerHTML = allRoles.map(r => `
+                <label class="checkbox-label">
+                    <input type="checkbox" name="editRole" value="${r.name}" ${currentRoles.includes(r.name) ? 'checked' : ''}>
+                    ${r.name} <small style="color:#999;">(${r.description || ''})</small>
+                </label>
+            `).join('');
+
+            document.getElementById('editRoleModal').classList.add('show');
+        }
+
+        function closeEditRoleModal() {
+            document.getElementById('editRoleModal').classList.remove('show');
+            editingUserId = null;
+        }
+
+        async function saveUserRoles() {
+            if (!editingUserId) return;
+            const roles = [...document.querySelectorAll('#editRoleCheckboxes input:checked')].map(c => c.value);
+            if (roles.length === 0) { showToast('Phải chọn ít nhất 1 vai trò', 'error'); return; }
+
+            try {
+                const res = await fetch(`${API}/admin/users/${editingUserId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roles })
+                });
+                if (res.ok) {
+                    showToast('✅ Đã cập nhật vai trò', 'success');
+                    closeEditRoleModal();
+                    loadUsers();
+                } else {
+                    const data = await res.json();
+                    showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Lỗi kết nối', 'error');
+            }
+        }
+
+        // =========================================================================
+        // Approvals
+        // =========================================================================
+        async function loadPendingApprovals() {
+            try {
+                const res = await fetch(`${API}/approvals/pending`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const items = data.pending || [];
+                document.getElementById('statPending').textContent = items.length;
+
+                const badge = document.getElementById('pendingBadge');
+                if (items.length > 0) {
+                    badge.style.display = 'inline';
+                    badge.textContent = items.length;
+                } else {
+                    badge.style.display = 'none';
+                }
+
+                if (items.length === 0) {
+                    document.getElementById('approvalsTable').innerHTML = `
+                    <tr><td colspan="5" class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div class="empty-state-text">Không có yêu cầu chờ duyệt</div>
+                    </td></tr>`;
+                    return;
+                }
+
+                document.getElementById('approvalsTable').innerHTML = items.map(a => `
+                <tr>
+                    <td><strong>${a.requester.email}</strong><br><small style="color:var(--text-secondary)">${a.requester.name || ''}</small></td>
+                    <td>📄 ${a.extra_data.file_name || '—'}<br><small style="color:var(--text-secondary)">${formatBytes(a.extra_data.file_size)}</small></td>
+                    <td>📁 ${a.extra_data.target_folder_name || a.extra_data.target_folder_id || '—'}</td>
+                    <td>${new Date(a.created_at).toLocaleString('vi')}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="approveRequest('${a.id}')">✅ Duyệt</button>
+                        <button class="btn btn-danger btn-sm" onclick="rejectRequest('${a.id}')" style="margin-left:0.25rem;">❌ Từ chối</button>
+                    </td>
+                </tr>
+            `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadHistory() {
+            try {
+                const res = await fetch(`${API}/approvals/history`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const items = data.history || [];
+                if (items.length === 0) {
+                    document.getElementById('historyTable').innerHTML = `
+                    <tr><td colspan="5" class="empty-state"><div class="empty-state-icon">📋</div><div>Chưa có lịch sử</div></td></tr>`;
+                    return;
+                }
+
+                document.getElementById('historyTable').innerHTML = items.map(a => `
+                <tr>
+                    <td>${a.requester.email}</td>
+                    <td>📄 ${(a.extra_data || {}).file_name || '—'}</td>
+                    <td><span class="badge badge-${a.status}">${a.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'}</span></td>
+                    <td>${a.reviewer ? a.reviewer.email : '—'}</td>
+                    <td>${a.reviewed_at ? new Date(a.reviewed_at).toLocaleString('vi') : '—'}</td>
+                </tr>
+            `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function approveRequest(id) {
+            if (!confirm('Duyệt yêu cầu này? File sẽ được move sang thư mục đích.')) return;
+            try {
+                const res = await fetch(`${API}/approvals/${id}/approve`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('✅ ' + data.message, 'success');
+                    loadPendingApprovals();
+                    loadHistory();
+                } else {
+                    showToast('❌ ' + (data.detail || 'Lỗi'), 'error');
+                }
+            } catch (e) { showToast('❌ Lỗi kết nối', 'error'); }
+        }
+
+        async function rejectRequest(id) {
+            const note = prompt('Lý do từ chối (tùy chọn):');
+            if (note === null) return;
+            try {
+                const res = await fetch(`${API}/approvals/${id}/reject?note=${encodeURIComponent(note)}`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('⏹ Đã từ chối yêu cầu', 'success');
+                    loadPendingApprovals();
+                    loadHistory();
+                } else {
+                    showToast('❌ ' + (data.detail || 'Lỗi'), 'error');
+                }
+            } catch (e) { showToast('❌ Lỗi kết nối', 'error'); }
+        }
+
+        // =========================================================================
+        // Folders
+        // =========================================================================
+        async function createFolder() {
+            const name = document.getElementById('folderName').value.trim();
+            const parentId = document.getElementById('folderParent').value.trim();
+
+            if (!name) { showToast('Nhập tên thư mục', 'error'); return; }
+
+            const btn = document.getElementById('createFolderBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang tạo...';
+
+            try {
+                const body = { name };
+                if (parentId) body.parent_folder_id = parentId;
+
+                const res = await fetch(`${API}/admin/folders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`✅ ${data.message}`, 'success');
+                    document.getElementById('folderResult').style.display = 'block';
+                    document.getElementById('folderResult').innerHTML = `
+                    <div style="background:var(--success-light);padding:1rem;border-radius:0.75rem;border:1px solid rgba(34,197,94,0.3);">
+                        <strong>✅ Thư mục đã tạo</strong><br>
+                        <small>📁 ${data.folder.name}</small><br>
+                        <small>ID: <code>${data.folder.id}</code></small>
+                    </div>`;
+                    document.getElementById('folderName').value = '';
+                    document.getElementById('folderParent').value = '';
+                } else {
+                    showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Lỗi kết nối', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📁 Tạo thư mục';
+            }
+        }
+
+        // =========================================================================
+        // Utilities
+        // =========================================================================
+        async function logout() {
+            await fetch(`${API}/rbac/logout`, { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // Init
+        init();
+    </script>
+</body>
+
+</html>

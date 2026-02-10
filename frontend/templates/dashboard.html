@@ -360,20 +360,25 @@
             </a>
         </div>
         <nav class="sidebar-nav">
-            <a href="/dashboard" class="nav-item active"><span>🏠</span> Dashboard</a>
-            <a href="/sources" class="nav-item"><span>📄</span> Sources</a>
-            <a href="/" class="nav-item"><span>💬</span> Chat</a>
+            <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
+            <a href="/dashboard" class="nav-item active"><span>📊</span> Dashboard</a>
+            <a href="/chatbot" class="nav-item"><span>💬</span> Chat AI</a>
+            <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
             <a href="/upload" class="nav-item"><span>📤</span> Upload</a>
-            <a href="/document" class="nav-item"><span>📑</span> Document Viewer</a>
+            <a href="/admin-dashboard" class="nav-item" id="adminNavLink" style="display:none;"><span>⚙️</span> Admin
+                Panel</a>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
                 <div class="user-avatar">AD</div>
                 <div class="user-details">
-                    <div class="user-name">Admin</div>
-                    <div class="user-email">admin@adg.vn</div>
+                    <div class="user-name">Loading...</div>
+                    <div class="user-email">...</div>
                 </div>
             </div>
+            <a href="javascript:logout()"
+                style="display:block;margin-top:0.5rem;color:rgba(255,255,255,0.5);font-size:0.75rem;text-decoration:none;text-align:center;">🚪
+                Đăng xuất</a>
         </div>
     </aside>
     <main class="main-content">
@@ -462,6 +467,35 @@
             </div>
         </div>
     </main>
+
+    <script>
+        // Load user info from RBAC
+        async function loadUserInfo() {
+            try {
+                const resp = await fetch('/api/v1/rbac/check');
+                const data = await resp.json();
+                if (data.authenticated) {
+                    const email = data.email || '';
+                    const roles = data.roles || [];
+                    document.querySelector('.user-name').textContent = email.split('@')[0];
+                    document.querySelector('.user-email').textContent = email;
+                    document.querySelector('.user-avatar').textContent = email.substring(0, 2).toUpperCase();
+                    document.querySelector('.header-avatar').textContent = email.substring(0, 2).toUpperCase();
+                    // Show admin link for admin/super_admin
+                    if (roles.includes('super_admin') || roles.includes('admin')) {
+                        document.getElementById('adminNavLink').style.display = 'flex';
+                    }
+                }
+            } catch (e) { console.log('Auth check failed:', e); }
+        }
+
+        async function logout() {
+            await fetch('/api/v1/rbac/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        loadUserInfo();
+    </script>
 </body>
 
 </html>
