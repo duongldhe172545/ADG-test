@@ -93,6 +93,83 @@ async def submit_for_approval(
 
 
 # =============================================================================
+# Preview File (Admin only — shares file and returns embed URL)
+# =============================================================================
+
+@router.get("/preview/{file_id}")
+async def preview_file(
+    file_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Get a Google Drive preview URL for a pending file.
+    Shares the file publicly (read-only) so the preview iframe can load.
+    Admin/super_admin only.
+    """
+    roles = current_user.get("roles", [])
+    if "admin" not in roles and "super_admin" not in roles:
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    try:
+        from backend.services.gdrive_service import GoogleDriveService
+        gdrive = GoogleDriveService.from_service_account(settings.GOOGLE_SERVICE_ACCOUNT_FILE)
+        
+        # Share file so preview iframe can access it
+        gdrive.share_file_public(file_id)
+        
+        # Return Google Drive embed preview URL
+        preview_url = f"https://drive.google.com/file/d/{file_id}/preview"
+        
+        return {
+            "success": True,
+            "preview_url": preview_url,
+            "file_id": file_id,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Preview failed: {str(e)}")
+
+
+# =============================================================================
+# Submit Delete Request for Approval
+# =============================================================================
+
+@router.post("/submit-delete")
+async def submit_delete_request(
+    file_id: str = Form(...),
+    file_name: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Submit a delete request for approval.
+    Non-admin users request file deletion, admin approves.
+    """
+    try:
+        # Create approval request for deletion
+        approval = ApprovalRequest(
+            requester_id=UUID(current_user["id"]),
+            action_type="delete",
+            status="pending",
+            extra_data={
+                "file_id": file_id,
+                "file_name": file_name,
+            }
+        )
+        db.add(approval)
+        await db.commit()
+        
+        return {
+            "success": True,
+            "approval_id": str(approval.id),
+            "message": f"Delete request for '{file_name}' submitted for approval",
+            "status": "pending",
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Submit delete request failed: {str(e)}")
+
+
+# =============================================================================
 # Approval Queue (Admin)
 # =============================================================================
 
@@ -251,6 +328,38 @@ async def approve_request(
     
     extra_data = approval.extra_data or {}
     file_id = extra_data.get("file_id")
+    action_type = approval.action_type or "upload"
+    
+    # Handle delete approval
+    if action_type == "delete":
+        try:
+            from backend.api.v1.documents import get_gdrive_service
+            gdrive = get_gdrive_service()
+            
+            file_name = extra_data.get("file_name", "Unknown")
+            
+            # Delete from Google Drive
+            gdrive.delete_file(file_id)
+            print(f"🗑️ [Approval] Deleted file: {file_id} ({file_name})")
+            
+            # Update approval record
+            approval.status = "approved"
+            approval.reviewer_id = UUID(approver["id"])
+            approval.reviewed_at = datetime.utcnow()
+            approval.review_note = note
+            
+            await db.commit()
+            
+            return {
+                "success": True,
+                "message": f"File '{file_name}' has been deleted",
+                "file_id": file_id,
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Delete approval failed: {str(e)}")
+    
+    # Handle upload approval (existing flow)
     target_folder_id = extra_data.get("target_folder_id")
     
     if not file_id or not target_folder_id:

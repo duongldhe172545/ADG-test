@@ -190,6 +190,28 @@
             background: var(--bg-tertiary);
         }
 
+        .tree-item .delete-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 2px 4px;
+            border-radius: 4px;
+            margin-left: auto;
+            opacity: 0.6;
+            transition: all 0.2s;
+        }
+
+        .tree-item:hover .delete-btn {
+            display: inline-block;
+        }
+
+        .tree-item .delete-btn:hover {
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.15);
+        }
+
         .tree-item.selected {
             background: rgba(138, 180, 248, 0.15);
             border: 1px solid var(--accent);
@@ -580,7 +602,7 @@
             <a href="/upload" id="uploadNavLink" style="display:none;">📤 Upload</a>
             <a href="/dashboard">📊 Dashboard</a>
             <a href="/approval-history">📋 Lịch sử duyệt</a>
-            <a href="/admin-dashboard" id="adminNavLink" style="display:none;">⚙️ Admin</a>
+            <a href="/admin/users" id="adminNavLink" style="display:none;">⚙️ Admin</a>
         </nav>
         <div style="display:flex;align-items:center;gap:8px;">
             <div id="userNav" style="display:none;align-items:center;gap:6px;">
@@ -656,6 +678,7 @@
         // State
         let isAuthenticated = false;
         let userEmail = null;
+        let currentRoles = [];
         let selectedFileId = null;
         let folderCache = {};
         let searchTimeout = null;
@@ -737,6 +760,7 @@
                 if (data.authenticated) {
                     isAuthenticated = true;
                     userEmail = data.email;
+                    currentRoles = data.roles || [];
 
                     // Show user avatar, hide login button
                     const userNav = document.getElementById('userNav');
@@ -880,6 +904,7 @@
                         <span class="icon">${icon}</span>
                         <span class="name">${escapeHtml(item.name)}</span>
                         ${size ? `<span class="size">${size}</span>` : ''}
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteItem('${item.id}', '${escapeHtml(item.name).replace(/'/g, '\\&#39;')}', ${isFolder})" title="Xóa">🗑️</button>
                     </div>
                     ${isFolder ? '<div class="tree-children collapsed"></div>' : ''}
                 </div>
@@ -1175,6 +1200,78 @@
         async function logoutRBAC() {
             await fetch('/api/v1/rbac/logout', { method: 'POST' });
             window.location.href = '/login';
+        }
+
+        // ========================================================================
+        // Delete Functionality
+        // ========================================================================
+        async function deleteItem(fileId, fileName, isFolder) {
+            const isAdmin = currentRoles.some(r => ['admin', 'super_admin'].includes(r));
+            const typeLabel = isFolder ? 'thư mục' : 'file';
+
+            if (isAdmin) {
+                const confirmMsg = isFolder
+                    ? `⚠️ Xóa thư mục "${fileName}" và TẤT CẢ file bên trong?\n\nThao tác này không thể hoàn tác!`
+                    : `🗑️ Xóa ${typeLabel} "${fileName}"?\n\nThao tác này không thể hoàn tác!`;
+
+                if (!confirm(confirmMsg)) return;
+
+                try {
+                    const res = await fetch(`/api/v1/documents/${fileId}`, { method: 'DELETE' });
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        showDeleteToast(`✅ Đã xóa ${typeLabel} "${fileName}"`, 'success');
+                        const el = document.querySelector(`[data-id="${fileId}"]`);
+                        if (el) el.closest('.tree-item-wrapper').remove();
+                    } else {
+                        showDeleteToast(`❌ ${data.detail || 'Lỗi xóa'}`, 'error');
+                    }
+                } catch (e) {
+                    showDeleteToast('❌ Lỗi kết nối', 'error');
+                }
+            } else {
+                if (!confirm(`📋 Gửi yêu cầu xóa ${typeLabel} "${fileName}" cho admin duyệt?`)) return;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file_id', fileId);
+                    formData.append('file_name', fileName);
+
+                    const res = await fetch('/api/v1/approvals/submit-delete', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        showDeleteToast(`📋 Yêu cầu xóa "${fileName}" đã gửi cho admin`, 'success');
+                    } else {
+                        showDeleteToast(`❌ ${data.detail || 'Lỗi gửi yêu cầu'}`, 'error');
+                    }
+                } catch (e) {
+                    showDeleteToast('❌ Lỗi kết nối', 'error');
+                }
+            }
+        }
+
+        function showDeleteToast(msg, type = 'success') {
+            let toast = document.getElementById('deleteToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'deleteToast';
+                toast.style.cssText = 'position:fixed;bottom:2rem;right:2rem;padding:0.75rem 1.25rem;border-radius:0.75rem;font-size:0.8125rem;transform:translateY(100px);opacity:0;transition:all 0.3s;z-index:200;';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.background = type === 'success' ? '#065f46' : '#991b1b';
+            toast.style.color = type === 'success' ? '#d1fae5' : '#fee2e2';
+            toast.style.transform = 'translateY(0)';
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.transform = 'translateY(100px)';
+                toast.style.opacity = '0';
+            }, 3000);
         }
     </script>
 </body>

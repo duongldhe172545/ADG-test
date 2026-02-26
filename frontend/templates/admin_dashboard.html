@@ -828,6 +828,18 @@
         let currentUser = null;
         let allRoles = [];
 
+        // Convert UTC timestamp to Vietnam timezone
+        function toVN(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+            return d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+        function toVNDate(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+            return d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+
         // =========================================================================
         // Init
         // =========================================================================
@@ -928,7 +940,7 @@
                     <td>${u.name || '—'}</td>
                     <td>${u.roles.map(r => `<span class="badge badge-${r}">${r}</span>`).join(' ')}</td>
                     <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
-                    <td>${u.last_login ? new Date(u.last_login).toLocaleDateString('vi') : '—'}</td>
+                    <td>${u.last_login ? toVNDate(u.last_login) : '—'}</td>
                     <td style="display:flex;gap:4px;flex-wrap:wrap;">
                         <button class="btn btn-outline btn-sm" onclick="showEditRoleModal('${u.id}', '${u.email}', ${JSON.stringify(u.roles).replace(/"/g, '&quot;')})">
                             ✏️ Đổi Role
@@ -1094,7 +1106,7 @@
                     <td><strong>${a.requester.email}</strong><br><small style="color:var(--text-secondary)">${a.requester.name || ''}</small></td>
                     <td>📄 ${a.extra_data.file_name || '—'}<br><small style="color:var(--text-secondary)">${formatBytes(a.extra_data.file_size)}</small></td>
                     <td>📁 ${a.extra_data.target_folder_name || a.extra_data.target_folder_id || '—'}</td>
-                    <td>${new Date(a.created_at).toLocaleString('vi')}</td>
+                    <td>${toVN(a.created_at)}</td>
                     <td>
                         <button class="btn btn-success btn-sm" onclick="approveRequest('${a.id}')">✅ Duyệt</button>
                         <button class="btn btn-danger btn-sm" onclick="rejectRequest('${a.id}')" style="margin-left:0.25rem;">❌ Từ chối</button>
@@ -1123,7 +1135,7 @@
                     <td>📄 ${(a.extra_data || {}).file_name || '—'}</td>
                     <td><span class="badge badge-${a.status}">${a.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'}</span></td>
                     <td>${a.reviewer ? a.reviewer.email : '—'}</td>
-                    <td>${a.reviewed_at ? new Date(a.reviewed_at).toLocaleString('vi') : '—'}</td>
+                    <td>${a.reviewed_at ? toVN(a.reviewed_at) : '—'}</td>
                 </tr>
             `).join('');
             } catch (e) { console.error(e); }

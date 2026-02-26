@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phê duyệt - ADG Marketing Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: #1e293b;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent: #3b82f6;
+            --accent-light: rgba(59, 130, 246, 0.1);
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --success-light: rgba(34, 197, 94, 0.1);
+            --warning: #f59e0b;
+            --warning-light: rgba(245, 158, 11, 0.1);
+            --error: #ef4444;
+            --error-light: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Preview Modal Overlay */
+        .preview-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .preview-overlay.show {
+            display: flex;
+        }
+
+        .preview-container {
+            width: 85vw;
+            height: 88vh;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .preview-close {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.4rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+        }
+
+        .preview-close:hover {
+            background: var(--error-light);
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        .preview-body {
+            flex: 1;
+            position: relative;
+        }
+
+        .preview-body iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .preview-loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .preview-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            display: flex;
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-sidebar);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .sidebar-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-logo-text {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-logo-sub {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 0.75rem 0;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            padding: 0.75rem 1.25rem 0.4rem;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1.25rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.3);
+            color: white;
+            border-right: 3px solid var(--accent);
+        }
+
+        .nav-badge {
+            background: var(--error);
+            color: white;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 10px;
+            margin-left: auto;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .user-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .user-role {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .logout-btn {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0.4rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: auto;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        /* Main content */
+        .main {
+            margin-left: 240px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .page-subtitle {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.125rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Table */
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            font-size: 0.8125rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background: var(--bg-primary);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .badge-pending {
+            background: var(--warning-light);
+            color: #d97706;
+        }
+
+        .badge-approved {
+            background: var(--success-light);
+            color: #16a34a;
+        }
+
+        .badge-rejected {
+            background: var(--error-light);
+            color: #dc2626;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(0.9);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            filter: brightness(0.9);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            filter: brightness(0.9);
+        }
+
+        .btn-outline {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-primary);
+        }
+
+        .btn-sm {
+            padding: 0.3rem 0.7rem;
+            font-size: 0.75rem;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem;
+            font-size: 0.8125rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 200;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success {
+            background: #065f46;
+            color: #d1fae5;
+        }
+
+        .toast-error {
+            background: #991b1b;
+            color: #fee2e2;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-state-text {
+            font-size: 0.9375rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="sidebar-logo">
+                <div class="sidebar-logo-icon">📚</div>
+                <div>
+                    <div class="sidebar-logo-text">ADG Marketing Hub</div>
+                    <div class="sidebar-logo-sub">Knowledge Management</div>
+                </div>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Menu chính</div>
+            <a href="/" class="nav-item">🏠 Trang chủ</a>
+            <a href="/chatbot" class="nav-item">💬 Chat AI</a>
+            <a href="/sources" class="nav-item">📁 Tài liệu</a>
+            <a href="/upload" class="nav-item">📤 Upload</a>
+            <a href="/dashboard" class="nav-item">📊 Dashboard</a>
+            <a href="/approval-history" class="nav-item">📋 Lịch sử duyệt</a>
+            <div class="nav-section">Quản trị</div>
+            <a href="/admin/users" class="nav-item">👥 Quản lý Users</a>
+            <a href="/admin/approvals" class="nav-item active">📋 Phê duyệt <span id="pendingBadge" class="nav-badge"
+                    style="display:none">0</span></a>
+            <a href="/admin/folders" class="nav-item">📁 Tạo thư mục</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div>
+                    <div class="user-name" id="userName">Loading...</div>
+                    <div class="user-role" id="userRole">-</div>
+                </div>
+                <button class="logout-btn" onclick="logout()" title="Đăng xuất">🚪</button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title">📋 Phê duyệt</div>
+            <div class="page-subtitle">Duyệt và quản lý các yêu cầu upload/xóa tài liệu</div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="statPending">0</div>
+                <div class="stat-label">Chờ duyệt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statApproved">0</div>
+                <div class="stat-label">Đã duyệt</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statRejected">0</div>
+                <div class="stat-label">Từ chối</div>
+            </div>
+        </div>
+
+        <!-- Pending Approvals -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Yêu cầu chờ duyệt</div>
+                <button class="btn btn-outline btn-sm" onclick="loadPendingApprovals()">🔄 Làm mới</button>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Người gửi</th>
+                            <th>Loại</th>
+                            <th>File</th>
+                            <th>Chi tiết</th>
+                            <th>Ngày gửi</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approvalsTable">
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <div class="empty-state-icon">⏳</div>
+                                <div>Đang tải...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Lịch sử phê duyệt</div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Người gửi</th>
+                            <th>File</th>
+                            <th>Trạng thái</th>
+                            <th>Người duyệt</th>
+                            <th>Ngày duyệt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <div class="empty-state-icon">⏳</div>
+                                <div>Đang tải...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- File Preview Modal -->
+    <div class="preview-overlay" id="previewOverlay" onclick="closePreview(event)">
+        <div class="preview-container" onclick="event.stopPropagation()">
+            <div class="preview-header">
+                <div class="preview-title">
+                    <span>🔍</span>
+                    <span id="previewFileName">File preview</span>
+                </div>
+                <button class="preview-close" onclick="closePreview()">✕ Đóng</button>
+            </div>
+            <div class="preview-body" id="previewBody">
+                <div class="preview-loading" id="previewLoading">
+                    <div class="preview-spinner"></div>
+                    <div>Đang tải preview...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API = '/api/v1';
+
+        // Convert UTC timestamp to Vietnam timezone
+        function toVN(dateStr) {
+            if (!dateStr) return '—';
+            const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+            return d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // Init
+        async function init() {
+            const authRes = await fetch(`${API}/rbac/check`);
+            const authData = await authRes.json();
+            if (!authData.authenticated) { window.location.href = '/login'; return; }
+            if (!authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
+                document.querySelector('.main').innerHTML = `
+                <div class="empty-state" style="margin-top:5rem;">
+                    <div class="empty-state-icon">🚫</div>
+                    <div class="empty-state-text">Bạn không có quyền truy cập trang này.</div>
+                    <a href="/" class="btn btn-primary" style="margin-top:1rem;">← Về trang chủ</a>
+                </div>`;
+                return;
+            }
+            document.getElementById('userName').textContent = authData.email.split('@')[0];
+            document.getElementById('userRole').textContent = authData.roles.join(', ');
+            document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
+            loadPendingApprovals();
+            loadHistory();
+        }
+
+        // Approvals
+        async function loadPendingApprovals() {
+            try {
+                const res = await fetch(`${API}/approvals/pending`);
+                if (!res.ok) {
+                    document.getElementById('approvalsTable').innerHTML = `
+                    <tr><td colspan="6" class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div>Không có yêu cầu chờ duyệt</div>
+                    </td></tr>`;
+                    return;
+                }
+                const data = await res.json();
+                const items = data.pending || [];
+
+                document.getElementById('statPending').textContent = items.length;
+                const badge = document.getElementById('pendingBadge');
+                if (items.length > 0) { badge.textContent = items.length; badge.style.display = 'inline'; }
+                else { badge.style.display = 'none'; }
+
+                if (items.length === 0) {
+                    document.getElementById('approvalsTable').innerHTML = `
+                    <tr><td colspan="6" class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div>Không có yêu cầu chờ duyệt</div>
+                    </td></tr>`;
+                    return;
+                }
+
+                document.getElementById('approvalsTable').innerHTML = items.map(a => {
+                    const isDelete = a.action_type === 'delete';
+                    const typeBadge = isDelete
+                        ? '<span class="badge badge-rejected">🗑️ Xóa</span>'
+                        : '<span class="badge badge-pending">📤 Upload</span>';
+                    const detail = isDelete
+                        ? ''
+                        : `📁 ${a.extra_data.target_folder_name || a.extra_data.target_folder_id || '—'}`;
+                    return `
+                    <tr>
+                        <td><strong>${a.requester.email}</strong><br><small style="color:var(--text-secondary)">${a.requester.name || ''}</small></td>
+                        <td>${typeBadge}</td>
+                        <td>📄 ${a.extra_data.file_name || '—'}<br><small style="color:var(--text-secondary)">${formatBytes(a.extra_data.file_size)}</small></td>
+                        <td>${detail}</td>
+                        <td>${toVN(a.created_at)}</td>
+                        <td>
+                            <button class="btn btn-outline btn-sm" onclick="previewFile('${a.extra_data.file_id || ''}', '${(a.extra_data.file_name || '').replace(/'/g, "\\'")}')">🔍 Xem</button>
+                            <button class="btn btn-success btn-sm" onclick="approveRequest('${a.id}', '${a.action_type || 'upload'}')" style="margin-left:0.25rem;">✅ Duyệt</button>
+                            <button class="btn btn-danger btn-sm" onclick="rejectRequest('${a.id}')" style="margin-left:0.25rem;">❌ Từ chối</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadHistory() {
+            try {
+                const res = await fetch(`${API}/approvals/history`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const items = data.history || [];
+
+                document.getElementById('statApproved').textContent = items.filter(a => a.status === 'approved').length;
+                document.getElementById('statRejected').textContent = items.filter(a => a.status === 'rejected').length;
+
+                if (items.length === 0) {
+                    document.getElementById('historyTable').innerHTML = `
+                    <tr><td colspan="5" class="empty-state"><div class="empty-state-icon">📋</div><div>Chưa có lịch sử</div></td></tr>`;
+                    return;
+                }
+
+                document.getElementById('historyTable').innerHTML = items.map(a => `
+                <tr>
+                    <td>${a.requester.email}</td>
+                    <td>📄 ${(a.extra_data || {}).file_name || '—'}</td>
+                    <td><span class="badge badge-${a.status}">${a.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'}</span></td>
+                    <td>${a.reviewer ? a.reviewer.email : '—'}</td>
+                    <td>${a.reviewed_at ? toVN(a.reviewed_at) : '—'}</td>
+                </tr>
+            `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function approveRequest(id, actionType) {
+            const msg = actionType === 'delete'
+                ? 'Duyệt yêu cầu XÓA này? File sẽ bị xóa vĩnh viễn khỏi Google Drive.'
+                : 'Duyệt yêu cầu này? File sẽ được move sang thư mục đích.';
+            if (!confirm(msg)) return;
+            try {
+                const res = await fetch(`${API}/approvals/${id}/approve`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('✅ ' + data.message, 'success');
+                    loadPendingApprovals();
+                    loadHistory();
+                } else {
+                    showToast('❌ ' + (data.detail || 'Lỗi'), 'error');
+                }
+            } catch (e) { showToast('❌ Lỗi kết nối', 'error'); }
+        }
+
+        async function rejectRequest(id) {
+            const note = prompt('Lý do từ chối (tùy chọn):');
+            if (note === null) return;
+            try {
+                const res = await fetch(`${API}/approvals/${id}/reject?note=${encodeURIComponent(note)}`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('⏹ Đã từ chối yêu cầu', 'success');
+                    loadPendingApprovals();
+                    loadHistory();
+                } else {
+                    showToast('❌ ' + (data.detail || 'Lỗi'), 'error');
+                }
+            } catch (e) { showToast('❌ Lỗi kết nối', 'error'); }
+        }
+
+        // Utilities
+        async function logout() {
+            await fetch(`${API}/rbac/logout`, { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        init();
+
+        // ============================================================
+        // File Preview
+        // ============================================================
+        async function previewFile(fileId, fileName) {
+            if (!fileId) { showToast('❌ Không tìm thấy file ID', 'error'); return; }
+
+            const overlay = document.getElementById('previewOverlay');
+            const body = document.getElementById('previewBody');
+            const loading = document.getElementById('previewLoading');
+            document.getElementById('previewFileName').textContent = fileName || 'File preview';
+
+            // Show modal with loading
+            overlay.classList.add('show');
+            loading.style.display = 'flex';
+            // Remove old iframe if any
+            const oldIframe = body.querySelector('iframe');
+            if (oldIframe) oldIframe.remove();
+
+            try {
+                const res = await fetch(`${API}/approvals/preview/${fileId}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Preview failed');
+                }
+
+                // Create iframe
+                const iframe = document.createElement('iframe');
+                iframe.src = data.preview_url;
+                iframe.allow = 'autoplay';
+                iframe.onload = () => { loading.style.display = 'none'; };
+                body.appendChild(iframe);
+
+                // Timeout fallback for loading
+                setTimeout(() => { loading.style.display = 'none'; }, 5000);
+            } catch (e) {
+                loading.innerHTML = `<div style="color:var(--error);text-align:center;">❌ ${e.message}<br><small>Không thể tải preview</small></div>`;
+            }
+        }
+
+        function closePreview(event) {
+            if (event && event.target !== document.getElementById('previewOverlay')) return;
+            document.getElementById('previewOverlay').classList.remove('show');
+            const body = document.getElementById('previewBody');
+            const iframe = body.querySelector('iframe');
+            if (iframe) iframe.remove();
+            // Reset loading
+            document.getElementById('previewLoading').innerHTML = '<div class="preview-spinner"></div><div>Đang tải preview...</div>';
+            document.getElementById('previewLoading').style.display = 'flex';
+        }
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePreview();
+        });
+    </script>
+</body>
+
+</html>

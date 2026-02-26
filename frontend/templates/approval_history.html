@@ -372,7 +372,7 @@
             <a href="/approval-history" class="nav-item active"><span>📋</span> Lịch sử duyệt</a>
 
             <div class="nav-section-title">QUẢN TRỊ</div>
-            <a href="/admin-dashboard" class="nav-item" id="adminNavLink" style="display:none;"><span>⚙️</span> Admin
+            <a href="/admin/users" class="nav-item" id="adminNavLink" style="display:none;"><span>⚙️</span> Admin
                 Panel</a>
         </nav>
 
@@ -492,6 +492,14 @@
             } catch (e) { console.log('Auth check failed:', e); }
         }
 
+        // Convert UTC timestamp to Vietnam timezone
+        function toVN(dateStr) {
+            if (!dateStr) return '—';
+            // Backend sends UTC without 'Z' suffix, add it so JS parses as UTC
+            const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+            return d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+
         async function loadData() {
             allRequests = [];
 
@@ -540,7 +548,7 @@
             }
 
             // Sort by created_at desc
-            allRequests.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            allRequests.sort((a, b) => new Date(b.created_at + 'Z') - new Date(a.created_at + 'Z'));
 
             updateStats();
             renderTable();
@@ -587,8 +595,8 @@
                     <td>${requesterEmail}</td>
                     <td>${statusBadge}${r.review_note ? '<div class="review-note">💬 ' + r.review_note + '</div>' : ''}</td>
                     <td>${r.reviewer ? r.reviewer.email : '—'}</td>
-                    <td>${new Date(r.created_at).toLocaleString('vi')}</td>
-                    <td>${r.reviewed_at ? new Date(r.reviewed_at).toLocaleString('vi') : '—'}</td>
+                    <td>${toVN(r.created_at)}</td>
+                    <td>${r.reviewed_at ? toVN(r.reviewed_at) : '—'}</td>
                 </tr>`;
             }).join('');
         }

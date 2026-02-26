@@ -8,12 +8,13 @@ import tempfile
 import shutil
 from typing import List, Dict, Any
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 
 from backend.config import settings
 from backend.core.auth.oauth import get_oauth_service
 from backend.services.gdrive_service import GoogleDriveService
 from backend.models.responses import FolderTreeResponse, UploadResponse
+from backend.services.permission_service import get_current_user
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -410,3 +411,51 @@ async def list_files(folder_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Delete File/Folder (Admin Only - Direct Delete)
+# =============================================================================
+
+@router.delete("/{file_id}")
+async def delete_file(
+    file_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Delete a file from Google Drive (admin only, direct delete).
+    """
+    # Check admin role
+    user_roles = current_user.get("roles", [])
+    if not any(r in ["admin", "super_admin"] for r in user_roles):
+        raise HTTPException(status_code=403, detail="Only admins can delete files directly")
+    
+    try:
+        gdrive = get_gdrive_service()
+        
+        # Get file info first for confirmation
+        file_info = gdrive.service.files().get(
+            fileId=file_id,
+            fields="id, name, mimeType, parents",
+            supportsAllDrives=True
+        ).execute()
+        
+        file_name = file_info.get("name", "Unknown")
+        is_folder = file_info.get("mimeType") == "application/vnd.google-apps.folder"
+        
+        # Delete the file/folder
+        gdrive.delete_file(file_id)
+        
+        return {
+            "success": True,
+            "message": f"{'Folder' if is_folder else 'File'} '{file_name}' deleted successfully",
+            "file_id": file_id,
+            "file_name": file_name,
+            "was_folder": is_folder,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+

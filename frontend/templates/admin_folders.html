@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo thư mục - ADG Marketing Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: #1e293b;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent: #3b82f6;
+            --accent-light: rgba(59, 130, 246, 0.1);
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --success-light: rgba(34, 197, 94, 0.1);
+            --warning: #f59e0b;
+            --warning-light: rgba(245, 158, 11, 0.1);
+            --error: #ef4444;
+            --error-light: rgba(239, 68, 68, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            display: flex;
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-sidebar);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .sidebar-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-logo-text {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-logo-sub {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 0.75rem 0;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            padding: 0.75rem 1.25rem 0.4rem;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1.25rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.3);
+            color: white;
+            border-right: 3px solid var(--accent);
+        }
+
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .user-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .user-role {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .logout-btn {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.6);
+            padding: 0.4rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: auto;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        /* Main content */
+        .main {
+            margin-left: 240px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .page-subtitle {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+            color: var(--text-secondary);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 0.6rem 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.875rem;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(0.9);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem;
+            font-size: 0.8125rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 200;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success {
+            background: #065f46;
+            color: #d1fae5;
+        }
+
+        .toast-error {
+            background: #991b1b;
+            color: #fee2e2;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-state-text {
+            font-size: 0.9375rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="sidebar-logo">
+                <div class="sidebar-logo-icon">📚</div>
+                <div>
+                    <div class="sidebar-logo-text">ADG Marketing Hub</div>
+                    <div class="sidebar-logo-sub">Knowledge Management</div>
+                </div>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Menu chính</div>
+            <a href="/" class="nav-item">🏠 Trang chủ</a>
+            <a href="/chatbot" class="nav-item">💬 Chat AI</a>
+            <a href="/sources" class="nav-item">📁 Tài liệu</a>
+            <a href="/upload" class="nav-item">📤 Upload</a>
+            <a href="/dashboard" class="nav-item">📊 Dashboard</a>
+            <a href="/approval-history" class="nav-item">📋 Lịch sử duyệt</a>
+            <div class="nav-section">Quản trị</div>
+            <a href="/admin/users" class="nav-item">👥 Quản lý Users</a>
+            <a href="/admin/approvals" class="nav-item">📋 Phê duyệt</a>
+            <a href="/admin/folders" class="nav-item active">📁 Tạo thư mục</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">?</div>
+                <div>
+                    <div class="user-name" id="userName">Loading...</div>
+                    <div class="user-role" id="userRole">-</div>
+                </div>
+                <button class="logout-btn" onclick="logout()" title="Đăng xuất">🚪</button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div class="page-title">📁 Tạo thư mục</div>
+            <div class="page-subtitle">Tạo thư mục mới trên Google Drive</div>
+        </div>
+
+        <div class="card" style="max-width: 600px;">
+            <div class="card-title" style="margin-bottom:1.5rem;">Tạo thư mục mới trên Google Drive</div>
+            <div class="form-group">
+                <label class="form-label">Tên thư mục *</label>
+                <input type="text" class="form-input" id="folderName" placeholder="Nhập tên thư mục...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Thư mục cha</label>
+                <select class="form-select" id="folderParent" style="cursor:pointer;">
+                    <option value="">📂 Chọn thư mục cha...</option>
+                </select>
+                <small style="color:var(--text-secondary);font-size:0.75rem;">Chọn thư mục cha để tạo bên trong</small>
+            </div>
+            <button class="btn btn-primary" onclick="createFolder()" id="createFolderBtn" style="margin-top:0.5rem;">📁
+                Tạo thư mục</button>
+            <div id="folderResult" style="margin-top:1rem;display:none;"></div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API = '/api/v1';
+
+        // Init
+        async function init() {
+            const authRes = await fetch(`${API}/rbac/check`);
+            const authData = await authRes.json();
+            if (!authData.authenticated) { window.location.href = '/login'; return; }
+            if (!authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
+                document.querySelector('.main').innerHTML = `
+                <div class="empty-state" style="margin-top:5rem;">
+                    <div class="empty-state-icon">🚫</div>
+                    <div class="empty-state-text">Bạn không có quyền truy cập trang này.</div>
+                    <a href="/" class="btn btn-primary" style="margin-top:1rem;">← Về trang chủ</a>
+                </div>`;
+                return;
+            }
+            document.getElementById('userName').textContent = authData.email.split('@')[0];
+            document.getElementById('userRole').textContent = authData.roles.join(', ');
+            document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
+            loadParentFolders();
+        }
+
+        // Load existing folders for parent dropdown
+        async function loadParentFolders() {
+            const select = document.getElementById('folderParent');
+            select.innerHTML = '<option value="">⏳ Đang tải...</option>';
+            try {
+                const res = await fetch('/api/v1/documents/folders?depth=10');
+                const data = await res.json();
+                select.innerHTML = '';
+                if (data.root_id) {
+                    const rootOpt = document.createElement('option');
+                    rootOpt.value = data.root_id;
+                    rootOpt.textContent = '📂 ADG_Marketing (Root)';
+                    select.appendChild(rootOpt);
+                }
+                if (data.folders && data.folders.length > 0) {
+                    flattenFolders(data.folders, select, 1);
+                }
+            } catch (e) {
+                select.innerHTML = '<option value="">❌ Lỗi tải folders</option>';
+                console.error('Failed to load folders:', e);
+            }
+        }
+
+        function flattenFolders(folders, select, level) {
+            for (const folder of folders) {
+                const indent = '\u00A0\u00A0'.repeat(level);
+                const prefix = level === 0 ? '📁' : '└📁';
+                const option = document.createElement('option');
+                option.value = folder.id;
+                option.textContent = `${indent}${prefix} ${folder.name}`;
+                select.appendChild(option);
+                if (folder.children && folder.children.length > 0) {
+                    flattenFolders(folder.children, select, level + 1);
+                }
+            }
+        }
+
+        async function createFolder() {
+            const name = document.getElementById('folderName').value.trim();
+            const parentId = document.getElementById('folderParent').value;
+            if (!name) { showToast('Nhập tên thư mục', 'error'); return; }
+
+            const btn = document.getElementById('createFolderBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang tạo...';
+
+            try {
+                const body = { name };
+                if (parentId) body.parent_folder_id = parentId;
+
+                const res = await fetch(`${API}/admin/folders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`✅ ${data.message}`, 'success');
+                    document.getElementById('folderResult').style.display = 'block';
+                    document.getElementById('folderResult').innerHTML = `
+                    <div style="background:var(--success-light);padding:1rem;border-radius:0.75rem;border:1px solid rgba(34,197,94,0.3);">
+                        <strong>✅ Thư mục đã tạo</strong><br>
+                        <small>📁 ${data.folder.name}</small><br>
+                        <small>ID: <code>${data.folder.id}</code></small>
+                    </div>`;
+                    document.getElementById('folderName').value = '';
+                    document.getElementById('folderParent').value = '';
+                    loadParentFolders();
+                } else {
+                    showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Lỗi kết nối', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📁 Tạo thư mục';
+            }
+        }
+
+        // Utilities
+        async function logout() {
+            await fetch(`${API}/rbac/logout`, { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

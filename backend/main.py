@@ -31,6 +31,9 @@ PUBLIC_PAGES = {"/", "/login", "/docs", "/redoc", "/openapi.json"}
 # Pages not listed here are open to all authenticated users
 PAGE_ROLES = {
     "/admin-dashboard": ["admin", "super_admin"],
+    "/admin/users":     ["admin", "super_admin"],
+    "/admin/approvals": ["admin", "super_admin"],
+    "/admin/folders":   ["admin", "super_admin"],
     "/upload":          ["editor", "admin", "super_admin"],
     "/approval-history":["viewer", "editor", "approver", "admin", "super_admin"],
     "/dashboard":       ["viewer", "editor", "approver", "admin", "super_admin"],
@@ -239,18 +242,46 @@ async def login_page():
     return HTMLResponse("<h1>ADG KMS - Login page not found</h1>")
 
 
-@app.get("/admin-dashboard", response_class=HTMLResponse)
-async def admin_dashboard_page():
-    """Serve the admin dashboard UI"""
+@app.get("/admin-dashboard")
+async def admin_dashboard_redirect():
+    """Redirect old admin dashboard to new URL"""
+    return RedirectResponse(url="/admin/users", status_code=302)
+
+
+@app.get("/admin/users", response_class=HTMLResponse)
+async def admin_users_page():
+    """Serve the admin users page"""
     template_path = os.path.join(
         os.path.dirname(__file__),
-        "..", "frontend", "templates", "admin_dashboard.html"
+        "..", "frontend", "templates", "admin_users.html"
     )
-    
     if os.path.exists(template_path):
         return FileResponse(template_path)
-    
-    return HTMLResponse("<h1>ADG KMS - Admin Dashboard not found</h1>")
+    return HTMLResponse("<h1>ADG KMS - Admin Users not found</h1>")
+
+
+@app.get("/admin/approvals", response_class=HTMLResponse)
+async def admin_approvals_page():
+    """Serve the admin approvals page"""
+    template_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "frontend", "templates", "admin_approvals.html"
+    )
+    if os.path.exists(template_path):
+        return FileResponse(template_path)
+    return HTMLResponse("<h1>ADG KMS - Admin Approvals not found</h1>")
+
+
+@app.get("/admin/folders", response_class=HTMLResponse)
+async def admin_folders_page():
+    """Serve the admin folders page"""
+    template_path = os.path.join(
+        os.path.dirname(__file__),
+        "..", "frontend", "templates", "admin_folders.html"
+    )
+    if os.path.exists(template_path):
+        return FileResponse(template_path)
+    return HTMLResponse("<h1>ADG KMS - Admin Folders not found</h1>")
 
 
 @app.get("/approval-history", response_class=HTMLResponse)
