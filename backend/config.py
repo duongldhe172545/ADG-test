@@ -78,22 +78,9 @@ class Settings(BaseSettings):
         default="",
         description="Folder ID for pending uploads (awaiting approval)"
     )
-    
-    # ==========================================================================
-    # NotebookLM Settings
-    # ==========================================================================
-    NOTEBOOK_ID: str = Field(default="", description="Default NotebookLM notebook ID")
-    ALLOWED_NOTEBOOKS: str = Field(
+    GDRIVE_REFRESH_TOKEN: str = Field(
         default="",
-        description="Comma-separated list of notebook IDs to show in UI (empty = show all)"
-    )
-    
-    # ==========================================================================
-    # Scheduler Settings
-    # ==========================================================================
-    AUTH_REFRESH_INTERVAL_MINUTES: int = Field(
-        default=30,
-        description="Interval for auto-refreshing NotebookLM auth"
+        description="Google Drive refresh token (generated via scripts/generate_drive_token.py)"
     )
     
     # ==========================================================================

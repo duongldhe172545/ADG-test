@@ -3,18 +3,22 @@ API Router
 Combines all API route modules
 """
 
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, Depends, Request, UploadFile, File, Form
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.v1 import auth, chat, documents, health
-from backend.api.v1 import rbac_auth, admin, approvals
-from backend.models.requests import ChatRequest
+from backend.api.v1 import auth, documents, health
+from backend.api.v1 import rbac_auth, admin, approvals, chat_history
+
+from backend.db.connection import get_db
+from backend.services.permission_service import get_current_user
 
 # Create main API router
 api_router = APIRouter(prefix="/api/v1")
 
 # Include all route modules
 api_router.include_router(auth.router)
-api_router.include_router(chat.router)
+
+api_router.include_router(chat_history.router)
 api_router.include_router(documents.router)
 api_router.include_router(health.router)
 
@@ -105,26 +109,5 @@ async def legacy_upload(file: UploadFile = File(...), folder_id: str = Form(...)
     return await documents.upload_file(file=file, folder_id=folder_id)
 
 
-# -----------------------------------------------------------------------------
-# NotebookLM Chat
-# -----------------------------------------------------------------------------
-@legacy_router.get("/notebooks")
-async def legacy_notebooks():
-    """Legacy: /api/notebooks -> /api/v1/chat/notebooks"""
-    return await chat.list_notebooks()
 
-@legacy_router.get("/sources/{notebook_id}")
-async def legacy_sources(notebook_id: str):
-    """Legacy: /api/sources/{id} -> /api/v1/chat/sources/{id}"""
-    return await chat.get_sources(notebook_id)
-
-@legacy_router.post("/chat")
-async def legacy_chat(request: ChatRequest):
-    """Legacy: /api/chat -> /api/v1/chat"""
-    return await chat.chat_sync(request)
-
-@legacy_router.post("/chat/stream")
-async def legacy_chat_stream(request: ChatRequest):
-    """Legacy: /api/chat/stream -> /api/v1/chat/stream"""
-    return await chat.chat_stream(request)
 

@@ -93,8 +93,18 @@ async def rbac_callback(
             scopes=rbac_scopes,
             redirect_uri=rbac_redirect_uri,
         )
+        
+        # Fix scope mismatch: Google may change scope ordering
+        import os
+        os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+        
         flow.fetch_token(code=code)
         credentials = flow.credentials
+        
+        # Save OAuth tokens for Google Drive service
+        # Only save if no existing Drive token (don't overwrite admin's token)
+        if not oauth_service._token_file.exists():
+            oauth_service._save_tokens(credentials)
         
         # Get user info from Google
         from googleapiclient.discovery import build

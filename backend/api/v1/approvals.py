@@ -86,10 +86,15 @@ async def submit_for_approval(
         }
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
     finally:
         if tmp_path and os.path.exists(tmp_path):
-            os.remove(tmp_path)
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass  # Windows may lock the file briefly
 
 
 # =============================================================================
@@ -380,74 +385,6 @@ async def approve_request(
         ).execute()
         
         file_name = move_result.get("name", extra_data.get("file_name", ""))
-        file_mime = move_result.get("mimeType", "application/pdf")
-        
-        # Share file publicly so NotebookLM can access it
-        try:
-            gdrive.share_file_public(file_id)
-            print(f"🔓 Shared file publicly: {file_id}")
-        except Exception as share_err:
-            print(f"⚠️ Could not share file publicly: {share_err}")
-        
-        # Sync to NotebookLM (matching direct upload logic)
-        notebook_sync_result = None
-        try:
-            from backend.config.folder_notebook_mapping import FOLDER_NOTEBOOK_MAPPING
-            from backend.services.notebooklm_service import get_notebooklm_service
-            
-            print(f"🔍 [Approval] Checking NotebookLM sync for folder: {target_folder_id}")
-            
-            # Check if target folder is mapped
-            notebook_id = FOLDER_NOTEBOOK_MAPPING.get(target_folder_id)
-            
-            # If not directly mapped, try parent folders
-            if not notebook_id:
-                try:
-                    folder_info = gdrive.service.files().get(
-                        fileId=target_folder_id,
-                        fields='parents'
-                    ).execute()
-                    
-                    for parent_id in folder_info.get('parents', []):
-                        notebook_id = FOLDER_NOTEBOOK_MAPPING.get(parent_id)
-                        if notebook_id:
-                            print(f"✅ Found parent mapping: {parent_id} -> {notebook_id}")
-                            break
-                        
-                        # Also check grandparent (2 levels deep)
-                        try:
-                            gp_info = gdrive.service.files().get(
-                                fileId=parent_id,
-                                fields='parents'
-                            ).execute()
-                            for gp_id in gp_info.get('parents', []):
-                                notebook_id = FOLDER_NOTEBOOK_MAPPING.get(gp_id)
-                                if notebook_id:
-                                    print(f"✅ Found grandparent mapping: {gp_id} -> {notebook_id}")
-                                    break
-                            if notebook_id:
-                                break
-                        except Exception:
-                            pass
-                except Exception as e:
-                    print(f"⚠️ Could not traverse parent folders: {e}")
-            
-            if notebook_id and file_id:
-                print(f"🚀 [Approval] Syncing to notebook: {notebook_id}")
-                notebooklm = get_notebooklm_service()
-                notebook_sync_result = await notebooklm.add_drive_source(
-                    notebook_id=notebook_id,
-                    document_id=file_id,
-                    title=file_name,
-                    mime_type=file_mime
-                )
-                print(f"📚 [Approval] NotebookLM sync: {notebook_sync_result}")
-            else:
-                print(f"⏭️ No mapping found for folder {target_folder_id}, skipping NotebookLM sync")
-        except ImportError as ie:
-            print(f"⚠️ Folder mapping not configured: {ie}")
-        except Exception as sync_error:
-            print(f"⚠️ NotebookLM sync error (non-blocking): {sync_error}")
         
         # Update approval record
         approval.status = "approved"
@@ -459,9 +396,8 @@ async def approve_request(
         
         return {
             "success": True,
-            "message": f"File '{file_name}' approved, moved, and synced to NotebookLM",
+            "message": f"File '{file_name}' approved and moved to target folder",
             "file_id": file_id,
-            "notebook_sync": notebook_sync_result,
         }
         
     except Exception as e:

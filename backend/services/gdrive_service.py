@@ -270,7 +270,7 @@ class GoogleDriveService:
         """
         Share a file publicly with "Anyone with the link can view" permission.
         
-        This is required for NotebookLM to access files from Google Drive.
+        This makes the file accessible via its web link.
         
         Args:
             file_id: ID of the file to share

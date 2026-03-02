@@ -20,7 +20,6 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from backend.config import settings
 from backend.api.router import api_router, legacy_router
-from backend.services.scheduler_service import get_scheduler_service
 from backend.services.auth_service import decode_access_token
 
 
@@ -49,28 +48,29 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown events.
     """
     # Startup
-    print("🚀 Starting ADG Knowledge Management System...")
-    
-    # Start background scheduler
-    scheduler = get_scheduler_service()
-    scheduler.start()
+    print("[START] Starting ADG Knowledge Management System...")
     
     yield
     
     # Shutdown
-    print("👋 Shutting down...")
-    scheduler.stop()
+    print("[STOP] Shutting down...")
 
 
 # Create FastAPI application
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Enterprise Knowledge Management System powered by NotebookLM",
+    description="Enterprise Knowledge Management System for ADG Marketing",
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
     lifespan=lifespan
 )
+
+# Mount static files
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+STATIC_DIR = os.path.join(FRONTEND_DIR, "static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 # =============================================================================

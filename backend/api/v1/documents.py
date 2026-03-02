@@ -11,7 +11,6 @@ from typing import List, Dict, Any
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 
 from backend.config import settings
-from backend.core.auth.oauth import get_oauth_service
 from backend.services.gdrive_service import GoogleDriveService
 from backend.models.responses import FolderTreeResponse, UploadResponse
 from backend.services.permission_service import get_current_user
@@ -19,45 +18,78 @@ from backend.services.permission_service import get_current_user
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
 
-def get_gdrive_service():
+def _build_credentials_from_env():
     """
-    Get Google Drive service using OAuth credentials.
-    
-    Raises:
-        HTTPException if not authenticated
-    """
-    oauth_service = get_oauth_service()
-    credentials = oauth_service.get_valid_credentials()
-    
-    if not credentials:
-        raise HTTPException(
-            status_code=401,
-            detail="Not authenticated. Please login with Google first."
-        )
-    
-    return GoogleDriveService.from_oauth_credentials(credentials)
-
-
-def get_gdrive_service_for_read():
-    """
-    Get Google Drive service for reading (OAuth preferred, fallback to service account).
+    Build Google OAuth credentials from GDRIVE_REFRESH_TOKEN in .env.
+    This is the production-ready, zero-login method.
     
     Returns:
-        GoogleDriveService or None
+        Credentials object or None
     """
-    oauth_service = get_oauth_service()
-    credentials = oauth_service.get_valid_credentials()
+    if not settings.GDRIVE_REFRESH_TOKEN:
+        return None
     
+    if not settings.OAUTH_CLIENT_ID or not settings.OAUTH_CLIENT_SECRET:
+        return None
+    
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+    
+    credentials = Credentials(
+        token=None,  # Will be refreshed automatically
+        refresh_token=settings.GDRIVE_REFRESH_TOKEN,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=settings.OAUTH_CLIENT_ID,
+        client_secret=settings.OAUTH_CLIENT_SECRET,
+        scopes=[
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+        ],
+    )
+    
+    # Refresh to get a valid access token
+    try:
+        credentials.refresh(Request())
+        return credentials
+    except Exception as e:
+        print(f"⚠️ Failed to refresh Drive token from .env: {e}")
+        return None
+
+
+def get_gdrive_service():
+    """
+    Get Google Drive service for all operations.
+    
+    Priority:
+      1. GDRIVE_REFRESH_TOKEN from .env (production-ready, zero-login)
+      2. Service Account (read-only fallback for Shared Drives)
+    """
+    # Priority 1: Refresh token from .env
+    credentials = _build_credentials_from_env()
     if credentials:
         return GoogleDriveService.from_oauth_credentials(credentials)
     
-    # Fallback to service account for reading
+    # Priority 2: Service account fallback
     if settings.GDRIVE_SERVICE_ACCOUNT_FILE:
         service_file = settings.GDRIVE_SERVICE_ACCOUNT_FILE
         if os.path.exists(service_file):
             return GoogleDriveService.from_service_account(service_file)
     
-    return None
+    raise HTTPException(
+        status_code=500,
+        detail="Google Drive not configured. Set GDRIVE_REFRESH_TOKEN in .env (run: python scripts/generate_drive_token.py)"
+    )
+
+
+def get_gdrive_service_for_read():
+    """
+    Get Google Drive service for reading. Returns None instead of raising.
+    """
+    try:
+        return get_gdrive_service()
+    except:
+        return None
 
 
 @router.get("/folders")
@@ -164,7 +196,7 @@ async def search_files(q: str, max_results: int = 50):
         q: Search query string (min 2 chars)
         max_results: Maximum results (default 50)
     
-    Only returns results within the NotebookLM-Sources folder tree.
+    Only returns results within the Knowledge Management folder tree.
     """
     if not q or len(q.strip()) < 2:
         return {"results": [], "query": q, "total": 0}
@@ -234,16 +266,13 @@ async def get_folder_children(folder_id: str):
 async def upload_file(
     file: UploadFile = File(...),
     folder_id: str = Form(...),
-    notebook_ids: str = Form(None)  # Comma-separated notebook IDs
 ):
     """
-    Upload file to Google Drive and sync to NotebookLM.
+    Upload file to Google Drive.
     
-    Uses OAuth credentials to upload to user's Drive storage.
-    Syncs to notebooks via:
-    1. Manual selection (notebook_ids parameter)
-    2. Auto-mapping (FOLDER_NOTEBOOK_MAPPING)
+    Uses GDRIVE_REFRESH_TOKEN from .env for authentication.
     """
+    tmp_path = None
     try:
         gdrive = get_gdrive_service()
         
@@ -252,135 +281,34 @@ async def upload_file(
             shutil.copyfileobj(file.file, tmp)
             tmp_path = tmp.name
         
-        try:
-            # Upload to Google Drive with original filename
-            result = gdrive.upload_file(
-                tmp_path, 
-                folder_id, 
-                custom_name=file.filename
-            )
-            
-            web_view_link = result.get('webViewLink')
-            file_name = result.get('name')
-            file_id = result.get('id')
-            
-            # Share file publicly so NotebookLM can access it
-            if file_id:
-                gdrive.share_file_public(file_id)
-            
-            # Auto-sync to NotebookLM if folder is mapped
-            notebook_sync_result = None
-            synced_notebooks = set()  # Track synced notebooks to avoid duplicates
-            try:
-                from backend.config.folder_notebook_mapping import FOLDER_NOTEBOOK_MAPPING
-                from backend.services.notebooklm_service import get_notebooklm_service
-                
-                print(f"🔍 Checking sync for folder_id: {folder_id}")
-                print(f"📋 Available mappings: {list(FOLDER_NOTEBOOK_MAPPING.keys())[:5]}...")
-                
-                # Check if this folder is mapped
-                notebook_id = FOLDER_NOTEBOOK_MAPPING.get(folder_id)
-                
-                # If not directly mapped, try to find parent folder in mapping
-                if not notebook_id:
-                    print(f"⚠️ Folder {folder_id} not in mapping, checking parents...")
-                    try:
-                        # Get file info to find parent folders
-                        file_info = gdrive.service.files().get(
-                            fileId=folder_id,
-                            fields='parents'
-                        ).execute()
-                        
-                        parents = file_info.get('parents', [])
-                        for parent_id in parents:
-                            print(f"🔍 Checking parent: {parent_id}")
-                            notebook_id = FOLDER_NOTEBOOK_MAPPING.get(parent_id)
-                            if notebook_id:
-                                print(f"✅ Found parent mapping: {parent_id} -> {notebook_id}")
-                                break
-                            
-                            # Also check grandparent (2 levels deep)
-                            try:
-                                grandparent_info = gdrive.service.files().get(
-                                    fileId=parent_id,
-                                    fields='parents'
-                                ).execute()
-                                for gp_id in grandparent_info.get('parents', []):
-                                    notebook_id = FOLDER_NOTEBOOK_MAPPING.get(gp_id)
-                                    if notebook_id:
-                                        print(f"✅ Found grandparent mapping: {gp_id} -> {notebook_id}")
-                                        break
-                                if notebook_id:
-                                    break
-                            except Exception:
-                                pass
-                    except Exception as e:
-                        print(f"⚠️ Could not get parent folders: {e}")
-                
-                if notebook_id and file_id:
-                    print(f"🚀 Syncing to notebook: {notebook_id}")
-                    notebooklm = get_notebooklm_service()
-                    notebook_sync_result = await notebooklm.add_drive_source(
-                        notebook_id=notebook_id,
-                        document_id=file_id,
-                        title=file_name,
-                        mime_type=result.get('mimeType', 'application/pdf')
-                    )
-                    synced_notebooks.add(notebook_id)  # Track synced notebook
-                    print(f"📚 NotebookLM sync: {notebook_sync_result}")
-                else:
-                    print(f"⏭️ No mapping found for folder {folder_id}, skipping auto-sync")
-            except ImportError as ie:
-                print(f"⚠️ Folder mapping not configured: {ie}")
-            except Exception as sync_error:
-                print(f"⚠️ NotebookLM sync error (non-blocking): {sync_error}")
-            
-            # Manual notebook sync (from selected checkboxes)
-            if notebook_ids and web_view_link:
-                try:
-                    from backend.services.notebooklm_service import get_notebooklm_service
-                    notebooklm = get_notebooklm_service()
-                    
-                    selected_notebooks = [nb.strip() for nb in notebook_ids.split(',') if nb.strip()]
-                    # Filter out already-synced notebooks
-                    new_notebooks = [nb for nb in selected_notebooks if nb not in synced_notebooks]
-                    
-                    if len(selected_notebooks) != len(new_notebooks):
-                        skipped = set(selected_notebooks) - set(new_notebooks)
-                        print(f"⏭️ Skipping already-synced notebooks: {skipped}")
-                    
-                    print(f"📝 Manual sync to notebooks: {new_notebooks}")
-                    
-                    for nb_id in new_notebooks:
-                        try:
-                            sync_result = await notebooklm.add_drive_source(
-                                notebook_id=nb_id,
-                                document_id=file_id,
-                                title=file_name,
-                                mime_type=result.get('mimeType', 'application/pdf')
-                            )
-                            synced_notebooks.add(nb_id)
-                            print(f"✅ Synced to notebook {nb_id}: {sync_result}")
-                        except Exception as nb_err:
-                            print(f"⚠️ Failed to sync to notebook {nb_id}: {nb_err}")
-                except Exception as manual_sync_error:
-                    print(f"⚠️ Manual sync error (non-blocking): {manual_sync_error}")
-            
-            return UploadResponse(
-                success=True,
-                id=result.get('id'),
-                name=file_name,
-                mimeType=result.get('mimeType'),
-                webViewLink=web_view_link
-            )
-        finally:
-            # Cleanup temp file
-            os.unlink(tmp_path)
+        # Upload to Google Drive with original filename
+        result = gdrive.upload_file(
+            tmp_path, 
+            folder_id, 
+            custom_name=file.filename
+        )
+        
+        return UploadResponse(
+            success=True,
+            id=result.get('id'),
+            name=result.get('name'),
+            mimeType=result.get('mimeType'),
+            webViewLink=result.get('webViewLink')
+        )
             
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup temp file (safe for Windows)
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
 
 @router.get("/files/{folder_id}")

@@ -231,3 +231,60 @@ class ApprovalRequest(Base):
     
     def __repr__(self):
         return f"<ApprovalRequest {self.id} - {self.status}>"
+
+
+# =============================================================================
+# Chat History
+# =============================================================================
+
+class ChatSession(Base):
+    """
+    A chat conversation session.
+    Groups messages for a user within a specific notebook context.
+    """
+    __tablename__ = "chat_sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    notebook_id = Column(String(255), nullable=True)  # Optional context ID
+    title = Column(String(500), default="New Chat", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    user = relationship("User")
+    messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan",
+                            order_by="ChatMessage.created_at")
+
+    __table_args__ = (
+        Index("ix_chat_session_user", "user_id"),
+        Index("ix_chat_session_updated", "updated_at"),
+    )
+
+    def __repr__(self):
+        return f"<ChatSession {self.id} - {self.title}>"
+
+
+class ChatMessage(Base):
+    """
+    A single message in a chat session.
+    Role is either 'user' or 'assistant'.
+    """
+    __tablename__ = "chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String(20), nullable=False)  # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    source_ids = Column(JSONB, nullable=True)  # Optional: selected source IDs for this message
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    session = relationship("ChatSession", back_populates="messages")
+
+    __table_args__ = (
+        Index("ix_chat_message_session", "session_id"),
+    )
+
+    def __repr__(self):
+        return f"<ChatMessage {self.id} - {self.role}>"

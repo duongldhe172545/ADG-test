@@ -6,584 +6,192 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tài liệu Google Drive - ADG KMS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/shared.css">
     <style>
-        :root {
-            --bg-primary: #0f0f0f;
-            --bg-secondary: #1a1a1a;
-            --bg-tertiary: #242424;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --accent: #8ab4f8;
-            --accent-hover: #aecbfa;
-            --accent-purple: #c58af9;
-            --border: #333333;
-            --success: #81c995;
-            --error: #f28b82;
+        /* Sources — page-specific overrides */
+        .sidebar {
+            width: 220px;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        .sidebar-logo .logo-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
         }
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+        .sidebar-logo .logo-text span {
+            color: #818cf8;
         }
 
-        /* Header */
-        .header {
+        .main-content {
+            margin-left: 220px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .nav-item.active {
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        .user-avatar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        /* Source cards grid */
+        .source-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .source-card {
             background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-            z-index: 100;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        .logo-text {
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .logo-text span {
-            color: var(--accent);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 6px;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 13px;
-            padding: 6px 12px;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-            background: var(--bg-tertiary);
-        }
-
-        .nav-links a.active {
-            color: var(--accent);
-            background: var(--bg-tertiary);
-        }
-
-        .auth-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .auth-btn {
-            padding: 6px 14px;
-            font-size: 13px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .auth-btn.login {
-            background: var(--accent);
-            color: var(--bg-primary);
-        }
-
-        .auth-btn.logout {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
             border: 1px solid var(--border);
-        }
-
-        .user-email {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        /* Main Layout */
-        .main-container {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
-
-        /* Folder Tree Panel */
-        .folder-panel {
-            width: 300px;
-            min-width: 200px;
-            max-width: 450px;
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .panel-header {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .panel-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-        }
-
-        /* Folder Tree */
-        .folder-tree {
-            font-size: 13px;
-        }
-
-        .tree-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 10px;
-            border-radius: 6px;
+            border-radius: 1rem;
+            padding: 1.25rem;
             cursor: pointer;
-            transition: background 0.15s;
-            margin-bottom: 2px;
-        }
-
-        .tree-item:hover {
-            background: var(--bg-tertiary);
-        }
-
-        .tree-item .delete-btn {
-            display: none;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 0.75rem;
-            padding: 2px 4px;
-            border-radius: 4px;
-            margin-left: auto;
-            opacity: 0.6;
             transition: all 0.2s;
+            position: relative;
         }
 
-        .tree-item:hover .delete-btn {
-            display: inline-block;
-        }
-
-        .tree-item .delete-btn:hover {
-            opacity: 1;
-            background: rgba(239, 68, 68, 0.15);
-        }
-
-        .tree-item.selected {
-            background: rgba(138, 180, 248, 0.15);
-            border: 1px solid var(--accent);
-        }
-
-        .tree-item.folder {
-            font-weight: 500;
-        }
-
-        .tree-item .icon {
-            font-size: 16px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .tree-item .name {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .tree-item .size {
-            font-size: 11px;
-            color: var(--text-secondary);
-        }
-
-        .tree-children {
-            margin-left: 20px;
-            border-left: 1px dashed var(--border);
-            padding-left: 8px;
-        }
-
-        .tree-children.collapsed {
-            display: none;
-        }
-
-        .expand-btn {
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .expand-btn.expanded {
-            transform: rotate(90deg);
-        }
-
-        /* Search Box */
-        .search-box {
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .search-input-wrapper {
-            display: flex;
-            align-items: center;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 6px 10px;
-            gap: 8px;
-        }
-
-        .search-input-wrapper:focus-within {
+        .source-card:hover {
             border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
         }
 
-        .search-input-wrapper input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: var(--text-primary);
-            font-size: 13px;
-            outline: none;
+        .source-card.active {
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.05);
         }
 
-        .search-input-wrapper input::placeholder {
-            color: var(--text-secondary);
-        }
-
-        .search-clear {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 12px;
-            padding: 2px 4px;
-            display: none;
-        }
-
-        .search-clear:hover {
-            color: var(--text-primary);
-        }
-
-        .search-results {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 8px;
-            background: var(--bg-tertiary);
-            border-radius: 6px;
-            display: none;
-        }
-
-        .search-result-item {
+        .source-card-header {
             display: flex;
-            flex-direction: column;
-            gap: 2px;
-            padding: 8px 10px;
-            cursor: pointer;
-            border-bottom: 1px solid var(--border);
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
         }
 
-        .search-result-item .row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .source-card-icon {
+            font-size: 1.75rem;
+            flex-shrink: 0;
         }
 
-        .search-result-item:last-child {
-            border-bottom: none;
-        }
-
-        .search-result-item:hover {
-            background: var(--bg-secondary);
-        }
-
-        .search-result-item .icon {
-            font-size: 16px;
-        }
-
-        .search-result-item .name {
-            font-size: 13px;
+        .source-card-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            line-height: 1.3;
             word-break: break-word;
         }
 
-        .search-result-item .type {
-            font-size: 11px;
+        .source-card-type {
+            font-size: 0.7rem;
             color: var(--text-secondary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding-left: 24px;
+            margin-top: 0.25rem;
         }
 
-        .search-loading,
-        .search-empty {
-            padding: 12px;
-            text-align: center;
+        .source-card-meta {
+            font-size: 0.75rem;
             color: var(--text-secondary);
-            font-size: 13px;
         }
 
-        .search-load-more {
-            padding: 10px;
-            text-align: center;
-            color: var(--accent);
-            font-size: 12px;
-            cursor: pointer;
-            border-top: 1px solid var(--border);
-        }
-
-        .search-load-more:hover {
+        /* Content Viewer */
+        .viewer-panel {
             background: var(--bg-secondary);
-        }
-
-        /* Resizer */
-        .resizer {
-            width: 4px;
-            background: var(--border);
-            cursor: col-resize;
-            flex-shrink: 0;
-            transition: background 0.2s;
-        }
-
-        .resizer:hover,
-        .resizer.active {
-            background: var(--accent);
-        }
-
-        /* Preview Panel */
-        .preview-panel {
-            flex: 1;
-            min-width: 400px;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-secondary);
-        }
-
-        .preview-header {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .preview-title {
-            font-size: 14px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .preview-path {
-            font-size: 12px;
-            font-weight: 400;
-            color: var(--text-secondary);
-        }
-
-        .preview-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .preview-btn {
-            padding: 6px 12px;
-            font-size: 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
             border: 1px solid var(--border);
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            text-decoration: none;
+            border-radius: 1rem;
+            overflow: hidden;
+            margin-top: 1.5rem;
+        }
+
+        .viewer-header {
             display: flex;
             align-items: center;
-            gap: 4px;
-        }
-
-        .preview-btn:hover {
-            background: var(--accent);
-            color: var(--bg-primary);
-            border-color: var(--accent);
-        }
-
-        .preview-content {
-            flex: 1;
-            overflow: hidden;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
             background: var(--bg-primary);
         }
 
-        .preview-empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text-secondary);
-            text-align: center;
-            padding: 40px;
+        .viewer-title {
+            font-weight: 600;
+            font-size: 0.9rem;
         }
 
-        .preview-empty-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        .preview-empty h3 {
-            font-size: 18px;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-
-        .preview-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        .preview-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            display: block;
-            margin: auto;
-        }
-
-        .preview-text {
-            padding: 20px;
-            font-size: 14px;
-            line-height: 1.7;
-            white-space: pre-wrap;
+        .viewer-body {
+            padding: 1.25rem;
+            max-height: 500px;
             overflow-y: auto;
-            height: 100%;
+            font-size: 0.875rem;
+            line-height: 1.7;
         }
 
-        /* Loading */
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            color: var(--text-secondary);
+        .viewer-body pre {
+            background: var(--bg-primary);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.8rem;
         }
 
+        /* Loading & Empty */
         .loading-spinner {
-            width: 32px;
-            height: 32px;
-            border: 3px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 12px;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Auth Required */
-        .auth-required {
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
+            padding: 3rem;
             color: var(--text-secondary);
-            text-align: center;
-            padding: 40px;
+            font-size: 0.875rem;
         }
 
-        .auth-required-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
+        /* Search */
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 0.6rem 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        .auth-required h3 {
-            font-size: 18px;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-
-        .auth-required .auth-btn {
-            margin-top: 20px;
-            padding: 10px 24px;
-            font-size: 14px;
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
+        .search-bar input {
+            flex: 1;
+            border: none;
             background: transparent;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            outline: none;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 3px;
+        /* Notebook select */
+        .notebook-selector {
+            margin-bottom: 1.5rem;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-secondary);
+        .notebook-selector select {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            background: var(--bg-secondary);
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            outline: none;
+            cursor: pointer;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
-            .folder-panel {
-                width: 250px;
+            .sidebar {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .source-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -754,7 +362,7 @@
         // ========================================================================
         async function checkAuthStatus() {
             try {
-                const response = await fetch('/api/v1/rbac/check');
+                const response = await fetch('/api/v1/rbac/check', { credentials: 'include' });
                 const data = await response.json();
 
                 if (data.authenticated) {
@@ -834,7 +442,7 @@
                     ? `${API_BASE}/api/v1/documents/folders?parent_id=${parentId}`
                     : `${API_BASE}/api/v1/documents/folders`;
 
-                const response = await fetch(url);
+                const response = await fetch(url, { credentials: 'include' });
 
                 // If 401 or 503, show auth prompt
                 if (response.status === 401 || response.status === 503) {
@@ -1117,7 +725,7 @@
             searchResults.innerHTML = '<div class="search-loading">🔍 Đang tìm kiếm...</div>';
 
             try {
-                const response = await fetch(`${API_BASE}/api/v1/documents/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch(`${API_BASE}/api/v1/documents/search?q=${encodeURIComponent(query, { credentials: 'include' })}`);
                 const data = await response.json();
 
                 if (!data.results || data.results.length === 0) {
@@ -1198,7 +806,7 @@
         });
 
         async function logoutRBAC() {
-            await fetch('/api/v1/rbac/logout', { method: 'POST' });
+            await fetch('/api/v1/rbac/logout', { method: 'POST', credentials: 'include' });
             window.location.href = '/login';
         }
 
@@ -1217,7 +825,7 @@
                 if (!confirm(confirmMsg)) return;
 
                 try {
-                    const res = await fetch(`/api/v1/documents/${fileId}`, { method: 'DELETE' });
+                    const res = await fetch(`/api/v1/documents/${fileId}`, { method: 'DELETE', credentials: 'include' });
                     const data = await res.json();
 
                     if (res.ok) {
@@ -1241,6 +849,7 @@
                     const res = await fetch('/api/v1/approvals/submit-delete', {
                         method: 'POST',
                         body: formData
+                        , credentials: 'include'
                     });
                     const data = await res.json();
 
@@ -1274,6 +883,90 @@
             }, 3000);
         }
     </script>
+</body>
+
+</html> loadFolders();
+});
+
+async function logoutRBAC() {
+await fetch('/api/v1/rbac/logout', { method: 'POST' });
+window.location.href = '/login';
+}
+
+// ========================================================================
+// Delete Functionality
+// ========================================================================
+async function deleteItem(fileId, fileName, isFolder) {
+const isAdmin = currentRoles.some(r => ['admin', 'super_admin'].includes(r));
+const typeLabel = isFolder ? 'thư mục' : 'file';
+
+if (isAdmin) {
+const confirmMsg = isFolder
+? `⚠️ Xóa thư mục "${fileName}" và TẤT CẢ file bên trong?\n\nThao tác này không thể hoàn tác!`
+: `🗑️ Xóa ${typeLabel} "${fileName}"?\n\nThao tác này không thể hoàn tác!`;
+
+if (!confirm(confirmMsg)) return;
+
+try {
+const res = await fetch(`/api/v1/documents/${fileId}`, { method: 'DELETE' });
+const data = await res.json();
+
+if (res.ok) {
+showDeleteToast(`✅ Đã xóa ${typeLabel} "${fileName}"`, 'success');
+const el = document.querySelector(`[data-id="${fileId}"]`);
+if (el) el.closest('.tree-item-wrapper').remove();
+} else {
+showDeleteToast(`❌ ${data.detail || 'Lỗi xóa'}`, 'error');
+}
+} catch (e) {
+showDeleteToast('❌ Lỗi kết nối', 'error');
+}
+} else {
+if (!confirm(`📋 Gửi yêu cầu xóa ${typeLabel} "${fileName}" cho admin duyệt?`)) return;
+
+try {
+const formData = new FormData();
+formData.append('file_id', fileId);
+formData.append('file_name', fileName);
+
+const res = await fetch('/api/v1/approvals/submit-delete', {
+method: 'POST',
+body: formData
+});
+const data = await res.json();
+
+if (res.ok) {
+showDeleteToast(`📋 Yêu cầu xóa "${fileName}" đã gửi cho admin`, 'success');
+} else {
+showDeleteToast(`❌ ${data.detail || 'Lỗi gửi yêu cầu'}`, 'error');
+}
+} catch (e) {
+showDeleteToast('❌ Lỗi kết nối', 'error');
+}
+}
+}
+
+function showDeleteToast(msg, type = 'success') {
+let toast = document.getElementById('deleteToast');
+if (!toast) {
+toast = document.createElement('div');
+toast.id = 'deleteToast';
+toast.style.cssText = 'position:fixed;bottom:2rem;right:2rem;padding:0.75rem
+1.25rem;border-radius:0.75rem;font-size:0.8125rem;transform:translateY(100px);opacity:0;transition:all
+0.3s;z-index:200;';
+document.body.appendChild(toast);
+}
+toast.textContent = msg;
+toast.style.background = type === 'success' ? '#065f46' : '#991b1b';
+toast.style.color = type === 'success' ? '#d1fae5' : '#fee2e2';
+toast.style.transform = 'translateY(0)';
+toast.style.opacity = '1';
+setTimeout(() => {
+toast.style.transform = 'translateY(100px)';
+toast.style.opacity = '0';
+}, 3000);
+}
+</script>
 </body>
 
 </html>

@@ -6,294 +6,204 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ADG Knowledge Management System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/shared.css">
     <style>
-        :root {
-            --bg-primary: #0f0f0f;
-            --bg-secondary: #1a1a1a;
-            --bg-tertiary: #242424;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --accent: #8ab4f8;
-            --accent-hover: #aecbfa;
-            --accent-purple: #c58af9;
-            --border: #333333;
-            --success: #81c995;
-            --error: #f28b82;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* Landing — standalone layout, no sidebar */
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            color: #e2e8f0;
+        }
+
+        .landing-container {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* Header */
-        .header {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 16px 24px;
+        .landing-header {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            backdrop-filter: blur(10px);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            align-items: center;
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .logo {
+        .landing-logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
         }
 
-        .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
-            border-radius: 10px;
+        .landing-logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 1.25rem;
         }
 
-        .logo-text {
+        .landing-logo-text {
             font-weight: 700;
-            font-size: 18px;
+            font-size: 1.1rem;
         }
 
-        .logo-text span {
-            color: var(--accent);
+        .landing-logo-text span {
+            color: #818cf8;
         }
 
-        .nav-links {
-            display: flex;
-            gap: 8px;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-            background: var(--bg-tertiary);
-        }
-
-        .nav-links a.active {
-            color: var(--accent);
-            background: var(--bg-tertiary);
-        }
-
-        /* Hero Section */
-        .hero {
+        .landing-hero {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 60px 24px;
-            background: radial-gradient(ellipse at center top, rgba(138, 180, 248, 0.08) 0%, transparent 50%);
+            padding: 2rem;
         }
 
         .hero-badge {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 100px;
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 32px;
+            gap: 0.5rem;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+            color: #a5b4fc;
+            margin-bottom: 1.5rem;
         }
 
-        .hero-badge .dot {
-            width: 8px;
-            height: 8px;
-            background: var(--success);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        .hero h1 {
-            font-size: 48px;
+        .hero-title {
+            font-size: 3rem;
             font-weight: 700;
-            line-height: 1.2;
-            margin-bottom: 20px;
-            max-width: 700px;
+            line-height: 1.1;
+            margin-bottom: 1rem;
+            color: white;
         }
 
-        .hero h1 .gradient-text {
-            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+        .hero-title .highlight {
+            background: linear-gradient(135deg, #818cf8, #c084fc);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
-        .hero p {
-            font-size: 18px;
-            color: var(--text-secondary);
-            max-width: 550px;
-            line-height: 1.7;
-            margin-bottom: 40px;
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            max-width: 600px;
+            line-height: 1.6;
+            margin-bottom: 2rem;
         }
 
-        .hero-buttons {
+        .hero-actions {
             display: flex;
-            gap: 16px;
+            gap: 1rem;
             flex-wrap: wrap;
             justify-content: center;
         }
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 500;
+        .btn-hero-primary {
+            padding: 0.85rem 2rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-hero-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-hero-secondary {
+            padding: 0.85rem 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.2s;
             text-decoration: none;
-            border: none;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
-            color: var(--bg-primary);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(138, 180, 248, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--bg-secondary);
-            border-color: var(--accent);
-        }
-
-        /* Features Grid */
-        .features {
-            padding: 80px 24px;
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .features h2 {
-            text-align: center;
-            font-size: 32px;
-            font-weight: 600;
-            margin-bottom: 48px;
+        .btn-hero-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            max-width: 900px;
+            margin: 3rem auto 0;
+            width: 100%;
         }
 
         .feature-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: left;
             transition: all 0.3s;
         }
 
         .feature-card:hover {
-            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(99, 102, 241, 0.3);
             transform: translateY(-4px);
         }
 
         .feature-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, rgba(138, 180, 248, 0.2), rgba(197, 138, 249, 0.2));
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            margin-bottom: 20px;
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
         }
 
-        .feature-card h3 {
-            font-size: 18px;
+        .feature-title {
             font-weight: 600;
-            margin-bottom: 12px;
+            margin-bottom: 0.5rem;
+            color: white;
         }
 
-        .feature-card p {
-            font-size: 14px;
-            color: var(--text-secondary);
-            line-height: 1.6;
+        .feature-desc {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.5;
         }
 
-        /* Footer */
-        .footer {
-            padding: 24px;
+        .landing-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             text-align: center;
-            border-top: 1px solid var(--border);
-            color: var(--text-secondary);
-            font-size: 13px;
+            font-size: 0.8rem;
+            color: #64748b;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 32px;
+            .hero-title {
+                font-size: 2rem;
             }
 
-            .hero p {
-                font-size: 16px;
+            .features-grid {
+                grid-template-columns: 1fr;
             }
 
-            .header {
-                padding: 12px 16px;
-            }
-
-            .nav-links a {
-                padding: 6px 12px;
-                font-size: 13px;
+            .hero-actions {
+                flex-direction: column;
+                align-items: center;
             }
         }
     </style>
@@ -331,7 +241,7 @@
     <main class="hero">
         <div class="hero-badge">
             <span class="dot"></span>
-            Powered by NotebookLM
+            ADG Marketing KMS
         </div>
         <h1>Hệ thống Quản trị <span class="gradient-text">Tri thức Marketing</span></h1>
         <p>
@@ -393,7 +303,7 @@
     <script>
         async function checkAuth() {
             try {
-                const resp = await fetch('/api/v1/rbac/check');
+                const resp = await fetch('/api/v1/rbac/check', { credentials: 'include' });
                 const data = await resp.json();
                 if (data.authenticated) {
                     document.getElementById('loginBtn').style.display = 'none';
@@ -414,7 +324,7 @@
             }
         }
         async function logout() {
-            await fetch('/api/v1/rbac/logout', { method: 'POST' });
+            await fetch('/api/v1/rbac/logout', { method: 'POST', credentials: 'include' });
             window.location.href = '/login';
         }
         checkAuth();

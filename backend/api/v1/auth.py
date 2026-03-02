@@ -46,10 +46,29 @@ async def callback(code: str = None, error: str = None):
     oauth_service = get_oauth_service()
     
     try:
+        # Fix scope mismatch: Google may add 'openid' to scopes
+        import os
+        os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+        
         credentials = oauth_service.exchange_code(code)
         email = oauth_service.get_user_email(credentials)
+        
+        # Print refresh token to console for .env setup
+        if credentials.refresh_token:
+            print()
+            print("=" * 60)
+            print("  🔑 REFRESH TOKEN (copy to .env)")
+            print("=" * 60)
+            print()
+            print(f"  GDRIVE_REFRESH_TOKEN={credentials.refresh_token}")
+            print()
+            print("=" * 60)
+            print()
+        
         return RedirectResponse(url=f"/upload?auth=success&email={email or 'user'}")
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return RedirectResponse(url=f"/upload?error={str(e)}")
 
 
