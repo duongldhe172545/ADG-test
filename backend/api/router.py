@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.v1 import auth, documents, health
 from backend.api.v1 import rbac_auth, admin, approvals, chat_history
+from backend.api.v1 import rag
 
 from backend.db.connection import get_db
 from backend.services.permission_service import get_current_user
@@ -26,6 +27,9 @@ api_router.include_router(health.router)
 api_router.include_router(rbac_auth.router)
 api_router.include_router(admin.router)
 api_router.include_router(approvals.router)
+
+# RAG routes
+api_router.include_router(rag.router)
 
 
 # =============================================================================

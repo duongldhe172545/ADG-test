@@ -151,32 +151,12 @@ async def root():
     return HTMLResponse("<h1>ADG KMS - Landing page not found</h1>")
 
 
-@app.get("/chatbot", response_class=HTMLResponse)
+@app.get("/chatbot")
 async def chatbot_page():
-    """Serve the chatbot UI with 3-panel layout"""
-    template_path = os.path.join(
-        os.path.dirname(__file__), 
-        "..", "frontend", "templates", "chatbot.html"
-    )
-    
-    # Fallback to index.html if chatbot.html doesn't exist yet
-    if not os.path.exists(template_path):
-        template_path = os.path.join(
-            os.path.dirname(__file__),
-            "..", "frontend", "templates", "index.html"
-        )
-    
-    # Fallback to old location
-    if not os.path.exists(template_path):
-        template_path = os.path.join(
-            os.path.dirname(__file__),
-            "..", "web_chatbot", "static", "index.html"
-        )
-    
-    if os.path.exists(template_path):
-        return FileResponse(template_path)
-    
-    return HTMLResponse("<h1>ADG KMS - Chat UI not found</h1>")
+    """Redirect to sources page (chat is now integrated there)"""
+    from starlette.responses import RedirectResponse
+    return RedirectResponse(url="/sources", status_code=302)
+
 
 
 @app.get("/upload", response_class=HTMLResponse)

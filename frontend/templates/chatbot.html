@@ -4,21 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NotebookLM Chatbot - ADG KMS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>Chat AI - ADG Knowledge Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0f0f0f;
-            --bg-secondary: #1a1a1a;
-            --bg-tertiary: #242424;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --accent: #8ab4f8;
-            --accent-hover: #aecbfa;
-            --accent-purple: #c58af9;
-            --border: #333333;
-            --success: #81c995;
-            --error: #f28b82;
+            --bg-primary: #0c1220;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1a2332;
+            --bg-card: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --border: #1e293b;
+            --border-light: #334155;
+            --success: #34d399;
+            --citation-bg: #1e293b;
+            --citation-border: #6366f1;
         }
 
         * {
@@ -33,210 +37,106 @@
             color: var(--text-primary);
             height: 100vh;
             display: flex;
-            flex-direction: column;
             overflow: hidden;
         }
 
-        /* Header */
-        .header {
+        /* ===== Left Sidebar — Sources ===== */
+        .sidebar {
+            width: 260px;
+            min-width: 220px;
             background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 12px 20px;
+            border-right: 1px solid var(--border);
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
             flex-shrink: 0;
-            z-index: 100;
         }
 
-        .logo {
+        .sidebar-header {
+            padding: 16px 20px;
             display: flex;
             align-items: center;
             gap: 10px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .logo-icon {
+        .sidebar-logo {
             width: 32px;
             height: 32px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
+            background: linear-gradient(135deg, var(--accent), #c084fc);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
-        }
-
-        .logo-text {
-            font-weight: 600;
             font-size: 16px;
         }
 
-        .logo-text span {
-            color: var(--accent);
+        .sidebar-title {
+            font-weight: 700;
+            font-size: 15px;
         }
 
-        .header-center {
+        .sidebar-title span {
+            color: var(--accent-light);
+        }
+
+        .sources-header {
+            padding: 16px 20px 8px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: space-between;
         }
 
-        .notebook-selector {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 14px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+        .sources-label {
+            font-weight: 700;
+            font-size: 14px;
         }
 
-        .notebook-selector label {
-            font-size: 12px;
-            color: var(--text-secondary);
+        .sources-count {
+            font-size: 11px;
+            color: var(--success);
+            background: rgba(52, 211, 153, 0.12);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
         }
 
-        .notebook-select {
-            background: transparent;
+        .add-source-btn {
+            margin: 8px 16px 12px;
+            padding: 10px;
+            background: var(--accent);
             border: none;
-            color: var(--text-primary);
-            font-size: 13px;
-            font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            outline: none;
-            min-width: 180px;
-        }
-
-        .notebook-select option {
-            background: var(--bg-secondary);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 6px;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 13px;
-            padding: 6px 12px;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-            background: var(--bg-tertiary);
-        }
-
-        .nav-links a.active {
-            color: var(--accent);
-            background: var(--bg-tertiary);
-        }
-
-        .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            background: var(--bg-tertiary);
-            border-radius: 20px;
-            font-size: 12px;
-        }
-
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--success);
-        }
-
-        .status-dot.error {
-            background: var(--error);
-        }
-
-        /* Main 3-Panel Layout */
-        .main-container {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
-
-        /* Panel Base Styles */
-        .panel {
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-secondary);
-            overflow: hidden;
-        }
-
-        .panel-header {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
+            border-radius: 10px;
+            color: white;
             font-size: 13px;
             font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
-            flex-shrink: 0;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            font-family: inherit;
         }
 
-        .panel-content {
+        .add-source-btn:hover {
+            background: var(--accent-light);
+            transform: translateY(-1px);
+        }
+
+        .source-list {
             flex: 1;
             overflow-y: auto;
-            padding: 12px;
-        }
-
-        /* Resizer */
-        .resizer {
-            width: 4px;
-            background: var(--border);
-            cursor: col-resize;
-            flex-shrink: 0;
-            transition: background 0.2s;
-        }
-
-        .resizer:hover,
-        .resizer.active {
-            background: var(--accent);
-        }
-
-        /* Sources Panel */
-        .sources-panel {
-            width: 260px;
-            min-width: 180px;
-            max-width: 400px;
-            border-right: 1px solid var(--border);
-        }
-
-        .source-toggle-all {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 8px;
-        }
-
-        .source-toggle-all label {
-            font-size: 12px;
-            color: var(--accent);
-            cursor: pointer;
+            padding: 0 8px;
         }
 
         .source-item {
             display: flex;
             align-items: flex-start;
-            gap: 8px;
-            padding: 8px 10px;
-            border-radius: 6px;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.15s;
             margin-bottom: 2px;
         }
 
@@ -244,16 +144,36 @@
             background: var(--bg-tertiary);
         }
 
-        .source-item.selected {
-            background: rgba(138, 180, 248, 0.15);
-            border: 1px solid var(--accent);
+        .source-item.active {
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
         }
 
-        .source-item input[type="checkbox"] {
-            width: 14px;
-            height: 14px;
-            accent-color: var(--accent);
-            margin-top: 2px;
+        .source-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .source-icon.pdf {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .source-icon.doc {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .source-icon.sheet {
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .source-icon.txt {
+            background: rgba(156, 163, 175, 0.15);
         }
 
         .source-info {
@@ -261,241 +181,444 @@
             min-width: 0;
         }
 
-        .source-title {
-            font-size: 12px;
+        .source-name {
+            font-size: 12.5px;
+            font-weight: 500;
             color: var(--text-primary);
-            word-break: break-word;
-            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .source-type {
-            font-size: 10px;
-            color: var(--text-secondary);
+        .source-meta {
+            font-size: 10.5px;
+            color: var(--text-muted);
             margin-top: 2px;
         }
 
-        /* Viewer Panel */
-        .viewer-panel {
-            width: 400px;
-            min-width: 250px;
-            max-width: 600px;
-            border-right: 1px solid var(--border);
-        }
-
-        .viewer-empty {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text-secondary);
-            text-align: center;
-            padding: 24px;
-        }
-
-        .viewer-empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-
-        .viewer-content {
-            font-size: 13px;
-            line-height: 1.7;
-            white-space: pre-wrap;
-        }
-
-        .viewer-loading {
+        .source-check {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid var(--border-light);
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100%;
-            color: var(--text-secondary);
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: all 0.15s;
         }
 
-        /* Chat Panel */
-        .chat-panel {
+        .source-check.checked {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .source-check.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* ===== Main Chat Area ===== */
+        .chat-area {
             flex: 1;
-            min-width: 350px;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
+        /* Top Bar */
+        .chat-topbar {
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .context-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .context-badge .label {
+            color: var(--text-muted);
+        }
+
+        .context-badge .value {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-weight: 600;
+            font-size: 12.5px;
+        }
+
+        .view-history {
+            color: var(--text-muted);
+            font-size: 12.5px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s;
+        }
+
+        .view-history:hover {
+            color: var(--accent-light);
+        }
+
+        /* Messages */
         .messages {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
         }
 
         .message {
             display: flex;
             gap: 12px;
+            max-width: 800px;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
         }
 
         .message-avatar {
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 15px;
             flex-shrink: 0;
+        }
+
+        .message.assistant .message-avatar {
+            background: linear-gradient(135deg, var(--accent), #c084fc);
         }
 
         .message.user .message-avatar {
             background: linear-gradient(135deg, #667eea, #764ba2);
         }
 
-        .message.assistant .message-avatar {
-            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
-        }
-
-        .message-content {
+        .message-body {
             flex: 1;
             min-width: 0;
         }
 
         .message-role {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            margin-bottom: 4px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
         }
 
         .message-text {
-            background: var(--bg-secondary);
-            padding: 16px 20px;
+            padding: 14px 18px;
             border-radius: 16px;
             line-height: 1.7;
-            word-wrap: break-word;
+            font-size: 14px;
         }
 
         .message.user .message-text {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 16px 16px 4px 16px;
         }
 
         .message.assistant .message-text {
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
+            background: transparent;
+            padding: 0;
         }
 
-        /* Markdown Styles */
-        .message-text h1,
-        .message-text h2,
-        .message-text h3 {
-            margin: 16px 0 8px 0;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .message-text h1 {
-            font-size: 1.4em;
-        }
-
-        .message-text h2 {
-            font-size: 1.25em;
-        }
-
-        .message-text h3 {
-            font-size: 1.1em;
-        }
-
-        .message-text h1:first-child,
-        .message-text h2:first-child,
-        .message-text h3:first-child {
-            margin-top: 0;
-        }
-
+        /* Markdown in messages */
         .message-text p {
             margin: 8px 0;
         }
 
-        .message-text ul,
-        .message-text ol {
-            margin: 12px 0;
-            padding-left: 24px;
-        }
-
-        .message-text ul {
-            list-style-type: disc;
-        }
-
-        .message-text ol {
-            list-style-type: decimal;
-        }
-
-        .message-text li {
-            margin: 6px 0;
-            line-height: 1.6;
-        }
-
-        .message-text ul li::marker {
-            color: var(--accent);
-        }
-
-        .message-text ol li::marker {
-            color: var(--accent);
-            font-weight: 600;
+        .message-text p:first-child {
+            margin-top: 0;
         }
 
         .message-text strong {
-            font-weight: 600;
-            color: var(--accent);
+            font-weight: 700;
+            color: white;
         }
 
-        .message-text code {
-            background: var(--bg-tertiary);
-            padding: 2px 6px;
+        .message-text ul,
+        .message-text ol {
+            margin: 10px 0;
+            padding-left: 22px;
+        }
+
+        .message-text li {
+            margin: 4px 0;
+            line-height: 1.6;
+        }
+
+        /* Citation inline ref */
+        .cite-ref {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
             border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.9em;
+            background: var(--accent);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            vertical-align: super;
+            margin: 0 2px;
+            cursor: pointer;
         }
 
-        /* Markdown Tables */
-        .md-table {
-            width: 100%;
-            border-collapse: collapse;
+        /* Citation block */
+        .citation-block {
             margin: 16px 0;
-            font-size: 14px;
-            overflow-x: auto;
-            display: block;
+            padding: 14px 18px;
+            background: var(--citation-bg);
+            border-left: 3px solid var(--citation-border);
+            border-radius: 0 10px 10px 0;
+            font-size: 13px;
+            font-style: italic;
+            color: var(--text-secondary);
         }
 
-        .md-table thead {
-            background: var(--bg-tertiary);
-        }
-
-        .md-table th,
-        .md-table td {
-            padding: 10px 14px;
-            border: 1px solid var(--border);
-            text-align: left;
-            min-width: 100px;
-        }
-
-        .md-table th {
+        .citation-block .citation-source {
+            margin-top: 8px;
+            font-style: normal;
+            font-size: 11px;
             font-weight: 600;
-            color: var(--accent);
-            background: rgba(138, 180, 248, 0.1);
+            color: var(--accent-light);
         }
 
-        .md-table tbody tr:hover {
+        /* Message actions */
+        .message-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
             background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-size: 11.5px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
         }
 
-        .md-table tbody tr:nth-child(even) {
-            background: rgba(255, 255, 255, 0.02);
+        .action-btn:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
         }
 
-        .typing-indicator {
+        /* Suggested prompts */
+        .suggested-prompts {
+            display: flex;
+            gap: 8px;
+            padding: 0 24px 12px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .prompt-chip {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            border: none;
+        }
+
+        .prompt-chip.primary {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-light);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .prompt-chip.primary:hover {
+            background: rgba(99, 102, 241, 0.25);
+        }
+
+        .prompt-chip.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+        }
+
+        .prompt-chip.secondary:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 12px 24px 16px;
+            flex-shrink: 0;
+        }
+
+        .input-box {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 12px 16px;
+            transition: border-color 0.2s;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--accent);
+        }
+
+        .input-field {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            min-height: 24px;
+            max-height: 120px;
+        }
+
+        .input-field::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .input-actions {
             display: flex;
             gap: 4px;
+        }
+
+        .toolbar-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.15s;
+        }
+
+        .toolbar-btn:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .input-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .send-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+
+        .send-btn:hover {
+            background: var(--accent-light);
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            background: var(--border-light);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .input-disclaimer {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 6px 0;
+        }
+
+        /* Welcome State */
+        .welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .welcome-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent), #c084fc);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            margin-bottom: 20px;
+        }
+
+        .welcome h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .welcome p {
+            color: var(--text-muted);
+            font-size: 14px;
+            max-width: 400px;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
             padding: 8px 0;
         }
 
@@ -504,23 +627,23 @@
             height: 8px;
             background: var(--accent);
             border-radius: 50%;
-            animation: typing 1.4s infinite;
+            animation: typeBounce 1.4s infinite;
         }
 
         .typing-dot:nth-child(2) {
-            animation-delay: 0.2s;
+            animation-delay: 0.15s;
         }
 
         .typing-dot:nth-child(3) {
-            animation-delay: 0.4s;
+            animation-delay: 0.3s;
         }
 
-        @keyframes typing {
+        @keyframes typeBounce {
 
             0%,
             100% {
                 opacity: 0.3;
-                transform: scale(0.8);
+                transform: scale(0.85);
             }
 
             50% {
@@ -529,123 +652,9 @@
             }
         }
 
-        .welcome {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 40px 20px;
-            height: 100%;
-        }
-
-        .welcome-icon {
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(135deg, var(--accent), var(--accent-purple));
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            margin-bottom: 20px;
-        }
-
-        .welcome h2 {
-            font-size: 20px;
-            margin-bottom: 8px;
-        }
-
-        .welcome p {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-
-        /* Input Area */
-        .input-area {
-            padding: 16px;
-            border-top: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-
-        .input-wrapper {
-            display: flex;
-            gap: 10px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 6px 6px 6px 16px;
-            align-items: center;
-        }
-
-        .input-wrapper:focus-within {
-            border-color: var(--accent);
-        }
-
-        .input-field {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: var(--text-primary);
-            font-size: 14px;
-            font-family: inherit;
-            resize: none;
-            outline: none;
-            max-height: 100px;
-        }
-
-        .input-field::placeholder {
-            color: var(--text-secondary);
-        }
-
-        .send-button {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
-            background: var(--accent);
-            color: var(--bg-primary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .send-button:hover {
-            background: var(--accent-hover);
-        }
-
-        .send-button:disabled {
-            background: var(--border);
-            cursor: not-allowed;
-        }
-
-        .send-button svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-            .viewer-panel {
-                display: none;
-            }
-
-            .sources-panel {
-                width: 220px;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .sources-panel {
-                display: none;
-            }
-        }
-
         /* Scrollbar */
         ::-webkit-scrollbar {
-            width: 6px;
+            width: 5px;
         }
 
         ::-webkit-scrollbar-track {
@@ -653,555 +662,391 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: var(--border);
+            background: var(--border-light);
             border-radius: 3px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-secondary);
+            background: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
         }
     </style>
 </head>
 
 <body>
-    <header class="header">
-        <div class="logo">
-            <div class="logo-icon">📚</div>
-            <span class="logo-text"><span>ADG</span> Chat</span>
+    <!-- Left Sidebar: Sources -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">📚</div>
+            <div class="sidebar-title"><span>ADG</span> Knowledge Hub</div>
         </div>
-        <div class="header-center">
-            <div class="notebook-selector">
-                <label>📓</label>
-                <select class="notebook-select" id="notebookSelect" disabled>
-                    <option value="">Đang tải notebooks...</option>
-                </select>
-            </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 16px;">
-            <nav class="nav-links">
-                <a href="/">Trang chủ</a>
-                <a href="/chatbot" class="active">💬 Chat</a>
-                <a href="/sources">📁 Tài liệu</a>
-                <a href="/upload" id="uploadNavLink" style="display:none;">📤 Upload</a>
-                <a href="/dashboard">📊 Dashboard</a>
-                <a href="/approval-history">📋 Lịch sử duyệt</a>
-                <a href="/admin/users" id="adminNavLink" style="display:none;">⚙️ Admin</a>
-            </nav>
-            <div class="status-badge">
-                <div class="status-dot" id="statusDot"></div>
-                <span id="statusText">Kết nối...</span>
-            </div>
-            <div id="userNav" style="display:none;align-items:center;gap:6px;">
-                <div id="userAvatar"
-                    style="width:28px;height:28px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:white;font-weight:600;">
-                </div>
-                <a href="javascript:logoutRBAC()"
-                    style="color:var(--text-secondary);font-size:11px;text-decoration:none;">🚪</a>
-            </div>
-        </div>
-    </header>
 
-    <main class="main-container">
-        <!-- Panel 1: Sources List -->
-        <aside class="panel sources-panel" id="sourcesPanel">
-            <div class="panel-header">
-                📄 Tài liệu
+        <div class="sources-header">
+            <span class="sources-label">Sources</span>
+            <span class="sources-count" id="sourcesCount">0 Active</span>
+        </div>
+
+        <button class="add-source-btn" onclick="window.location.href='/upload'">
+            ➕ Add Source
+        </button>
+
+        <div class="source-list" id="sourceList">
+            <!-- Sources loaded dynamically -->
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="chat-area">
+        <!-- Top Bar -->
+        <div class="chat-topbar">
+            <div class="context-badge">
+                <span>🌐</span>
+                <span class="label">Current Context:</span>
+                <span class="value" id="contextName">All Sources</span>
             </div>
-            <div class="panel-content">
-                <div class="source-toggle-all">
-                    <input type="checkbox" id="toggleAllSources" checked>
-                    <label for="toggleAllSources">Chọn tất cả</label>
-                </div>
-                <div id="sourceList">
-                    <div style="color: var(--text-secondary); font-size: 12px; padding: 20px 0; text-align: center;">
-                        Chọn notebook để xem tài liệu
+            <a class="view-history" href="#" id="viewHistoryBtn">
+                🕘 View History
+            </a>
+        </div>
+
+        <!-- Messages -->
+        <div class="messages" id="messages">
+            <div class="welcome" id="welcomeScreen">
+                <div class="welcome-icon">💬</div>
+                <h2>ADG Knowledge Assistant</h2>
+                <p>Hỏi bất cứ điều gì về tài liệu trong knowledge base. AI sẽ trả lời dựa trên nguồn tài liệu đã chọn.
+                </p>
+            </div>
+        </div>
+
+        <!-- Suggested Prompts -->
+        <div class="suggested-prompts" id="suggestedPrompts">
+            <button class="prompt-chip primary" onclick="sendSuggested(this)">✨ Summarize B2B Strategy</button>
+            <button class="prompt-chip secondary" onclick="sendSuggested(this)">List key competitors</button>
+            <button class="prompt-chip secondary" onclick="sendSuggested(this)">Draft an email based on this</button>
+        </div>
+
+        <!-- Input -->
+        <div class="input-area">
+            <div class="input-box">
+                <textarea class="input-field" id="messageInput" placeholder="Ask a question about your sources..."
+                    rows="1"></textarea>
+                <div class="input-toolbar">
+                    <div class="input-actions">
+                        <button class="toolbar-btn" title="Attach file">📎</button>
+                        <button class="toolbar-btn" title="Voice input">🎤</button>
+                    </div>
+                    <div class="input-hint">
+                        <span>Enter to send, Shift+Enter for new line</span>
+                        <button class="send-btn" id="sendButton" title="Send">
+                            ▶
+                        </button>
                     </div>
                 </div>
             </div>
-        </aside>
-
-        <div class="resizer" id="resizer1"></div>
-
-        <!-- Panel 2: Source Viewer -->
-        <section class="panel viewer-panel" id="viewerPanel">
-            <div class="panel-header">
-                📖 Xem nội dung
-            </div>
-            <div class="panel-content" id="viewerContent">
-                <div class="viewer-empty">
-                    <div class="viewer-empty-icon">📄</div>
-                    <p>Click vào tài liệu bên trái<br>để xem nội dung</p>
-                </div>
-            </div>
-        </section>
-
-        <div class="resizer" id="resizer2"></div>
-
-        <!-- Panel 3: Chat -->
-        <section class="panel chat-panel" id="chatPanel">
-            <div class="panel-header">
-                💬 Chat AI
-            </div>
-            <div class="messages" id="messages">
-                <div class="welcome">
-                    <div class="welcome-icon">💬</div>
-                    <h2>Xin chào!</h2>
-                    <p>Hỏi bất cứ điều gì về tài liệu trong notebook</p>
-                </div>
-            </div>
-            <div class="input-area">
-                <div class="input-wrapper">
-                    <textarea class="input-field" id="messageInput" placeholder="Nhập câu hỏi..." rows="1"></textarea>
-                    <button class="send-button" id="sendButton">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        </section>
+            <div class="input-disclaimer">AI can make mistakes. Verify important information from sources.</div>
+        </div>
     </main>
 
     <script>
-        const API_BASE = window.location.origin;
+        // ========================================================================
+        // State
+        // ========================================================================
+        let sources = [];
+        let chatHistory = [];
+        let isLoading = false;
 
-        // DOM Elements
-        const notebookSelect = document.getElementById('notebookSelect');
-        const sourceList = document.getElementById('sourceList');
-        const viewerContent = document.getElementById('viewerContent');
-        const messagesContainer = document.getElementById('messages');
+        // DOM
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const toggleAllSources = document.getElementById('toggleAllSources');
-
-        // State
-        let currentNotebookId = localStorage.getItem('selectedNotebookId') || '';
-        let sources = [];
-        let selectedSourceIds = [];
-        let selectedSourceForViewer = null;
+        const messagesContainer = document.getElementById('messages');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const suggestedPrompts = document.getElementById('suggestedPrompts');
+        const sourceList = document.getElementById('sourceList');
+        const sourcesCount = document.getElementById('sourcesCount');
 
         // ========================================================================
-        // Resizable Panels
+        // Sources — Load from Drive folders
         // ========================================================================
-        function initResizers() {
-            const resizer1 = document.getElementById('resizer1');
-            const resizer2 = document.getElementById('resizer2');
-            const sourcesPanel = document.getElementById('sourcesPanel');
-            const viewerPanel = document.getElementById('viewerPanel');
+        async function loadSources() {
+            try {
+                const res = await fetch('/api/v1/documents/folders');
+                if (!res.ok) return;
+                const data = await res.json();
+                const folders = data.folders || data.items || [];
 
-            let isResizing = false;
-            let currentResizer = null;
-
-            function startResize(resizer) {
-                isResizing = true;
-                currentResizer = resizer;
-                document.body.style.cursor = 'col-resize';
-                resizer.classList.add('active');
-            }
-
-            function stopResize() {
-                isResizing = false;
-                document.body.style.cursor = '';
-                if (currentResizer) currentResizer.classList.remove('active');
-                currentResizer = null;
-            }
-
-            function resize(e) {
-                if (!isResizing) return;
-
-                if (currentResizer === resizer1) {
-                    const newWidth = e.clientX;
-                    if (newWidth >= 180 && newWidth <= 400) {
-                        sourcesPanel.style.width = newWidth + 'px';
-                    }
-                } else if (currentResizer === resizer2) {
-                    const sourcesWidth = sourcesPanel.offsetWidth;
-                    const newWidth = e.clientX - sourcesWidth - 4;
-                    if (newWidth >= 250 && newWidth <= 600) {
-                        viewerPanel.style.width = newWidth + 'px';
+                // Flatten: load files from each top-level folder
+                sources = [];
+                for (const folder of folders.slice(0, 6)) {
+                    try {
+                        const subRes = await fetch(`/api/v1/documents/folders?parent_id=${folder.id}`);
+                        if (subRes.ok) {
+                            const subData = await subRes.json();
+                            const items = subData.items || subData.folders || [];
+                            items.forEach(item => {
+                                if (item.mimeType !== 'application/vnd.google-apps.folder') {
+                                    sources.push({
+                                        id: item.id,
+                                        name: item.name,
+                                        size: item.size || '',
+                                        mimeType: item.mimeType || '',
+                                        folder: folder.name,
+                                        active: true
+                                    });
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error loading folder:', folder.name, e);
                     }
                 }
-            }
 
-            resizer1.addEventListener('mousedown', () => startResize(resizer1));
-            resizer2.addEventListener('mousedown', () => startResize(resizer2));
-            document.addEventListener('mousemove', resize);
-            document.addEventListener('mouseup', stopResize);
-        }
-
-        // ========================================================================
-        // API Functions
-        // ========================================================================
-        async function checkHealth() {
-            try {
-                const response = await fetch(`${API_BASE}/api/v1/chat/notebooks`);
-                if (response.ok) {
-                    statusDot.className = 'status-dot';
-                    statusText.textContent = 'Đã kết nối';
-                    return true;
-                }
-            } catch (e) { }
-            statusDot.className = 'status-dot error';
-            statusText.textContent = 'Mất kết nối';
-            return false;
-        }
-
-        async function loadNotebooks() {
-            try {
-                const response = await fetch(`${API_BASE}/api/v1/chat/notebooks`);
-                const data = await response.json();
-
-                notebookSelect.innerHTML = '';
-                if (data.notebooks && data.notebooks.length > 0) {
-                    data.notebooks.forEach(nb => {
-                        const option = document.createElement('option');
-                        option.value = nb.id;
-                        option.textContent = nb.title || 'Untitled';
-                        notebookSelect.appendChild(option);
-                    });
-
-                    notebookSelect.disabled = false;
-
-                    if (currentNotebookId && data.notebooks.find(n => n.id === currentNotebookId)) {
-                        notebookSelect.value = currentNotebookId;
-                    } else {
-                        currentNotebookId = data.notebooks[0].id;
-                        notebookSelect.value = currentNotebookId;
-                    }
-
-                    loadSources(currentNotebookId);
-                } else {
-                    notebookSelect.innerHTML = '<option>Không có notebook</option>';
-                }
-            } catch (e) {
-                notebookSelect.innerHTML = '<option>Lỗi tải notebooks</option>';
-            }
-        }
-
-        async function loadSources(notebookId) {
-            sourceList.innerHTML = '<div style="color: var(--text-secondary); font-size: 12px; padding: 20px 0; text-align: center;">Đang tải...</div>';
-
-            try {
-                const response = await fetch(`${API_BASE}/api/v1/chat/sources/${notebookId}`);
-                const data = await response.json();
-
-                sources = data.sources || [];
-                selectedSourceIds = sources.map(s => s.id);
                 renderSources();
             } catch (e) {
-                sourceList.innerHTML = '<div style="color: var(--error); font-size: 12px; padding: 20px 0; text-align: center;">Lỗi tải tài liệu</div>';
+                console.error('Error loading sources:', e);
+                sourceList.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Không thể tải sources</div>';
             }
         }
 
         function renderSources() {
+            const activeCount = sources.filter(s => s.active).length;
+            sourcesCount.textContent = `${activeCount} Active`;
+
             if (sources.length === 0) {
-                sourceList.innerHTML = '<div style="color: var(--text-secondary); font-size: 12px; padding: 20px 0; text-align: center;">Không có tài liệu</div>';
+                sourceList.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--text-muted);font-size:12px;">Chưa có tài liệu. Click "Add Source" để thêm.</div>';
                 return;
             }
 
-            sourceList.innerHTML = sources.map(source => `
-                <div class="source-item ${selectedSourceForViewer === source.id ? 'selected' : ''}" 
-                     data-id="${source.id}" onclick="selectSourceForViewer('${source.id}')">
-                    <input type="checkbox" ${selectedSourceIds.includes(source.id) ? 'checked' : ''} 
-                           onclick="event.stopPropagation(); toggleSource('${source.id}')">
-                    <div class="source-info">
-                        <div class="source-title">${source.title || 'Untitled'}</div>
-                        <div class="source-type">${source.type || 'unknown'}</div>
+            sourceList.innerHTML = sources.map((s, i) => {
+                const icon = getSourceIcon(s.mimeType, s.name);
+                const iconClass = getIconClass(s.mimeType, s.name);
+                const size = s.size ? formatSize(parseInt(s.size)) : '';
+                const meta = [size, s.folder].filter(Boolean).join(' • ');
+
+                return `
+                    <div class="source-item ${s.active ? 'active' : ''}" data-index="${i}" onclick="toggleSource(${i})">
+                        <div class="source-icon ${iconClass}">${icon}</div>
+                        <div class="source-info">
+                            <div class="source-name">${escapeHtml(s.name)}</div>
+                            <div class="source-meta">${meta}</div>
+                        </div>
+                        <div class="source-check ${s.active ? 'checked' : ''}"></div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        function toggleSource(sourceId) {
-            const idx = selectedSourceIds.indexOf(sourceId);
-            if (idx >= 0) {
-                selectedSourceIds.splice(idx, 1);
-            } else {
-                selectedSourceIds.push(sourceId);
-            }
-            toggleAllSources.checked = selectedSourceIds.length === sources.length;
-        }
-
-        async function selectSourceForViewer(sourceId) {
-            selectedSourceForViewer = sourceId;
+        function toggleSource(index) {
+            sources[index].active = !sources[index].active;
             renderSources();
+        }
 
-            viewerContent.innerHTML = '<div class="viewer-loading">Đang tải nội dung...</div>';
+        // ========================================================================
+        // Chat
+        // ========================================================================
+        async function sendMessage(text) {
+            if (!text || !text.trim() || isLoading) return;
+
+            text = text.trim();
+            isLoading = true;
+
+            // Hide welcome & prompts
+            if (welcomeScreen) welcomeScreen.style.display = 'none';
+            suggestedPrompts.style.display = 'none';
+
+            // Add user message
+            addMessage('user', text);
+
+            // Clear input
+            messageInput.value = '';
+            autoGrow(messageInput);
+
+            // Show typing
+            const typingEl = addTyping();
 
             try {
-                const response = await fetch(`${API_BASE}/api/v1/chat/sources/${currentNotebookId}/${sourceId}/content`);
-                const data = await response.json();
+                // TODO: Replace with actual RAG API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
 
-                if (data.content) {
-                    viewerContent.innerHTML = `<div class="viewer-content">${escapeHtml(data.content)}</div>`;
-                } else {
-                    viewerContent.innerHTML = '<div class="viewer-empty"><div class="viewer-empty-icon">📄</div><p>Không có nội dung</p></div>';
-                }
-            } catch (e) {
-                viewerContent.innerHTML = '<div class="viewer-empty" style="color: var(--error);"><p>Lỗi tải nội dung</p></div>';
+                // Placeholder response
+                const response = `Cảm ơn câu hỏi của bạn. Tính năng RAG chatbot đang được phát triển.\n\nHệ thống sẽ tìm kiếm trong ${sources.filter(s => s.active).length} tài liệu đang active để trả lời câu hỏi của bạn.`;
+
+                typingEl.remove();
+                addMessage('assistant', response);
+
+            } catch (error) {
+                typingEl.remove();
+                addMessage('assistant', '❌ Lỗi kết nối. Vui lòng thử lại.');
             }
+
+            isLoading = false;
+        }
+
+        function addMessage(role, text) {
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+
+            const avatar = role === 'user' ? '👤' : '✨';
+            const roleLabel = role === 'user' ? '' : 'Notebook Assistant';
+
+            let content = '';
+            if (role === 'assistant') {
+                content = `
+                    <div class="message-avatar">${avatar}</div>
+                    <div class="message-body">
+                        ${roleLabel ? `<div class="message-role">${roleLabel}</div>` : ''}
+                        <div class="message-text">${formatMarkdown(text)}</div>
+                        <div class="message-actions">
+                            <button class="action-btn" onclick="copyMessage(this)">📋 Copy</button>
+                            <button class="action-btn">👍 Good response</button>
+                            <button class="action-btn">🔗 Share</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                content = `
+                    <div class="message-body">
+                        <div class="message-text">${escapeHtml(text)}</div>
+                    </div>
+                    <div class="message-avatar">${avatar}</div>
+                `;
+            }
+
+            msg.innerHTML = content;
+            messagesContainer.appendChild(msg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addTyping() {
+            const el = document.createElement('div');
+            el.className = 'message assistant';
+            el.innerHTML = `
+                <div class="message-avatar">✨</div>
+                <div class="message-body">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            messagesContainer.appendChild(el);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return el;
+        }
+
+        function sendSuggested(btn) {
+            const text = btn.textContent.replace(/^[✨\s]+/, '').trim();
+            messageInput.value = text;
+            sendMessage(text);
+        }
+
+        function copyMessage(btn) {
+            const text = btn.closest('.message-body').querySelector('.message-text').textContent;
+            navigator.clipboard.writeText(text);
+            btn.textContent = '✅ Copied';
+            setTimeout(() => btn.textContent = '📋 Copy', 2000);
+        }
+
+        // ========================================================================
+        // Helpers
+        // ========================================================================
+        function formatMarkdown(text) {
+            if (!text) return '';
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>')
+                .replace(/`(.*?)`/g, '<code>$1</code>');
         }
 
         function escapeHtml(text) {
+            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
+        function getSourceIcon(mimeType, name) {
+            if (!mimeType) {
+                const ext = name.split('.').pop().toLowerCase();
+                const icons = { pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', ppt: '📙', pptx: '📙', txt: '📝' };
+                return icons[ext] || '📄';
+            }
+            if (mimeType.includes('pdf')) return '📕';
+            if (mimeType.includes('document') || mimeType.includes('word')) return '📘';
+            if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return '📗';
+            if (mimeType.includes('presentation')) return '📙';
+            if (mimeType.includes('text')) return '📝';
+            return '📄';
+        }
+
+        function getIconClass(mimeType, name) {
+            if (!mimeType) {
+                const ext = name.split('.').pop().toLowerCase();
+                if (ext === 'pdf') return 'pdf';
+                if (['doc', 'docx'].includes(ext)) return 'doc';
+                if (['xls', 'xlsx'].includes(ext)) return 'sheet';
+                return 'txt';
+            }
+            if (mimeType.includes('pdf')) return 'pdf';
+            if (mimeType.includes('document') || mimeType.includes('word')) return 'doc';
+            if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'sheet';
+            return 'txt';
+        }
+
+        function formatSize(bytes) {
+            if (!bytes || bytes === 0) return '';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function autoGrow(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
         // ========================================================================
-        // Chat Functions
+        // RBAC Auth check
         // ========================================================================
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message || !currentNotebookId) return;
-
-            // Clear welcome
-            const welcome = messagesContainer.querySelector('.welcome');
-            if (welcome) welcome.remove();
-
-            // Add user message
-            addMessage('user', message);
-            messageInput.value = '';
-            sendButton.disabled = true;
-
-            // Add typing indicator
-            const typingId = addTypingIndicator();
-
+        async function checkAuth() {
             try {
-                const response = await fetch(`${API_BASE}/api/v1/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: message,
-                        notebook_id: currentNotebookId,
-                        source_ids: selectedSourceIds.length < sources.length ? selectedSourceIds : null
-                    })
-                });
-
-                removeTypingIndicator(typingId);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    addMessage('assistant', data.response);
-                } else {
-                    addMessage('assistant', 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.');
+                const res = await fetch('/api/v1/rbac/check', { credentials: 'include' });
+                const data = await res.json();
+                if (!data.authenticated) {
+                    window.location.href = '/login';
                 }
             } catch (e) {
-                removeTypingIndicator(typingId);
-                addMessage('assistant', 'Không thể kết nối. Vui lòng kiểm tra lại.');
+                console.error('Auth check failed:', e);
             }
-
-            sendButton.disabled = false;
-        }
-
-        function addMessage(role, content) {
-            const div = document.createElement('div');
-            div.className = `message ${role}`;
-            div.innerHTML = `
-                <div class="message-avatar">${role === 'user' ? '👤' : '🤖'}</div>
-                <div class="message-content">
-                    <div class="message-role">${role === 'user' ? 'Bạn' : 'AI'}</div>
-                    <div class="message-text">${parseMarkdown(content)}</div>
-                </div>
-            `;
-            messagesContainer.appendChild(div);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-
-        function addTypingIndicator() {
-            const id = 'typing-' + Date.now();
-            const div = document.createElement('div');
-            div.id = id;
-            div.className = 'message assistant';
-            div.innerHTML = `
-                <div class="message-avatar">🤖</div>
-                <div class="message-content">
-                    <div class="message-role">AI</div>
-                    <div class="message-text">Đang suy nghĩ...</div>
-                </div>
-            `;
-            messagesContainer.appendChild(div);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            return id;
-        }
-
-        function removeTypingIndicator(id) {
-            const el = document.getElementById(id);
-            if (el) el.remove();
-        }
-
-        // Enhanced markdown parser with table support (copied from chat.html)
-        function parseMarkdown(text) {
-            if (!text) return '';
-
-            let html = text;
-
-            // Parse tables BEFORE escaping HTML
-            // Match table blocks (consecutive lines containing |)
-            const tableRegex = /^(\|[^\n]+\|\n?)+/gm;
-            html = html.replace(tableRegex, (tableBlock) => {
-                const rows = tableBlock.trim().split('\n').filter(r => r.trim());
-                if (rows.length < 1) return tableBlock;
-
-                let tableHtml = '<table class="md-table">';
-                let inBody = false;
-                let headerDone = false;
-
-                rows.forEach((row, index) => {
-                    // Check if this is a separator row (contains only |, -, :, spaces)
-                    const isSeparator = /^\|[\s\-:|]+\|?$/.test(row.trim()) && row.includes('-');
-
-                    if (isSeparator) {
-                        // Skip separator row, but mark header as done
-                        if (!headerDone) {
-                            tableHtml += '</thead>';
-                            headerDone = true;
-                        }
-                        return;
-                    }
-
-                    // Split cells (handle both starting and not starting with |)
-                    let cells = row.split('|').map(c => c.trim()).filter(c => c !== '');
-
-                    if (cells.length === 0) return;
-
-                    // First non-separator row is header
-                    if (!headerDone && index === 0) {
-                        tableHtml += '<thead><tr>';
-                        cells.forEach(cell => {
-                            tableHtml += `<th>${cell}</th>`;
-                        });
-                        tableHtml += '</tr>';
-                    } else {
-                        // Body rows
-                        if (!inBody) {
-                            tableHtml += '<tbody>';
-                            inBody = true;
-                        }
-                        tableHtml += '<tr>';
-                        cells.forEach(cell => {
-                            tableHtml += `<td>${cell}</td>`;
-                        });
-                        tableHtml += '</tr>';
-                    }
-                });
-
-                if (inBody) tableHtml += '</tbody>';
-                tableHtml += '</table>';
-                return tableHtml;
-            });
-
-            // Escape HTML (preserve table tags)
-            html = html
-                .replace(/&(?!amp;|lt;|gt;)/g, '&amp;')
-                .replace(/<(?!\/?(?:table|thead|tbody|tr|th|td|strong|em|code|ul|ol|li|h[1-6]|br|p)[^>]*>)/g, '&lt;');
-
-            // Headers
-            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-            // Bold and Italic
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
-            html = html.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
-            html = html.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '<em>$1</em>');
-
-            // Inline code
-            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-            // Bullet lists: * item, - item, • item
-            html = html.replace(/^[\*\-•] (.+)$/gm, '<li class="bullet">$1</li>');
-
-            // Numbered lists: 1. item, 1) item
-            html = html.replace(/^\d+[\.)] (.+)$/gm, '<li class="numbered">$1</li>');
-
-            // Wrap consecutive list items in ul/ol
-            html = html.replace(/(<li class="bullet">.+<\/li>\n?)+/g, '<ul>$&</ul>');
-            html = html.replace(/(<li class="numbered">.+<\/li>\n?)+/g, '<ol>$&</ol>');
-
-            // Paragraphs and line breaks
-            html = html.replace(/\n\n+/g, '</p><p>');
-            html = html.replace(/\n/g, '<br>');
-
-            // Wrap in paragraph
-            html = '<p>' + html + '</p>';
-
-            // Cleanup
-            html = html.replace(/<p><\/p>/g, '');
-            html = html.replace(/<p>(<h[1-6]>)/g, '$1');
-            html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<[uo]l>)/g, '$1');
-            html = html.replace(/(<\/[uo]l>)<\/p>/g, '$1');
-            html = html.replace(/<p>(<table)/g, '$1');
-            html = html.replace(/(<\/table>)<\/p>/g, '$1');
-            html = html.replace(/<br>(<table)/g, '$1');
-            html = html.replace(/(<\/table>)<br>/g, '$1');
-            html = html.replace(/<br>(<[uo]l>)/g, '$1');
-            html = html.replace(/(<\/[uo]l>)<br>/g, '$1');
-
-            return html;
         }
 
         // ========================================================================
-        // Event Listeners
-        // ========================================================================
-        notebookSelect.addEventListener('change', (e) => {
-            currentNotebookId = e.target.value;
-            localStorage.setItem('selectedNotebookId', currentNotebookId);
-            loadSources(currentNotebookId);
-            selectedSourceForViewer = null;
-            viewerContent.innerHTML = '<div class="viewer-empty"><div class="viewer-empty-icon">📄</div><p>Click vào tài liệu bên trái<br>để xem nội dung</p></div>';
-        });
-
-        toggleAllSources.addEventListener('change', (e) => {
-            selectedSourceIds = e.target.checked ? sources.map(s => s.id) : [];
-            renderSources();
-        });
-
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        // ========================================================================
-        // Initialize
+        // Init
         // ========================================================================
         document.addEventListener('DOMContentLoaded', () => {
-            initResizers();
-            checkHealth();
-            loadNotebooks();
-        });
+            checkAuth();
+            loadSources();
 
-        // RBAC auth check
-        async function checkRBACRole() {
-            try {
-                const resp = await fetch('/api/v1/rbac/check');
-                const data = await resp.json();
-                if (data.authenticated && data.roles) {
-                    if (data.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
-                        document.getElementById('uploadNavLink').style.display = '';
-                    }
-                    if (data.roles.includes('super_admin') || data.roles.includes('admin')) {
-                        document.getElementById('adminNavLink').style.display = '';
-                    }
-                    const userNav = document.getElementById('userNav');
-                    userNav.style.display = 'flex';
-                    document.getElementById('userAvatar').textContent = (data.email || '?').substring(0, 2).toUpperCase();
+            // Send on Enter
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage(messageInput.value);
                 }
-            } catch (e) { }
-        }
-        checkRBACRole();
+            });
 
-        async function logoutRBAC() {
-            await fetch('/api/v1/rbac/logout', { method: 'POST' });
-            window.location.href = '/login';
-        }
+            messageInput.addEventListener('input', () => autoGrow(messageInput));
+
+            sendButton.addEventListener('click', () => sendMessage(messageInput.value));
+        });
     </script>
 </body>
 

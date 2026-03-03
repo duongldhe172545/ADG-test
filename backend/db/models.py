@@ -288,3 +288,37 @@ class ChatMessage(Base):
 
     def __repr__(self):
         return f"<ChatMessage {self.id} - {self.role}>"
+
+
+# =============================================================================
+# Document Chunks (for RAG / pgvector)
+# =============================================================================
+
+class DocumentChunk(Base):
+    """
+    Stores document text chunks with vector embeddings for RAG search.
+    Uses pgvector extension for similarity search.
+    """
+    __tablename__ = "document_chunks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    file_id = Column(String(255), nullable=False, index=True)
+    file_name = Column(String(500), nullable=False)
+    folder_id = Column(String(255), index=True)
+    folder_path = Column(String(1000))
+    chunk_index = Column(Integer, nullable=False)
+    chunk_text = Column(Text, nullable=False)
+    token_count = Column(Integer)
+    metadata_ = Column("metadata", JSONB, default={})
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("file_id", "chunk_index", name="uq_chunk_file_index"),
+        Index("ix_document_chunks_file_id", "file_id"),
+        Index("ix_document_chunks_folder_id", "folder_id"),
+    )
+
+    def __repr__(self):
+        return f"<DocumentChunk {self.file_name}[{self.chunk_index}]>"
+
