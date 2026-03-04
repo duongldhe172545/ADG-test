@@ -13,7 +13,10 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from backend.config import settings
 from backend.services.gdrive_service import GoogleDriveService
 from backend.models.responses import FolderTreeResponse, UploadResponse
-from backend.services.permission_service import get_current_user
+from backend.services.permission_service import get_current_user, get_current_user_optional
+from backend.db.connection import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -93,7 +96,12 @@ def get_gdrive_service_for_read():
 
 
 @router.get("/folders")
-async def list_folders(depth: int = 5, parent_id: str = None):
+async def list_folders(
+    depth: int = 5,
+    parent_id: str = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user_optional),
+):
     """
     List folder structure from Google Drive.
     
@@ -123,6 +131,37 @@ async def list_folders(depth: int = 5, parent_id: str = None):
         # If parent_id is provided, return files and folders in that parent (lazy loading mode)
         if parent_id:
             items = gdrive.list_files(parent_id)  # Returns both files and folders
+            
+            # ─── Permission filter for lazy-loaded items ───
+            if current_user and not any(r in ['admin', 'super_admin'] for r in current_user.get('roles', [])):
+                from backend.db.models import Resource, Permission, PermissionType
+                import uuid as uuid_mod
+                
+                user_uuid = current_user['id']
+                if isinstance(user_uuid, str):
+                    user_uuid = uuid_mod.UUID(user_uuid)
+                
+                pt_result = await db.execute(select(PermissionType).where(PermissionType.code == "view"))
+                view_pt = pt_result.scalars().first()
+                
+                if view_pt:
+                    perm_result = await db.execute(
+                        select(Resource.resource_id)
+                        .join(Permission, Permission.resource_id == Resource.id)
+                        .where(
+                            Permission.user_id == user_uuid,
+                            Permission.permission_type_id == view_pt.id,
+                            Permission.is_granted == True,
+                            Resource.resource_type == "folder",
+                        )
+                    )
+                    allowed_ids = set(row[0] for row in perm_result.all())
+                    
+                    # Filter: keep files (always visible if parent is visible), filter folders by permission
+                    items = [item for item in items 
+                             if item.get('mimeType') != 'application/vnd.google-apps.folder' 
+                             or item.get('id') in allowed_ids]
+            
             return {
                 "parent_id": parent_id,
                 "items": items,
@@ -177,6 +216,51 @@ async def list_folders(depth: int = 5, parent_id: str = None):
             return result
         
         folders = build_tree(root_folder_id)
+        
+        # ─── Permission filter: non-admin users only see allowed folders ───
+        if current_user and not any(r in ['admin', 'super_admin'] for r in current_user.get('roles', [])):
+            from backend.db.models import Resource, Permission, PermissionType
+            import uuid as uuid_mod
+            
+            user_uuid = current_user['id']
+            if isinstance(user_uuid, str):
+                user_uuid = uuid_mod.UUID(user_uuid)
+            
+            # Get the 'view' permission type
+            pt_result = await db.execute(select(PermissionType).where(PermissionType.code == "view"))
+            view_pt = pt_result.scalars().first()
+            
+            if view_pt:
+                # Get allowed Google Drive folder IDs for this user
+                perm_result = await db.execute(
+                    select(Resource.resource_id)
+                    .join(Permission, Permission.resource_id == Resource.id)
+                    .where(
+                        Permission.user_id == user_uuid,
+                        Permission.permission_type_id == view_pt.id,
+                        Permission.is_granted == True,
+                        Resource.resource_type == "folder",
+                    )
+                )
+                allowed_ids = set(row[0] for row in perm_result.all())
+                
+                # Filter the tree — show only allowed folders and their ancestors
+                def filter_tree(nodes):
+                    filtered = []
+                    for node in nodes:
+                        # Include if directly allowed or has allowed descendants
+                        filtered_children = filter_tree(node.get('children', []))
+                        if node['id'] in allowed_ids or filtered_children:
+                            node['children'] = filtered_children
+                            node['hasChildren'] = len(filtered_children) > 0
+                            filtered.append(node)
+                    return filtered
+                
+                folders = filter_tree(folders)
+            else:
+                # No 'view' permission type exists → no permissions set → show nothing
+                folders = []
+        
         
         return {
             "root_id": root_folder_id,

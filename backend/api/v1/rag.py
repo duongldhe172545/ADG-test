@@ -156,6 +156,94 @@ async def rag_chat(
         raise HTTPException(status_code=500, detail=f"RAG query failed: {e}")
 
 
+@router.post("/chat-stream")
+async def rag_chat_stream(
+    request: ChatRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Streaming RAG Chat via Server-Sent Events.
+    Sends: meta (citations), text chunks, done event.
+    Saves chat history to DB after streaming completes.
+    """
+    import json
+
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+
+    rag = get_rag_service()
+    repo = ChatRepository(db)
+    user_id = current_user["id"]
+    session_id = request.session_id
+    chat_history = []
+
+    # Get or create session (same logic as /chat)
+    if session_id:
+        session = await repo.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        if str(session.user_id) != user_id:
+            raise HTTPException(status_code=403, detail="Not your session")
+        session_id = str(session.id)
+        messages = await repo.get_messages(session_id)
+        chat_history = [
+            {"role": m.role, "content": m.content}
+            for m in messages[-10:]
+        ]
+    else:
+        title = request.question[:80] + ("..." if len(request.question) > 80 else "")
+        session = await repo.create_session(user_id=user_id, title=title)
+        session_id = str(session.id)
+
+    # Save user message immediately
+    await repo.add_message(
+        session_id=session_id,
+        role="user",
+        content=request.question,
+    )
+
+    async def event_generator():
+        full_answer = ""
+        citations = []
+        async for event in rag.query_stream(
+            question=request.question,
+            chat_history=chat_history,
+            file_ids=request.file_ids,
+            folder_ids=request.folder_ids,
+        ):
+            event_type = event.get("type", "")
+            if event_type == "meta":
+                citations = event.get("citations", [])
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            elif event_type == "text":
+                full_answer += event.get("chunk", "")
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            elif event_type == "done":
+                event["session_id"] = session_id
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+                # Save assistant message to DB after streaming completes
+                if full_answer:
+                    try:
+                        citation_source_ids = [c.get("file_id", "") for c in citations]
+                        await repo.add_message(
+                            session_id=session_id,
+                            role="assistant",
+                            content=full_answer,
+                            source_ids=citation_source_ids if citation_source_ids else None,
+                        )
+                    except Exception:
+                        pass  # Don't break stream if DB save fails
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream; charset=utf-8",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.post("/index", response_model=IndexResponse)
 async def index_file(request: IndexFileRequest):
     """

@@ -98,6 +98,87 @@ async def submit_for_approval(
 
 
 # =============================================================================
+# Submit Update for Approval (Replace existing file)
+# =============================================================================
+
+@router.post("/submit-update")
+async def submit_update_for_approval(
+    file: UploadFile = File(...),
+    target_folder_id: str = Form(...),
+    target_folder_name: str = Form(""),
+    replace_file_id: str = Form(...),
+    replace_file_name: str = Form(""),
+    change_note: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Upload updated file to Pending folder and create approval request.
+    When approved, old file moves to _OLD/ subfolder and new file takes its place.
+    """
+    import tempfile, os
+    from backend.api.v1.documents import get_gdrive_service
+
+    pending_folder_id = settings.GDRIVE_PENDING_FOLDER_ID
+    if not pending_folder_id:
+        raise HTTPException(status_code=500, detail="Pending folder not configured")
+
+    tmp_path = None
+    try:
+        file_content = await file.read()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
+            tmp.write(file_content)
+            tmp_path = tmp.name
+
+        file_size = len(file_content)
+
+        gdrive = get_gdrive_service()
+        uploaded_file = gdrive.upload_file(
+            file_path=tmp_path,
+            parent_id=pending_folder_id,
+            mime_type=file.content_type,
+            custom_name=file.filename,
+        )
+
+        approval = ApprovalRequest(
+            requester_id=UUID(current_user["id"]),
+            action_type="update",
+            status="pending",
+            extra_data={
+                "file_id": uploaded_file.get("id"),
+                "file_name": file.filename,
+                "mime_type": file.content_type,
+                "target_folder_id": target_folder_id,
+                "target_folder_name": target_folder_name,
+                "file_size": file_size,
+                "replace_file_id": replace_file_id,
+                "replace_file_name": replace_file_name,
+                "change_note": change_note,
+            }
+        )
+        db.add(approval)
+        await db.commit()
+
+        return {
+            "success": True,
+            "approval_id": str(approval.id),
+            "message": f"Update '{file.filename}' (replacing '{replace_file_name}') submitted for approval",
+            "status": "pending",
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+
+# =============================================================================
 # Preview File (Admin only — shares file and returns embed URL)
 # =============================================================================
 
@@ -364,6 +445,106 @@ async def approve_request(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Delete approval failed: {str(e)}")
     
+    # Handle update approval (move old → _OLD, move new → target)
+    if action_type == "update":
+        replace_file_id = extra_data.get("replace_file_id")
+        target_folder_id = extra_data.get("target_folder_id")
+        change_note = extra_data.get("change_note", "")
+
+        if not file_id or not target_folder_id or not replace_file_id:
+            raise HTTPException(status_code=400, detail="Missing file, target folder, or replace file info")
+
+        try:
+            from backend.api.v1.documents import get_gdrive_service
+            from backend.db.repositories.document_repo import DocumentRepository
+            gdrive = get_gdrive_service()
+            pending_folder_id = settings.GDRIVE_PENDING_FOLDER_ID
+
+            # 1. Find or create _OLD subfolder in target folder
+            old_query = gdrive.service.files().list(
+                q=f"name='_OLD' and '{target_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false",
+                fields="files(id)"
+            ).execute()
+            old_files = old_query.get("files", [])
+
+            if old_files:
+                old_folder_id = old_files[0]["id"]
+            else:
+                old_folder_meta = {
+                    "name": "_OLD",
+                    "mimeType": "application/vnd.google-apps.folder",
+                    "parents": [target_folder_id],
+                }
+                old_folder = gdrive.service.files().create(body=old_folder_meta, fields="id").execute()
+                old_folder_id = old_folder["id"]
+
+            # 2. Move old file to _OLD/
+            old_file_info = gdrive.service.files().get(fileId=replace_file_id, fields="parents").execute()
+            old_parents = ",".join(old_file_info.get("parents", []))
+            gdrive.service.files().update(
+                fileId=replace_file_id,
+                addParents=old_folder_id,
+                removeParents=old_parents,
+                fields="id, name"
+            ).execute()
+
+            # 3. Move new file from _PENDING to target folder
+            move_result = gdrive.service.files().update(
+                fileId=file_id,
+                addParents=target_folder_id,
+                removeParents=pending_folder_id,
+                fields="id, parents, name, mimeType"
+            ).execute()
+
+            file_name = move_result.get("name", extra_data.get("file_name", ""))
+
+            # 4. Track in documents table
+            doc_repo = DocumentRepository(db)
+            existing_doc = await doc_repo.get_by_drive_id(replace_file_id)
+            if existing_doc:
+                await doc_repo.update_version(
+                    drive_file_id=replace_file_id,
+                    new_drive_file_id=file_id,
+                    new_file_name=file_name,
+                    change_note=change_note,
+                    uploaded_by=approval.requester_id,
+                    approved_by=UUID(approver["id"]),
+                )
+            else:
+                await doc_repo.create(
+                    drive_file_id=file_id,
+                    file_name=file_name,
+                    mime_type=extra_data.get("mime_type"),
+                    file_size=extra_data.get("file_size"),
+                    folder_id=target_folder_id,
+                    folder_path=extra_data.get("target_folder_name", ""),
+                    version=2,
+                    old_drive_id=replace_file_id,
+                    change_note=change_note,
+                    uploaded_by=approval.requester_id,
+                    approved_by=UUID(approver["id"]),
+                    approved_at=datetime.utcnow(),
+                )
+
+            # 5. Update approval record
+            approval.status = "approved"
+            approval.reviewer_id = UUID(approver["id"])
+            approval.reviewed_at = datetime.utcnow()
+            approval.review_note = note
+
+            await db.commit()
+
+            return {
+                "success": True,
+                "message": f"File '{file_name}' updated (old version moved to _OLD/)",
+                "file_id": file_id,
+            }
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Update approval failed: {str(e)}")
+
     # Handle upload approval (existing flow)
     target_folder_id = extra_data.get("target_folder_id")
     
@@ -373,6 +554,7 @@ async def approve_request(
     try:
         # Move file from pending to target folder
         from backend.api.v1.documents import get_gdrive_service
+        from backend.db.repositories.document_repo import DocumentRepository
         gdrive = get_gdrive_service()
         
         pending_folder_id = settings.GDRIVE_PENDING_FOLDER_ID
@@ -386,6 +568,20 @@ async def approve_request(
         
         file_name = move_result.get("name", extra_data.get("file_name", ""))
         
+        # Track in documents table
+        doc_repo = DocumentRepository(db)
+        await doc_repo.create(
+            drive_file_id=file_id,
+            file_name=file_name,
+            mime_type=extra_data.get("mime_type"),
+            file_size=extra_data.get("file_size"),
+            folder_id=target_folder_id,
+            folder_path=extra_data.get("target_folder_name", ""),
+            uploaded_by=approval.requester_id,
+            approved_by=UUID(approver["id"]),
+            approved_at=datetime.utcnow(),
+        )
+
         # Update approval record
         approval.status = "approved"
         approval.reviewer_id = UUID(approver["id"])

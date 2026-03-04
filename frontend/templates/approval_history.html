@@ -64,60 +64,41 @@
             color: white;
         }
 
-        .sidebar-logo .logo-icon {
+        .sidebar-logo-icon {
             width: 36px;
             height: 36px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 0.75rem;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
+            font-size: 1.25rem;
         }
 
-        .sidebar-logo .logo-text {
+        .sidebar-logo-text {
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
 
-        .sidebar-logo .logo-text span {
-            color: #818cf8;
+        .sidebar-logo-sub {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
         }
 
-        .sidebar-logo .logo-sub {
-            font-size: 0.65rem;
-            color: rgba(255, 255, 255, 0.5);
-            margin-top: 2px;
-        }
-
-        nav {
+        .sidebar-nav {
+            padding: 1rem 0;
             flex: 1;
-            padding: 1rem 0.75rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .nav-section-title {
-            font-size: 0.65rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.4);
-            padding: 0.75rem 0.75rem 0.35rem;
         }
 
         .nav-item {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.65rem 0.75rem;
-            border-radius: 0.5rem;
+            padding: 0.75rem 1.25rem;
             color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.15s;
+            font-size: 0.875rem;
+            transition: all 0.2s;
         }
 
         .nav-item:hover {
@@ -126,8 +107,9 @@
         }
 
         .nav-item.active {
-            background: rgba(99, 102, 241, 0.3);
+            background: rgba(59, 130, 246, 0.3);
             color: white;
+            border-left: 3px solid var(--accent);
         }
 
         .sidebar-footer {
@@ -142,15 +124,14 @@
         }
 
         .user-avatar {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             background: linear-gradient(135deg, #667eea, #764ba2);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
-            font-weight: 600;
+            font-size: 0.875rem;
         }
 
         .user-details {
@@ -353,29 +334,27 @@
 <body>
     <aside class="sidebar">
         <div class="sidebar-header">
-            <a href="/" class="sidebar-logo">
-                <div class="logo-icon">📚</div>
+            <a href="/dashboard" class="sidebar-logo">
+                <div class="sidebar-logo-icon">✨</div>
                 <div>
-                    <div class="logo-text"><span>ADG</span> Marketing Hub</div>
-                    <div class="logo-sub">Knowledge Management</div>
+                    <div class="sidebar-logo-text">ADG Admin</div>
+                    <div class="sidebar-logo-sub">Knowledge Hub</div>
                 </div>
             </a>
         </div>
-
-        <nav>
-            <div class="nav-section-title">MENU CHÍNH</div>
+        <nav class="sidebar-nav">
             <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
-
+            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
             <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
             <a href="/upload" class="nav-item" id="uploadNavLink" style="display:none;"><span>📤</span> Upload</a>
-            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
             <a href="/approval-history" class="nav-item active"><span>📋</span> Lịch sử duyệt</a>
-
-            <div class="nav-section-title">QUẢN TRỊ</div>
-            <a href="/admin/users" class="nav-item" id="adminNavLink" style="display:none;"><span>⚙️</span> Admin
-                Panel</a>
+            <a href="/admin/users" class="nav-item" id="adminNavUsers" style="display:none;"><span>👥</span> Quản lý
+                Users</a>
+            <a href="/admin/approvals" class="nav-item" id="adminNavApprovals" style="display:none;"><span>📋</span> Phê
+                duyệt</a>
+            <a href="/admin/folders" class="nav-item" id="adminNavFolders" style="display:none;"><span>📁</span> Tạo thư
+                mục</a>
         </nav>
-
         <div class="sidebar-footer">
             <div class="user-info">
                 <div class="user-avatar" id="userAvatar">AD</div>
@@ -484,9 +463,11 @@
                     if (roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
                         document.getElementById('uploadNavLink').style.display = 'flex';
                     }
-                    // Show admin link for admin/super_admin
+                    // Show admin links for admin/super_admin
                     if (roles.includes('super_admin') || roles.includes('admin')) {
-                        document.getElementById('adminNavLink').style.display = 'flex';
+                        document.getElementById('adminNavUsers').style.display = 'flex';
+                        document.getElementById('adminNavApprovals').style.display = 'flex';
+                        document.getElementById('adminNavFolders').style.display = 'flex';
                     }
                 }
             } catch (e) { console.log('Auth check failed:', e); }

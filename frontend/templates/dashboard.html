@@ -366,8 +366,12 @@
             <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
             <a href="/upload" class="nav-item" id="uploadNavLink" style="display:none;"><span>📤</span> Upload</a>
             <a href="/approval-history" class="nav-item"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin/users" class="nav-item" id="adminNavLink" style="display:none;"><span>⚙️</span> Admin
-                Panel</a>
+            <a href="/admin/users" class="nav-item" id="adminNavUsers" style="display:none;"><span>👥</span> Quản lý
+                Users</a>
+            <a href="/admin/approvals" class="nav-item" id="adminNavApprovals" style="display:none;"><span>📋</span> Phê
+                duyệt</a>
+            <a href="/admin/folders" class="nav-item" id="adminNavFolders" style="display:none;"><span>📁</span> Tạo thư
+                mục</a>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
@@ -392,76 +396,48 @@
         <div class="content">
             <div class="content-header">
                 <h1>🏠 Dashboard</h1>
-                <p>Welcome back! Here's your knowledge base overview.</p>
+                <p>Tổng quan hệ thống quản lý tài liệu</p>
             </div>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon blue">📁</div>
-                    <div class="stat-value">156</div>
-                    <div class="stat-label">Total Assets</div>
+                    <div class="stat-value" id="statTotal">—</div>
+                    <div class="stat-label">Tổng tài liệu</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon green">📄</div>
-                    <div class="stat-value">89</div>
-                    <div class="stat-label">Active Documents</div>
+                    <div class="stat-icon orange">⏳</div>
+                    <div class="stat-value" id="statPending">—</div>
+                    <div class="stat-label">Chờ duyệt</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon orange">⚠️</div>
-                    <div class="stat-value">7</div>
-                    <div class="stat-label">Pending Review</div>
+                    <div class="stat-icon green">✅</div>
+                    <div class="stat-value" id="statIndexed">—</div>
+                    <div class="stat-label">Đã index (AI)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon purple">💬</div>
-                    <div class="stat-value">342</div>
-                    <div class="stat-label">AI Queries (7d)</div>
+                    <div class="stat-icon purple">📌</div>
+                    <div class="stat-value" id="statUnindexed">—</div>
+                    <div class="stat-label">Chưa index</div>
                 </div>
             </div>
             <div class="content-grid">
                 <div class="card">
-                    <div class="card-title">⚠️ Critical Alerts</div>
-                    <div class="item">
-                        <div class="item-icon warning">⏰</div>
-                        <div class="item-content">
-                            <div class="item-title">3 documents expiring soon</div>
-                            <div class="item-meta">Review required by Jan 15</div>
-                        </div>
-                    </div>
-                    <div class="item">
-                        <div class="item-icon warning">❌</div>
-                        <div class="item-content">
-                            <div class="item-title">Sync failed: Marketing Q4</div>
-                            <div class="item-meta">2 hours ago</div>
-                        </div>
-                    </div>
-                    <div class="item">
-                        <div class="item-icon warning">📋</div>
-                        <div class="item-content">
-                            <div class="item-title">5 drafts need approval</div>
-                            <div class="item-meta">From: Brand Team</div>
+                    <div class="card-title">📋 Hoạt động gần đây</div>
+                    <div id="activityList">
+                        <div class="item">
+                            <div class="item-content">
+                                <div class="item-meta">Đang tải...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="card">
-                    <div class="card-title">⭐ Recent Golden Answers</div>
-                    <div class="item">
-                        <div class="item-icon gold">✨</div>
-                        <div class="item-content">
-                            <div class="item-title">"What is Q3 channel strategy?"</div>
-                            <div class="item-meta">From: 2024 B2B Strategy.pdf</div>
-                        </div>
-                    </div>
-                    <div class="item">
-                        <div class="item-icon gold">✨</div>
-                        <div class="item-content">
-                            <div class="item-title">"LinkedIn organic best practices"</div>
-                            <div class="item-meta">From: Social Playbook.docx</div>
-                        </div>
-                    </div>
-                    <div class="item">
-                        <div class="item-icon gold">✨</div>
-                        <div class="item-content">
-                            <div class="item-title">"Brand color guidelines"</div>
-                            <div class="item-meta">From: Brand Guidelines v3.pdf</div>
+                    <div class="card-title">📄 Tài liệu được quản lý</div>
+                    <div id="fileList">
+                        <div class="item">
+                            <div class="item-content">
+                                <div class="item-meta">Đang tải...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -470,6 +446,100 @@
     </main>
 
     <script>
+        const API = '/api/v1';
+
+        function escapeHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s || '';
+            return d.innerHTML;
+        }
+
+        function timeAgo(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const now = new Date();
+            const diff = Math.floor((now - d) / 1000);
+            if (diff < 60) return 'vừa xong';
+            if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
+            return `${Math.floor(diff / 86400)} ngày trước`;
+        }
+
+        function actionIcon(action, status) {
+            if (status === 'rejected') return '❌';
+            if (action === 'upload') return '📤';
+            if (action === 'update') return '🔄';
+            if (action === 'delete') return '🗑️';
+            return '📋';
+        }
+
+        function actionLabel(action, status) {
+            const labels = {
+                upload: 'Upload', update: 'Cập nhật', delete: 'Xóa',
+            };
+            const statusLabels = {
+                pending: 'chờ duyệt', approved: 'đã duyệt', rejected: 'từ chối',
+            };
+            return `${labels[action] || action} — ${statusLabels[status] || status}`;
+        }
+
+        async function loadDashboard() {
+            try {
+                // Load stats
+                const statsResp = await fetch(`${API}/dashboard/stats`, { credentials: 'include' });
+                if (!statsResp.ok) throw new Error('Failed to load stats');
+                const stats = await statsResp.json();
+
+                document.getElementById('statTotal').textContent = stats.total_files || 0;
+                document.getElementById('statPending').textContent = stats.pending_approvals || 0;
+                document.getElementById('statIndexed').textContent = stats.indexed_files || 0;
+                document.getElementById('statUnindexed').textContent = stats.unindexed_files || 0;
+
+                // Render activity timeline
+                const actEl = document.getElementById('activityList');
+                if (stats.recent_activity && stats.recent_activity.length > 0) {
+                    actEl.innerHTML = stats.recent_activity.map(a => `
+                        <div class="item">
+                            <div class="item-icon ${a.status === 'pending' ? 'warning' : 'gold'}">${actionIcon(a.action, a.status)}</div>
+                            <div class="item-content">
+                                <div class="item-title">${escapeHtml(a.file_name)}</div>
+                                <div class="item-meta">${actionLabel(a.action, a.status)} · ${timeAgo(a.created_at)}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    actEl.innerHTML = '<div class="item"><div class="item-content"><div class="item-meta">Chưa có hoạt động nào</div></div></div>';
+                }
+
+                // Load files
+                const filesResp = await fetch(`${API}/dashboard/files?limit=20`, { credentials: 'include' });
+                if (!filesResp.ok) throw new Error('Failed to load files');
+                const files = await filesResp.json();
+
+                const fileEl = document.getElementById('fileList');
+                if (files.length > 0) {
+                    fileEl.innerHTML = files.map(f => {
+                        const indexed = f.indexed_at ? '✅' : '⚠️';
+                        const ver = f.version > 1 ? ` v${f.version}` : '';
+                        return `
+                            <div class="item">
+                                <div class="item-icon gold">${indexed}</div>
+                                <div class="item-content">
+                                    <div class="item-title">${escapeHtml(f.file_name)}${ver}</div>
+                                    <div class="item-meta">${escapeHtml(f.folder_path || '')} · ${timeAgo(f.uploaded_at)}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    fileEl.innerHTML = '<div class="item"><div class="item-content"><div class="item-meta">Chưa có tài liệu nào được quản lý</div></div></div>';
+                }
+
+            } catch (e) {
+                console.error('Dashboard load error:', e);
+            }
+        }
+
         // Load user info from RBAC
         async function loadUserInfo() {
             try {
@@ -482,13 +552,13 @@
                     document.querySelector('.user-email').textContent = email;
                     document.querySelector('.user-avatar').textContent = email.substring(0, 2).toUpperCase();
                     document.querySelector('.header-avatar').textContent = email.substring(0, 2).toUpperCase();
-                    // Show upload link for editor+ roles
                     if (roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
                         document.getElementById('uploadNavLink').style.display = 'flex';
                     }
-                    // Show admin link for admin/super_admin
                     if (roles.includes('super_admin') || roles.includes('admin')) {
-                        document.getElementById('adminNavLink').style.display = 'flex';
+                        document.getElementById('adminNavUsers').style.display = 'flex';
+                        document.getElementById('adminNavApprovals').style.display = 'flex';
+                        document.getElementById('adminNavFolders').style.display = 'flex';
                     }
                 }
             } catch (e) { console.log('Auth check failed:', e); }
@@ -500,6 +570,7 @@
         }
 
         loadUserInfo();
+        loadDashboard();
     </script>
 </body>
 

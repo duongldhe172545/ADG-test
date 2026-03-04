@@ -40,7 +40,7 @@
 
         /* Sidebar */
         .sidebar {
-            width: 240px;
+            width: 220px;
             background: var(--bg-sidebar);
             color: white;
             display: flex;
@@ -67,28 +67,27 @@
         .sidebar-logo-icon {
             width: 36px;
             height: 36px;
-            background: var(--accent);
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
+            font-size: 1.25rem;
         }
 
         .sidebar-logo-text {
-            font-weight: 600;
+            font-weight: 700;
             font-size: 0.9rem;
         }
 
         .sidebar-logo-sub {
             font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.6);
         }
 
         .sidebar-nav {
+            padding: 1rem 0;
             flex: 1;
-            padding: 0.75rem 0;
-            overflow-y: auto;
         }
 
         .nav-section {
@@ -104,10 +103,10 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.7rem 1.25rem;
+            padding: 0.75rem 1.25rem;
             color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
-            font-size: 0.85rem;
+            font-size: 0.875rem;
             transition: all 0.2s;
         }
 
@@ -119,7 +118,7 @@
         .nav-item.active {
             background: rgba(59, 130, 246, 0.3);
             color: white;
-            border-right: 3px solid var(--accent);
+            border-left: 3px solid var(--accent);
         }
 
         .nav-badge {
@@ -182,7 +181,7 @@
 
         /* Main content */
         .main {
-            margin-left: 240px;
+            margin-left: 220px;
             flex: 1;
             padding: 2rem;
         }
@@ -507,33 +506,33 @@
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <a href="/" class="sidebar-logo">
-                <div class="sidebar-logo-icon">📚</div>
+            <a href="/dashboard" class="sidebar-logo">
+                <div class="sidebar-logo-icon">✨</div>
                 <div>
-                    <div class="sidebar-logo-text">ADG Marketing Hub</div>
-                    <div class="sidebar-logo-sub">Knowledge Management</div>
+                    <div class="sidebar-logo-text">ADG Admin</div>
+                    <div class="sidebar-logo-sub">Knowledge Hub</div>
                 </div>
             </a>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-section">Menu chính</div>
-            <a href="/" class="nav-item">🏠 Trang chủ</a>
-
-            <a href="/sources" class="nav-item">📁 Tài liệu</a>
-            <a href="/upload" class="nav-item">📤 Upload</a>
-            <a href="/dashboard" class="nav-item">📊 Dashboard</a>
-            <a href="/approval-history" class="nav-item">📋 Lịch sử duyệt</a>
-            <div class="nav-section">Quản trị</div>
-            <a href="/admin/users" class="nav-item active">👥 Quản lý Users</a>
-            <a href="/admin/approvals" class="nav-item">📋 Phê duyệt</a>
-            <a href="/admin/folders" class="nav-item">📁 Tạo thư mục</a>
+            <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
+            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
+            <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
+            <a href="/upload" class="nav-item" id="uploadNavLink" style="display:none;"><span>📤</span> Upload</a>
+            <a href="/approval-history" class="nav-item"><span>📋</span> Lịch sử duyệt</a>
+            <a href="/admin/users" class="nav-item active" id="adminNavUsers" style="display:none;"><span>👥</span> Quản
+                lý Users</a>
+            <a href="/admin/approvals" class="nav-item" id="adminNavApprovals" style="display:none;"><span>📋</span> Phê
+                duyệt</a>
+            <a href="/admin/folders" class="nav-item" id="adminNavFolders" style="display:none;"><span>📁</span> Tạo thư
+                mục</a>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
                 <div class="user-avatar" id="userAvatar">?</div>
-                <div>
+                <div class="user-details">
                     <div class="user-name" id="userName">Loading...</div>
-                    <div class="user-role" id="userRole">-</div>
+                    <div class="user-email" id="userRole">-</div>
                 </div>
                 <button class="logout-btn" onclick="logout()" title="Đăng xuất">🚪</button>
             </div>
@@ -566,7 +565,10 @@
         <div class="card">
             <div class="card-header">
                 <div class="card-title">Danh sách người dùng</div>
-                <button class="btn btn-primary" onclick="showAddUserModal()">+ Thêm User</button>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-outline" onclick="syncFolders()" id="syncBtn">🔄 Sync Folders</button>
+                    <button class="btn btn-primary" onclick="showAddUserModal()">+ Thêm User</button>
+                </div>
             </div>
             <div class="table-wrap">
                 <table>
@@ -637,6 +639,32 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
+    <!-- Folder Permission Modal -->
+    <div class="modal-overlay" id="folderPermModal">
+        <div class="modal" style="max-width:560px;max-height:80vh;display:flex;flex-direction:column;">
+            <div class="modal-title">🔐 Phân quyền folder</div>
+            <div class="form-group">
+                <label class="form-label">User: <strong id="folderPermEmail"></strong></label>
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+                <button class="btn btn-outline btn-sm" onclick="selectAllFolders(true)">☑ Chọn tất cả</button>
+                <button class="btn btn-outline btn-sm" onclick="selectAllFolders(false)">☐ Bỏ chọn tất cả</button>
+            </div>
+            <div id="folderPermTree"
+                style="flex:1;overflow-y:auto;max-height:400px;border:1px solid var(--border);border-radius:0.75rem;padding:0.75rem;background:var(--bg-primary);">
+                <div class="empty-state" style="padding:2rem;">
+                    <div class="empty-state-icon">⏳</div>
+                    <div>Đang tải...</div>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:1rem;">
+                <button class="btn btn-outline" onclick="closeFolderPermModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="saveFolderPerms()" id="saveFolderPermBtn">💾 Lưu phân
+                    quyền</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = '/api/v1';
         let currentUser = null;
@@ -672,6 +700,15 @@
             document.getElementById('userName').textContent = authData.email.split('@')[0];
             document.getElementById('userRole').textContent = authData.roles.join(', ');
             document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
+            // Show/hide nav links based on roles
+            if (authData.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
+                document.getElementById('uploadNavLink').style.display = 'flex';
+            }
+            if (authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
+                document.getElementById('adminNavUsers').style.display = 'flex';
+                document.getElementById('adminNavApprovals').style.display = 'flex';
+                document.getElementById('adminNavFolders').style.display = 'flex';
+            }
             loadUsers();
             loadRoles();
         }
@@ -706,6 +743,9 @@
                     <td style="display:flex;gap:4px;flex-wrap:wrap;">
                         <button class="btn btn-outline btn-sm" onclick="showEditRoleModal('${u.id}', '${u.email}', ${JSON.stringify(u.roles).replace(/"/g, '&quot;')})">
                             ✏️ Đổi Role
+                        </button>
+                        <button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:var(--accent);" onclick="showFolderPermModal('${u.id}', '${u.email}')">
+                            🔐 Phân quyền
                         </button>
                         <button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}', ${!u.is_active})">
                             ${u.is_active ? '⏸ Vô hiệu' : '▶ Kích hoạt'}
@@ -826,6 +866,152 @@
             toast.textContent = msg;
             toast.className = `toast toast-${type} show`;
             setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // =========================================================================
+        // Folder Permissions
+        // =========================================================================
+        let editingPermUserId = null;
+        let allFolderResources = [];
+
+        async function syncFolders() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Syncing...';
+            try {
+                const res = await fetch(`${API}/admin/permissions/sync-folders`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`✅ ${data.message}`, 'success');
+                } else {
+                    showToast(`❌ ${data.detail || 'Sync failed'}`, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Lỗi kết nối', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Sync Folders';
+            }
+        }
+
+        async function showFolderPermModal(userId, email) {
+            editingPermUserId = userId;
+            document.getElementById('folderPermEmail').textContent = email;
+            document.getElementById('folderPermModal').classList.add('show');
+            document.getElementById('folderPermTree').innerHTML = '<div class="empty-state" style="padding:2rem;"><div class="empty-state-icon">⏳</div><div>Đang tải...</div></div>';
+
+            try {
+                // Load all folders from resources
+                const foldersRes = await fetch(`${API}/admin/permissions/folders`);
+                const foldersData = await foldersRes.json();
+                allFolderResources = foldersData.folders || [];
+
+                if (allFolderResources.length === 0) {
+                    document.getElementById('folderPermTree').innerHTML = `
+                        <div class="empty-state" style="padding:2rem;">
+                            <div class="empty-state-icon">📁</div>
+                            <div>Chưa có folder nào. Nhấn "🔄 Sync Folders" để đồng bộ từ Google Drive.</div>
+                        </div>`;
+                    return;
+                }
+
+                // Load user's current permissions
+                const permRes = await fetch(`${API}/admin/permissions/folders/${userId}`);
+                const permData = await permRes.json();
+                const grantedFolderIds = permData.folder_ids || [];
+
+                // Build tree HTML
+                const tree = buildFolderTree(allFolderResources, null, grantedFolderIds, 0);
+                document.getElementById('folderPermTree').innerHTML = tree || '<div style="padding:1rem;color:var(--text-secondary);">Không có folder nào</div>';
+            } catch (e) {
+                console.error('Load folder perms error:', e);
+                document.getElementById('folderPermTree').innerHTML = '<div style="padding:1rem;color:var(--error);">❌ Lỗi tải dữ liệu</div>';
+            }
+        }
+
+        function buildFolderTree(folders, parentId, grantedIds, level) {
+            const children = folders.filter(f => f.parent_id === parentId);
+            if (children.length === 0) return '';
+
+            return children.map(folder => {
+                const isChecked = grantedIds.includes(folder.resource_id) ? 'checked' : '';
+                const indent = level * 1.25;
+                const childHtml = buildFolderTree(folders, folder.id, grantedIds, level + 1);
+                return `
+                    <div style="padding-left:${indent}rem;" data-folder-wrapper="${folder.resource_id}">
+                        <label style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:0.375rem;cursor:pointer;transition:background 0.15s;font-size:0.8125rem;" 
+                               onmouseover="this.style.background='rgba(59,130,246,0.08)'" 
+                               onmouseout="this.style.background='transparent'">
+                            <input type="checkbox" name="folderPerm" value="${folder.resource_id}" ${isChecked} 
+                                   onchange="cascadeCheck(this)"
+                                   style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;">
+                            <span>📁</span>
+                            <span>${folder.name}</span>
+                        </label>
+                        ${childHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Cascade checkbox: uncheck parent → uncheck children, check child → check parents
+        function cascadeCheck(cb) {
+            const wrapper = cb.closest('[data-folder-wrapper]');
+            if (!wrapper) return;
+
+            if (!cb.checked) {
+                // Uncheck: cascade DOWN — uncheck all children
+                wrapper.querySelectorAll('input[name=folderPerm]').forEach(child => {
+                    if (child !== cb) child.checked = false;
+                });
+            } else {
+                // Check: cascade UP — check all parent ancestors
+                let parent = wrapper.parentElement;
+                while (parent) {
+                    const pw = parent.closest('[data-folder-wrapper]');
+                    if (!pw) break;
+                    const parentCb = pw.querySelector(':scope > label input[name=folderPerm]');
+                    if (parentCb && !parentCb.checked) parentCb.checked = true;
+                    parent = pw.parentElement;
+                }
+            }
+        }
+
+        function selectAllFolders(checked) {
+            document.querySelectorAll('#folderPermTree input[name=folderPerm]').forEach(cb => cb.checked = checked);
+        }
+
+        function closeFolderPermModal() {
+            document.getElementById('folderPermModal').classList.remove('show');
+            editingPermUserId = null;
+        }
+
+        async function saveFolderPerms() {
+            if (!editingPermUserId) return;
+            const folderIds = [...document.querySelectorAll('#folderPermTree input[name=folderPerm]:checked')].map(cb => cb.value);
+            const btn = document.getElementById('saveFolderPermBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang lưu...';
+
+            try {
+                const res = await fetch(`${API}/admin/permissions/folders/${editingPermUserId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder_ids: folderIds })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`✅ ${data.message}`, 'success');
+                    closeFolderPermModal();
+                } else {
+                    showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
+                }
+            } catch (e) {
+                showToast('❌ Lỗi kết nối', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Lưu phân quyền';
+            }
         }
 
         init();

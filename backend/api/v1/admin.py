@@ -13,7 +13,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.connection import get_db
-from backend.db.models import User, Role, UserRole, PermissionType
+from backend.db.models import User, Role, UserRole, PermissionType, Resource, Permission
 from backend.services.permission_service import get_current_user
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -287,3 +287,277 @@ async def create_folder(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Folder creation failed: {str(e)}")
 
+
+# =============================================================================
+# Folder Permissions (Admin Only)
+# =============================================================================
+
+class SetFolderPermissionsRequest(BaseModel):
+    folder_ids: List[str]  # List of Google Drive folder IDs to grant view access
+
+
+async def _ensure_view_permission_type(db: AsyncSession):
+    """Get or create the 'view' permission type."""
+    result = await db.execute(select(PermissionType).where(PermissionType.code == "view"))
+    pt = result.scalars().first()
+    if not pt:
+        pt = PermissionType(code="view", name="View", description="View folder contents")
+        db.add(pt)
+        await db.flush()
+    return pt
+
+
+@router.get("/permissions/folders")
+async def list_folder_permissions(
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """
+    List all registered folders and which users have view permission.
+    Returns a matrix: {folders: [...], users_permissions: {user_id: [folder_resource_ids]}}
+    """
+    # Get all folder resources
+    folder_result = await db.execute(
+        select(Resource)
+        .where(Resource.resource_type == "folder")
+        .order_by(Resource.name)
+    )
+    folders = folder_result.scalars().all()
+    
+    # Get view permission type
+    view_pt = await _ensure_view_permission_type(db)
+    
+    # Get all folder view permissions
+    perm_result = await db.execute(
+        select(Permission)
+        .where(
+            Permission.permission_type_id == view_pt.id,
+            Permission.is_granted == True,
+        )
+    )
+    perms = perm_result.scalars().all()
+    
+    # Build user → folder mapping
+    users_permissions = {}
+    for p in perms:
+        uid = str(p.user_id)
+        if uid not in users_permissions:
+            users_permissions[uid] = []
+        users_permissions[uid].append(str(p.resource_id))
+    
+    return {
+        "folders": [
+            {
+                "id": str(f.id),
+                "resource_id": f.resource_id,  # Google Drive ID
+                "name": f.name,
+                "parent_id": str(f.parent_id) if f.parent_id else None,
+            }
+            for f in folders
+        ],
+        "users_permissions": users_permissions,
+    }
+
+
+@router.get("/permissions/folders/{user_id}")
+async def get_user_folder_permissions(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """
+    Get which folders a specific user has view access to.
+    Returns list of Google Drive folder IDs.
+    """
+    # Verify user exists
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    view_pt = await _ensure_view_permission_type(db)
+    
+    # Get user's folder permissions
+    perm_result = await db.execute(
+        select(Resource.resource_id)
+        .join(Permission, Permission.resource_id == Resource.id)
+        .where(
+            Permission.user_id == user.id,
+            Permission.permission_type_id == view_pt.id,
+            Permission.is_granted == True,
+            Resource.resource_type == "folder",
+        )
+    )
+    folder_ids = [row[0] for row in perm_result.all()]
+    
+    return {
+        "user_id": str(user.id),
+        "email": user.email,
+        "folder_ids": folder_ids,  # Google Drive folder IDs
+    }
+
+
+@router.put("/permissions/folders/{user_id}")
+async def set_user_folder_permissions(
+    user_id: str,
+    req: SetFolderPermissionsRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """
+    Set which folders a user can view. Replaces all existing folder view permissions.
+    Body: {folder_ids: ["gdrive_folder_id_1", "gdrive_folder_id_2"]}
+    """
+    # Verify user exists
+    user_result = await db.execute(select(User).where(User.id == user_id))
+    user = user_result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    view_pt = await _ensure_view_permission_type(db)
+    
+    # Get all folder resource IDs for cleanup
+    folder_resource_result = await db.execute(
+        select(Resource.id).where(Resource.resource_type == "folder")
+    )
+    folder_resource_ids = [row[0] for row in folder_resource_result.all()]
+    
+    # Delete existing folder view permissions for this user
+    if folder_resource_ids:
+        await db.execute(
+            delete(Permission).where(
+                Permission.user_id == user.id,
+                Permission.permission_type_id == view_pt.id,
+                Permission.resource_id.in_(folder_resource_ids),
+            )
+        )
+    
+    # Add new permissions
+    granted_count = 0
+    for gdrive_folder_id in req.folder_ids:
+        # Find the resource by Google Drive ID
+        res_result = await db.execute(
+            select(Resource).where(
+                Resource.resource_type == "folder",
+                Resource.resource_id == gdrive_folder_id,
+            )
+        )
+        resource = res_result.scalars().first()
+        if resource:
+            perm = Permission(
+                user_id=user.id,
+                resource_id=resource.id,
+                permission_type_id=view_pt.id,
+                is_granted=True,
+            )
+            db.add(perm)
+            granted_count += 1
+    
+    await db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Granted view access to {granted_count} folders for {user.email}",
+        "granted_count": granted_count,
+    }
+
+
+@router.post("/permissions/sync-folders")
+async def sync_drive_folders_to_resources(
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """
+    Sync Google Drive folder structure into the resources table.
+    Creates Resource entries for any folders not yet registered.
+    """
+    from backend.api.v1.documents import get_gdrive_service
+    from backend.config import settings
+    
+    root_id = settings.GDRIVE_ROOT_FOLDER_ID
+    if not root_id:
+        raise HTTPException(status_code=500, detail="GDRIVE_ROOT_FOLDER_ID not configured")
+    
+    try:
+        gdrive = get_gdrive_service()
+        synced = 0
+        skipped = 0
+        
+        # Recursive function to sync folders
+        async def sync_folder(parent_drive_id: str, parent_resource_id=None):
+            nonlocal synced, skipped
+            
+            query = f"'{parent_drive_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+            results = gdrive.service.files().list(
+                q=query,
+                fields="files(id, name)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                pageSize=100,
+            ).execute()
+            
+            folders = results.get("files", [])
+            
+            for folder in folders:
+                # Skip _OLD and _PENDING folders
+                if folder["name"].startswith("_"):
+                    continue
+                
+                # Check if already registered
+                existing = await db.execute(
+                    select(Resource).where(
+                        Resource.resource_type == "folder",
+                        Resource.resource_id == folder["id"],
+                    )
+                )
+                resource = existing.scalars().first()
+                
+                if resource:
+                    # Update name if changed
+                    if resource.name != folder["name"]:
+                        resource.name = folder["name"]
+                    skipped += 1
+                else:
+                    resource = Resource(
+                        resource_type="folder",
+                        resource_id=folder["id"],
+                        name=folder["name"],
+                        parent_id=parent_resource_id,
+                    )
+                    db.add(resource)
+                    await db.flush()
+                    synced += 1
+                
+                # Recurse into children
+                await sync_folder(folder["id"], resource.id)
+        
+        # Ensure root folder is registered
+        root_result = await db.execute(
+            select(Resource).where(
+                Resource.resource_type == "folder",
+                Resource.resource_id == root_id,
+            )
+        )
+        root_resource = root_result.scalars().first()
+        if not root_resource:
+            root_resource = Resource(
+                resource_type="folder",
+                resource_id=root_id,
+                name="ADG_Marketing (Root)",
+            )
+            db.add(root_resource)
+            await db.flush()
+            synced += 1
+        
+        await sync_folder(root_id, root_resource.id)
+        await db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Sync complete: {synced} new, {skipped} existing",
+            "synced": synced,
+            "skipped": skipped,
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")

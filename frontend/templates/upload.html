@@ -958,12 +958,15 @@
         <nav class="sidebar-nav">
             <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
             <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
-
             <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
             <a href="/upload" class="nav-item active"><span>📤</span> Upload</a>
             <a href="/approval-history" class="nav-item"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin/users" class="nav-item" id="adminNavLink" style="display:none;"><span>⚙️</span> Admin
-                Panel</a>
+            <a href="/admin/users" class="nav-item" id="adminNavUsers" style="display:none;"><span>👥</span> Quản lý
+                Users</a>
+            <a href="/admin/approvals" class="nav-item" id="adminNavApprovals" style="display:none;"><span>📋</span> Phê
+                duyệt</a>
+            <a href="/admin/folders" class="nav-item" id="adminNavFolders" style="display:none;"><span>📁</span> Tạo thư
+                mục</a>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
@@ -973,8 +976,8 @@
                     <div class="user-email" id="userEmail">Not signed in</div>
                 </div>
             </div>
-            <a href="javascript:void(0)" onclick="logoutRBAC()"
-                style="display:block;margin-top:0.5rem;color:rgba(255,255,255,0.5);font-size:0.7rem;text-decoration:none;text-align:center;">🚪
+            <a href="javascript:void(0)" onclick="logout()"
+                style="display:block;margin-top:0.5rem;color:rgba(255,255,255,0.5);font-size:0.75rem;text-decoration:none;text-align:center;">🚪
                 Đăng xuất</a>
         </div>
     </aside>
@@ -1190,7 +1193,9 @@
                     document.getElementById('docOwner').value = email;
 
                     if (userRoles.includes('super_admin') || userRoles.includes('admin')) {
-                        document.getElementById('adminNavLink').style.display = 'flex';
+                        document.getElementById('adminNavUsers').style.display = 'flex';
+                        document.getElementById('adminNavApprovals').style.display = 'flex';
+                        document.getElementById('adminNavFolders').style.display = 'flex';
                     }
                 } else {
                     isAuthenticated = false;

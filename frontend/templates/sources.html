@@ -599,6 +599,27 @@
             color: #f87171;
         }
 
+        .chat-index-all-btn {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+
+        .chat-index-all-btn:hover {
+            background: rgba(34, 197, 94, 0.25);
+        }
+
+        .chat-index-all-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .session-list {
             display: flex;
             flex-direction: column;
@@ -1098,6 +1119,57 @@
                 transform: scale(1);
             }
         }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+                min-height: calc(100vh - 60px);
+            }
+
+            .folder-panel {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
+                border-right: none;
+                border-bottom: 1px solid var(--border, #e2e8f0);
+                max-height: 35vh;
+            }
+
+            .preview-panel {
+                flex: 1;
+                width: 100% !important;
+                min-height: 40vh;
+            }
+
+            .chat-panel {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
+                height: 100vh !important;
+                border-radius: 0 !important;
+                z-index: 1000;
+            }
+
+            .chat-panel:not(.open) {
+                display: none;
+            }
+
+            .chat-fab {
+                bottom: 1rem;
+                right: 1rem;
+            }
+
+            .resize-handle {
+                display: none !important;
+            }
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -1228,6 +1300,8 @@
                 <div class="chat-sources" id="chatSourcesBar">
                     <div class="chat-sources-label">📎 Nguồn:</div>
                     <div class="chat-sources-chips" id="chatSourcesChips"></div>
+                    <button class="chat-index-all-btn" id="indexAllBtn" onclick="indexAllFolder()"
+                        title="Index tất cả file trong thư mục hiện tại" style="display:none;">📂 Index tất cả</button>
                 </div>
                 <div class="chat-input-box">
                     <textarea class="chat-input-field" id="chatInput" placeholder="Hỏi về tài liệu..."
@@ -1487,6 +1561,7 @@
             // Track current folder for RAG chat context
             if (expanded && typeof currentFolderId !== 'undefined') {
                 currentFolderId = folderId;
+                if (typeof updateIndexAllBtn === 'function') updateIndexAllBtn();
             }
             // tree-children is sibling of tree-item inside the wrapper
             const children = treeItem.parentElement.querySelector('.tree-children');
@@ -1937,7 +2012,6 @@
             const unindexed = chatSources.filter(s => !s.indexed);
             for (const src of unindexed) {
                 try {
-                    console.log('[RAG] Indexing:', src.name, src.id);
                     const resp = await fetch(`${API_BASE}/api/v1/rag/index`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1945,16 +2019,39 @@
                         body: JSON.stringify({ file_id: src.id, file_name: src.name }),
                     });
                     const data = await resp.json();
-                    console.log('[RAG] Index result:', data);
                     if (data.success) {
                         src.indexed = true;
                         renderChatSources();
-                    } else {
-                        console.error('[RAG] Index failed:', data.error || data);
                     }
-                } catch (e) {
-                    console.error('Index failed:', src.name, e);
-                }
+                } catch (e) { /* ignore */ }
+            }
+        }
+
+        function updateIndexAllBtn() {
+            const btn = document.getElementById('indexAllBtn');
+            if (!btn) return;
+            btn.style.display = currentFolderId ? 'inline-block' : 'none';
+        }
+
+        async function indexAllFolder() {
+            if (!currentFolderId) return;
+            const btn = document.getElementById('indexAllBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '⏳ Đang index...';
+            try {
+                const resp = await fetch(`${API_BASE}/api/v1/rag/reindex`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ folder_id: currentFolderId }),
+                });
+                const data = await resp.json();
+                btn.textContent = `✅ ${data.indexed || 0}/${data.total_files || 0} files`;
+                setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 3000);
+            } catch (e) {
+                btn.textContent = '❌ Lỗi';
+                setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 3000);
             }
         }
 
@@ -2134,73 +2231,104 @@
             `;
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            // Call RAG API (with session tracking + auto-index sources)
-            // First ensure sources are indexed
+            // Call RAG API (streaming)
             if (chatSources.length > 0) {
                 await ensureSourcesIndexed();
             }
-            fetch(`${API_BASE}/api/v1/rag/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    question: text,
-                    session_id: chatSessionId,
-                    file_ids: chatSources.length > 0 ? chatSources.map(s => s.id) : null,
-                    folder_ids: chatSources.length === 0 && currentFolderId ? [currentFolderId] : null,
-                }),
-            })
-                .then(res => {
-                    if (!res.ok) {
-                        return res.json().then(err => {
-                            throw new Error(err.detail || `Server error ${res.status}`);
-                        });
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    const typing = document.getElementById(typingId);
-                    if (typing) typing.remove();
 
-                    // Track session (backend creates or reuses)
-                    if (data.session_id) chatSessionId = data.session_id;
+            try {
+                const resp = await fetch(`${API_BASE}/api/v1/rag/chat-stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        question: text,
+                        session_id: chatSessionId,
+                        file_ids: chatSources.length > 0 ? chatSources.map(s => s.id) : null,
+                        folder_ids: chatSources.length === 0 && currentFolderId ? [currentFolderId] : null,
+                    }),
+                });
 
-                    // Build citations HTML (collapsible)
-                    let citationsHtml = '';
-                    if (data.citations && data.citations.length > 0) {
-                        citationsHtml = '<div class="chat-citations-wrapper">';
-                        citationsHtml += `<button class="citations-toggle" onclick="this.parentElement.classList.toggle('expanded')">📎 ${data.citations.length} nguồn tham khảo</button>`;
-                        citationsHtml += '<div class="chat-citations">';
-                        data.citations.forEach(c => {
-                            const chunkInfo = c.chunks_used > 1 ? ` (${c.chunks_used} đoạn)` : '';
-                            citationsHtml += `<div class="chat-citation" title="${escapeHtml(c.chunk_text || '')}">
-                            <span class="citation-num">[${c.number}]</span>
-                            <span class="citation-file">${escapeHtml(c.file_name)}${chunkInfo}</span>
-                        </div>`;
-                        });
-                        citationsHtml += '</div></div>';
-                    }
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || `Server error ${resp.status}`);
+                }
 
-                    // Format answer with markdown
-                    let answer = renderMarkdown(data.answer || 'Không có câu trả lời.');
+                // Remove typing indicator, add response container
+                const typing = document.getElementById(typingId);
+                if (typing) typing.remove();
 
-                    chatMessages.innerHTML += `
-                    <div class="chat-msg assistant">
+                const responseId = 'resp-' + Date.now();
+                chatMessages.innerHTML += `
+                    <div class="chat-msg assistant" id="${responseId}">
                         <div class="chat-msg-avatar">✨</div>
                         <div class="chat-msg-text md-content">
-                            ${answer}
-                            ${citationsHtml}
+                            <span class="stream-text"></span>
                         </div>
                     </div>
                 `;
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                    chatLoading = false;
-                })
-                .catch(err => {
-                    const typing = document.getElementById(typingId);
-                    if (typing) typing.remove();
 
-                    chatMessages.innerHTML += `
+                const responseEl = document.getElementById(responseId);
+                const streamText = responseEl.querySelector('.stream-text');
+                let fullText = '';
+                let citations = [];
+
+                // Read SSE stream
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        try {
+                            const event = JSON.parse(line.substring(6));
+                            if (event.type === 'meta') {
+                                citations = event.citations || [];
+                            } else if (event.type === 'text') {
+                                fullText += event.chunk;
+                                streamText.innerHTML = renderMarkdown(fullText);
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            } else if (event.type === 'done') {
+                                if (event.session_id) chatSessionId = event.session_id;
+                            }
+                        } catch (e) { /* skip bad JSON */ }
+                    }
+                }
+
+                // Final render with citations
+                let citationsHtml = '';
+                if (citations.length > 0) {
+                    citationsHtml = '<div class="chat-citations-wrapper">';
+                    citationsHtml += `<button class="citations-toggle" onclick="this.parentElement.classList.toggle('expanded')">📎 ${citations.length} nguồn tham khảo</button>`;
+                    citationsHtml += '<div class="chat-citations">';
+                    citations.forEach(c => {
+                        const chunkInfo = c.chunks_used > 1 ? ` (${c.chunks_used} đoạn)` : '';
+                        citationsHtml += `<div class="chat-citation" title="${escapeHtml(c.chunk_text || '')}">
+                            <span class="citation-num">[${c.number}]</span>
+                            <span class="citation-file">${escapeHtml(c.file_name)}${chunkInfo}</span>
+                        </div>`;
+                    });
+                    citationsHtml += '</div></div>';
+                }
+
+                const msgText = responseEl.querySelector('.chat-msg-text');
+                msgText.innerHTML = renderMarkdown(fullText || 'Không có câu trả lời.') + citationsHtml;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                chatLoading = false;
+
+            } catch (err) {
+                const typing = document.getElementById(typingId);
+                if (typing) typing.remove();
+
+                chatMessages.innerHTML += `
                     <div class="chat-msg assistant">
                         <div class="chat-msg-avatar">✨</div>
                         <div class="chat-msg-text" style="color:#f87171;">
@@ -2208,9 +2336,9 @@
                         </div>
                     </div>
                 `;
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                    chatLoading = false;
-                });
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                chatLoading = false;
+            }
         }
 
         function sendChatSuggestion(btn) {

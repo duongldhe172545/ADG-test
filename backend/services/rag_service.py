@@ -69,6 +69,36 @@ class RAGService:
                 return parts[0].get("text", "")
         return ""
 
+    def _generate_text_stream(self, prompt: str):
+        """Stream text from Gemini REST API. Yields text chunks."""
+        import requests as req
+        import json as _json
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY not set in .env")
+        model = os.getenv("RAG_MODEL", "gemini-2.0-flash")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?key={api_key}&alt=sse"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        with req.post(url, json=payload, timeout=120, stream=True) as resp:
+            if resp.status_code != 200:
+                raise RuntimeError(f"Gemini API error {resp.status_code}: {resp.text}")
+            resp.encoding = 'utf-8'  # Force UTF-8 (requests defaults to ISO-8859-1 for streaming)
+            for line in resp.iter_lines(decode_unicode=True):
+                if line and line.startswith("data: "):
+                    try:
+                        data = _json.loads(line[6:])
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts:
+                                text = parts[0].get("text", "")
+                                if text:
+                                    yield text
+                    except _json.JSONDecodeError:
+                        continue
+
     async def _get_pool(self):
         """Get or create asyncpg connection pool."""
         if self._pool is None:
@@ -208,10 +238,10 @@ class RAGService:
         from backend.api.v1.documents import get_gdrive_service
 
         try:
-            print(f"[RAG-INDEX] Starting index for: {file_name} ({file_id})")
+
             gdrive = get_gdrive_service()
             service = gdrive.service
-            print(f"[RAG-INDEX] Drive service OK, mime_type={mime_type}")
+
 
             # Handle Google Docs (export as text)
             if mime_type == 'application/vnd.google-apps.document':
@@ -234,7 +264,7 @@ class RAGService:
                 _, done = downloader.next_chunk()
 
             content = fh.getvalue()
-            print(f"[RAG-INDEX] Downloaded {len(content)} bytes")
+
 
             result = await self.index_file_from_bytes(
                 content=content,
@@ -244,12 +274,10 @@ class RAGService:
                 folder_id=folder_id,
                 folder_path=folder_path,
             )
-            print(f"[RAG-INDEX] Result: {result}")
+
             return result
         except Exception as e:
-            print(f"[RAG-INDEX] ❌ FAILED: {e}")
-            import traceback
-            traceback.print_exc()
+
             return {"success": False, "error": f"Drive download failed: {e}", "file_id": file_id}
 
     # ========================================================================
@@ -356,6 +384,94 @@ class RAGService:
             "chunks_used": len(chunks),
             "elapsed_seconds": round(elapsed, 2),
         }
+
+    async def query_stream(self, question: str, chat_history: List[Dict],
+                           file_ids=None, folder_ids=None):
+        """
+        Same as query() but streams the answer text chunk by chunk.
+        Yields dicts: first {"type":"meta","citations":...} then {"type":"text","chunk":"..."}.
+        """
+        import time
+        start = time.time()
+        top_k = int(os.getenv("RAG_TOP_K", "8"))
+        await self._ensure_table()
+
+        query_embedding = self.embedding_service.embed_text(question)
+        embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+
+        pool = await self._get_pool()
+        async with pool.acquire() as conn:
+            if file_ids:
+                results = await conn.fetch("""
+                    SELECT file_id, file_name, folder_path, chunk_index, chunk_text,
+                           1 - (embedding <=> $1::vector) AS similarity
+                    FROM document_chunks
+                    WHERE file_id = ANY($2)
+                    ORDER BY embedding <=> $1::vector
+                    LIMIT $3
+                """, embedding_str, file_ids, top_k)
+            elif folder_ids:
+                results = await conn.fetch("""
+                    SELECT file_id, file_name, folder_path, chunk_index, chunk_text,
+                           1 - (embedding <=> $1::vector) AS similarity
+                    FROM document_chunks
+                    WHERE folder_id = ANY($2)
+                    ORDER BY embedding <=> $1::vector
+                    LIMIT $3
+                """, embedding_str, folder_ids, top_k)
+            else:
+                results = await conn.fetch("""
+                    SELECT file_id, file_name, folder_path, chunk_index, chunk_text,
+                           1 - (embedding <=> $1::vector) AS similarity
+                    FROM document_chunks
+                    ORDER BY embedding <=> $1::vector
+                    LIMIT $2
+                """, embedding_str, top_k)
+
+        if not results:
+            yield {"type": "meta", "citations": [], "chunks_used": 0}
+            yield {"type": "text", "chunk": "Không tìm thấy thông tin liên quan trong tài liệu."}
+            yield {"type": "done", "elapsed_seconds": round(time.time() - start, 2), "full_answer": ""}
+            return
+
+        # Build sources
+        sources, chunks, metadatas = [], [], []
+        seen_files = {}
+        for row in results:
+            chunk_text = row["chunk_text"]
+            chunks.append(chunk_text)
+            metadatas.append(dict(row))
+            fid = row["file_id"]
+            if fid in seen_files:
+                sources[seen_files[fid]]["chunks_used"] += 1
+            else:
+                seen_files[fid] = len(sources)
+                sources.append({
+                    "number": len(sources) + 1,
+                    "file_name": row["file_name"],
+                    "file_id": fid,
+                    "folder_path": row.get("folder_path", ""),
+                    "chunk_text": chunk_text[:200] + "..." if len(chunk_text) > 200 else chunk_text,
+                    "relevance": round(float(row["similarity"]), 3),
+                    "chunks_used": 1,
+                })
+
+        prompt = self._build_prompt(question, chunks, metadatas, chat_history)
+
+        # Yield metadata first
+        yield {"type": "meta", "citations": sources, "chunks_used": len(chunks)}
+
+        # Stream answer text
+        full_answer = ""
+        try:
+            for text_chunk in self._generate_text_stream(prompt):
+                full_answer += text_chunk
+                yield {"type": "text", "chunk": text_chunk}
+        except Exception as e:
+            yield {"type": "text", "chunk": f"\n\nLỗi: {e}"}
+
+        elapsed = time.time() - start
+        yield {"type": "done", "elapsed_seconds": round(elapsed, 2), "full_answer": full_answer}
 
     def _build_prompt(
         self,

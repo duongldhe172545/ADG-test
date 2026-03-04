@@ -291,6 +291,57 @@ class ChatMessage(Base):
 
 
 # =============================================================================
+# Document Tracking (file versioning & management)
+# =============================================================================
+
+class Document(Base):
+    """
+    Tracks all files managed by the system.
+    Syncs with Google Drive — Drive is source of truth for content,
+    this table tracks metadata, versions, and indexing status.
+    """
+    __tablename__ = "documents"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    drive_file_id = Column(String(255), nullable=False, unique=True)
+    file_name = Column(String(500), nullable=False)
+    mime_type = Column(String(100), nullable=True)
+    file_size = Column(Integer, nullable=True)
+    folder_id = Column(String(255), nullable=True, index=True)
+    folder_path = Column(String(1000), nullable=True)
+
+    # Versioning
+    version = Column(Integer, default=1, nullable=False)
+    old_drive_id = Column(String(255), nullable=True)
+    change_note = Column(Text, nullable=True)
+
+    # Tracking
+    uploaded_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    approved_at = Column(DateTime, nullable=True)
+
+    # RAG indexing
+    indexed_at = Column(DateTime, nullable=True)
+
+    # Status
+    status = Column(String(20), default="active", nullable=False)
+
+    # Relationships
+    uploader = relationship("User", foreign_keys=[uploaded_by])
+    approver = relationship("User", foreign_keys=[approved_by])
+
+    __table_args__ = (
+        Index("ix_document_drive_file_id", "drive_file_id"),
+        Index("ix_document_folder_id", "folder_id"),
+        Index("ix_document_status", "status"),
+    )
+
+    def __repr__(self):
+        return f"<Document {self.file_name} v{self.version}>"
+
+
+# =============================================================================
 # Document Chunks (for RAG / pgvector)
 # =============================================================================
 
@@ -321,4 +372,3 @@ class DocumentChunk(Base):
 
     def __repr__(self):
         return f"<DocumentChunk {self.file_name}[{self.chunk_index}]>"
-

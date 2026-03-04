@@ -134,6 +134,17 @@ class Settings(BaseSettings):
         """Check if OAuth is properly configured"""
         return bool(self.OAUTH_CLIENT_ID and self.OAUTH_CLIENT_SECRET)
 
+    def validate_critical(self) -> list:
+        """Check critical settings at startup. Returns list of warnings."""
+        warnings = []
+        if not self.DATABASE_URL:
+            warnings.append("DATABASE_URL not set — database features will not work")
+        if not self.OAUTH_CLIENT_ID or not self.OAUTH_CLIENT_SECRET:
+            warnings.append("OAUTH_CLIENT_ID/SECRET not set — Google login will not work")
+        if not self.GDRIVE_REFRESH_TOKEN:
+            warnings.append("GDRIVE_REFRESH_TOKEN not set — Drive access will not work")
+        return warnings
+
 
 @lru_cache()
 def get_settings() -> Settings:
