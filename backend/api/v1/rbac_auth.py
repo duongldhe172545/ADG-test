@@ -45,6 +45,9 @@ async def rbac_login(request: Request):
             scopes=rbac_scopes,
             redirect_uri=rbac_redirect_uri,
         )
+        # Disable PKCE — we're a confidential client with client_secret,
+        # and Railway is stateless so code_verifier is lost between requests
+        flow.code_verifier = None
         auth_url, state = flow.authorization_url(
             access_type='offline',
             include_granted_scopes='true',
@@ -93,6 +96,7 @@ async def rbac_callback(
             scopes=rbac_scopes,
             redirect_uri=rbac_redirect_uri,
         )
+        flow.code_verifier = None
         
         # Fix scope mismatch: Google may change scope ordering
         import os
@@ -133,10 +137,10 @@ async def rbac_callback(
         
         # Redirect based on role
         roles = result['user']['roles']
-        if 'super_admin' in roles or 'admin' in roles:
-            redirect_url = "/admin-dashboard"
+        if 'super_admin' in roles:
+            redirect_url = "/admin/users"
         else:
-            redirect_url = "/"
+            redirect_url = "/dashboard"
         
         response = RedirectResponse(url=redirect_url, status_code=302)
         response.set_cookie(
