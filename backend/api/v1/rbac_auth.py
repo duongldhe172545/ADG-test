@@ -144,6 +144,7 @@ async def rbac_callback(
             key="access_token",
             value=result["token"],
             httponly=True,
+            secure=True,
             max_age=60 * 60 * 24,  # 24 hours
             samesite="lax",
         )
