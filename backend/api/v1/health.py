@@ -16,7 +16,7 @@ async def health_check():
     Check system health and Google Drive auth status.
     """
     try:
-        from backend.services.gdrive_service import get_gdrive_service_for_read
+        from backend.api.v1.documents import get_gdrive_service_for_read
         gdrive = get_gdrive_service_for_read()
         drive_status = "connected" if gdrive else "not_configured"
     except Exception as e:
