@@ -3,7 +3,7 @@ RBAC Authentication API Routes
 Google OAuth login with whitelist check and JWT tokens.
 """
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 
 from fastapi import APIRouter, HTTPException, Depends, Response, Request
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -20,42 +20,41 @@ from backend.config import settings
 router = APIRouter(prefix="/rbac", tags=["RBAC Authentication"])
 
 
+def _get_rbac_redirect_uri() -> str:
+    """Derive RBAC callback URI from OAUTH_REDIRECT_URI setting"""
+    parsed = urlparse(settings.OAUTH_REDIRECT_URI)
+    return f"{parsed.scheme}://{parsed.netloc}/api/v1/rbac/callback"
+
+
 @router.get("/login")
 async def rbac_login(request: Request):
     """
     Start RBAC login flow.
-    Redirects to Google OAuth with user info scope.
+    Redirects to Google OAuth — manually constructed URL (no PKCE).
     """
     oauth_service = get_oauth_service()
     
-    try:
-        # Derive RBAC redirect URI from existing OAuth setting
-        parsed = urlparse(settings.OAUTH_REDIRECT_URI)
-        rbac_redirect_uri = f"{parsed.scheme}://{parsed.netloc}/api/v1/rbac/callback"
-        print(f"🔑 RBAC redirect URI: {rbac_redirect_uri}")
-        
-        from google_auth_oauthlib.flow import Flow
-        
-        # Add openid scope (Google adds it automatically, must match)
-        rbac_scopes = list(oauth_service.SCOPES) + ['openid']
-        rbac_scopes = list(set(rbac_scopes))  # deduplicate
-        
-        flow = Flow.from_client_config(
-            oauth_service.get_client_config(),
-            scopes=rbac_scopes,
-            redirect_uri=rbac_redirect_uri,
-        )
-        # Disable PKCE — we're a confidential client with client_secret,
-        # and Railway is stateless so code_verifier is lost between requests
-        flow.code_verifier = None
-        auth_url, state = flow.authorization_url(
-            access_type='offline',
-            include_granted_scopes='true',
-            prompt='consent',
-        )
-        return RedirectResponse(url=auth_url)
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    if not settings.is_oauth_configured():
+        raise HTTPException(status_code=500, detail="OAuth not configured")
+    
+    rbac_redirect_uri = _get_rbac_redirect_uri()
+    print(f"🔑 RBAC redirect URI: {rbac_redirect_uri}")
+    
+    # Build scopes
+    rbac_scopes = list(set(oauth_service.SCOPES + ['openid']))
+    
+    # Construct OAuth URL manually — no PKCE
+    params = {
+        'client_id': settings.OAUTH_CLIENT_ID,
+        'redirect_uri': rbac_redirect_uri,
+        'response_type': 'code',
+        'scope': ' '.join(rbac_scopes),
+        'access_type': 'offline',
+        'prompt': 'consent',
+        'include_granted_scopes': 'true',
+    }
+    auth_url = f"https://accounts.google.com/o/oauth2/auth?{urlencode(params)}"
+    return RedirectResponse(url=auth_url)
 
 
 @router.get("/callback")
@@ -67,11 +66,7 @@ async def rbac_callback(
 ):
     """
     Handle OAuth callback for RBAC login.
-    1. Exchange code for Google credentials
-    2. Get user info from Google
-    3. Check whitelist
-    4. Generate JWT
-    5. Set cookie and redirect
+    Exchanges code via direct HTTP POST (no PKCE).
     """
     if error:
         return RedirectResponse(url=f"/login?error={error}")
@@ -79,42 +74,44 @@ async def rbac_callback(
     if not code:
         return RedirectResponse(url="/login?error=no_code")
     
-    oauth_service = get_oauth_service()
-    
     try:
-        # Derive RBAC redirect URI from existing OAuth setting
-        parsed = urlparse(settings.OAUTH_REDIRECT_URI)
-        rbac_redirect_uri = f"{parsed.scheme}://{parsed.netloc}/api/v1/rbac/callback"
+        import httpx
         
-        from google_auth_oauthlib.flow import Flow
+        rbac_redirect_uri = _get_rbac_redirect_uri()
         
-        rbac_scopes = list(oauth_service.SCOPES) + ['openid']
-        rbac_scopes = list(set(rbac_scopes))
+        # Exchange authorization code for tokens via direct HTTP POST
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(
+                'https://oauth2.googleapis.com/token',
+                data={
+                    'code': code,
+                    'client_id': settings.OAUTH_CLIENT_ID,
+                    'client_secret': settings.OAUTH_CLIENT_SECRET,
+                    'redirect_uri': rbac_redirect_uri,
+                    'grant_type': 'authorization_code',
+                }
+            )
         
-        flow = Flow.from_client_config(
-            oauth_service.get_client_config(),
-            scopes=rbac_scopes,
-            redirect_uri=rbac_redirect_uri,
-        )
-        flow.code_verifier = None
+        if token_response.status_code != 200:
+            error_data = token_response.json()
+            error_msg = error_data.get('error_description', error_data.get('error', 'Token exchange failed'))
+            print(f"❌ Token exchange failed: {error_data}")
+            return RedirectResponse(url=f"/login?error={error_msg}")
         
-        # Fix scope mismatch: Google may change scope ordering
-        import os
-        os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+        token_data = token_response.json()
+        access_token = token_data.get('access_token')
         
-        flow.fetch_token(code=code)
-        credentials = flow.credentials
+        # Get user info from Google using access token
+        async with httpx.AsyncClient() as client:
+            userinfo_response = await client.get(
+                'https://www.googleapis.com/oauth2/v2/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'}
+            )
         
-        # Save OAuth tokens for Google Drive service
-        # Only save if no existing Drive token (don't overwrite admin's token)
-        if not oauth_service._token_file.exists():
-            oauth_service._save_tokens(credentials)
+        if userinfo_response.status_code != 200:
+            return RedirectResponse(url="/login?error=failed_to_get_user_info")
         
-        # Get user info from Google
-        from googleapiclient.discovery import build
-        service = build('oauth2', 'v2', credentials=credentials)
-        user_info = service.userinfo().get().execute()
-        
+        user_info = userinfo_response.json()
         email = user_info.get('email')
         name = user_info.get('name')
         avatar_url = user_info.get('picture')
