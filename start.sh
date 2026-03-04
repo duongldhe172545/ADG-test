@@ -20,6 +20,11 @@ if [ -n "$DATABASE_URL" ]; then
     echo "🔄 Running database migrations..."
     cd /app/backend && alembic upgrade head && cd /app
     echo "✅ Migrations complete"
+    
+    # Seed roles and initial admin (idempotent — skips if already seeded)
+    echo "🌱 Seeding database..."
+    cd /app && python -m backend.db.seed "duongldhe172545@fpt.edu.vn" "Admin"
+    echo "✅ Seed complete"
 else
     echo "⚠️ DATABASE_URL not set, skipping migrations"
 fi
