@@ -4,6 +4,8 @@ Handles all Google Drive API operations for the KMS
 """
 
 import os
+import json
+import tempfile
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -59,6 +61,7 @@ class GoogleDriveService:
     def from_service_account(cls, file_path: str) -> 'GoogleDriveService':
         """
         Create GoogleDriveService from service account file.
+        Falls back to GDRIVE_SERVICE_ACCOUNT_JSON env var if file doesn't exist.
         
         Args:
             file_path: Path to service account JSON file
@@ -66,6 +69,20 @@ class GoogleDriveService:
         Returns:
             GoogleDriveService instance using service account
         """
+        # If file exists, use it directly
+        if os.path.exists(file_path):
+            return cls(service_account_file=file_path)
+        
+        # Fall back to JSON env var (Railway/cloud deployment)
+        json_content = os.getenv("GDRIVE_SERVICE_ACCOUNT_JSON", "")
+        if json_content:
+            # Write JSON to a temp file
+            tmp_file = os.path.join(tempfile.gettempdir(), "gcp-service-account.json")
+            with open(tmp_file, "w") as f:
+                f.write(json_content)
+            return cls(service_account_file=tmp_file)
+        
+        # No credentials available, return with file_path and let it fail later
         return cls(service_account_file=file_path)
     
     @property

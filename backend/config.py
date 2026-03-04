@@ -74,6 +74,10 @@ class Settings(BaseSettings):
         default=None,
         description="Path to service account JSON (optional, for fallback)"
     )
+    GDRIVE_SERVICE_ACCOUNT_JSON: Optional[str] = Field(
+        default=None,
+        description="Service account JSON content as string (for Railway/cloud deployment)"
+    )
     GDRIVE_PENDING_FOLDER_ID: str = Field(
         default="",
         description="Folder ID for pending uploads (awaiting approval)"
@@ -97,6 +101,10 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = Field(
         default=None,
         description="PostgreSQL connection URL (postgresql://user:pass@host:port/db)"
+    )
+    RAG_DATABASE_URL: Optional[str] = Field(
+        default=None,
+        description="RAG vector DB URL (defaults to DATABASE_URL if not set)"
     )
     
     # ==========================================================================
