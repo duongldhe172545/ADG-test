@@ -1,22 +1,28 @@
 """
 Seed data for RBAC system.
-Run this after migrations to populate default roles and permission types.
+Run this after migrations to populate/sync default roles, permissions, and users.
+
+This seed is IDEMPOTENT — safe to run multiple times.
+It will CREATE missing data, UPDATE existing data, and optionally REMOVE stale data.
 """
 
 import asyncio
 import uuid
 from datetime import datetime
 
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.connection import get_async_session_factory
-from backend.db.models import Role, PermissionType
+from backend.db.models import Role, PermissionType, RolePermission, User, UserRole
 
 
 # =============================================================================
-# Default Roles
+# DATA DEFINITIONS — Edit these to change what gets synced to all environments
 # =============================================================================
-DEFAULT_ROLES = [
+
+# Roles (name must be unique)
+ROLES = [
     {"name": "super_admin", "description": "Full system access", "priority": 100},
     {"name": "admin", "description": "Manage users, approve, edit, view", "priority": 90},
     {"name": "approver", "description": "Approve documents, view", "priority": 70},
@@ -24,11 +30,8 @@ DEFAULT_ROLES = [
     {"name": "viewer", "description": "View only", "priority": 10},
 ]
 
-
-# =============================================================================
-# Default Permission Types
-# =============================================================================
-DEFAULT_PERMISSION_TYPES = [
+# Permission types (code must be unique)
+PERMISSION_TYPES = [
     {"code": "view", "name": "View", "description": "View documents and notebooks"},
     {"code": "upload", "name": "Upload", "description": "Upload new documents"},
     {"code": "edit", "name": "Edit", "description": "Edit existing documents"},
@@ -38,10 +41,7 @@ DEFAULT_PERMISSION_TYPES = [
     {"code": "manage_permissions", "name": "Manage Permissions", "description": "Assign permissions"},
 ]
 
-
-# =============================================================================
-# Role -> Permission Mappings
-# =============================================================================
+# Role → permissions mapping
 ROLE_PERMISSIONS = {
     "super_admin": ["view", "upload", "edit", "delete", "approve", "manage_users", "manage_permissions"],
     "admin": ["view", "upload", "edit", "delete", "approve", "manage_users"],
@@ -50,98 +50,151 @@ ROLE_PERMISSIONS = {
     "viewer": ["view"],
 }
 
-
-async def seed_roles_and_permissions():
-    """Seed default roles and permission types"""
-    AsyncSessionLocal = get_async_session_factory()
-    
-    async with AsyncSessionLocal() as session:
-        # Check if already seeded
-        from sqlalchemy import select
-        
-        existing_roles = await session.execute(select(Role))
-        if existing_roles.scalars().first():
-            print("⚠️ Roles already exist, skipping seed")
-            return
-        
-        # Create permission types
-        permission_map = {}
-        for pt_data in DEFAULT_PERMISSION_TYPES:
-            pt = PermissionType(**pt_data)
-            session.add(pt)
-            permission_map[pt_data["code"]] = pt
-        
-        # Create roles
-        role_map = {}
-        for role_data in DEFAULT_ROLES:
-            role = Role(**role_data)
-            session.add(role)
-            role_map[role_data["name"]] = role
-        
-        await session.commit()
-        
-        # Create role-permission mappings
-        from backend.db.models import RolePermission
-        
-        for role_name, perm_codes in ROLE_PERMISSIONS.items():
-            role = role_map[role_name]
-            for perm_code in perm_codes:
-                pt = permission_map[perm_code]
-                rp = RolePermission(role_id=role.id, permission_type_id=pt.id)
-                session.add(rp)
-        
-        await session.commit()
-        print("✅ Seeded default roles and permission types")
+# Initial users to seed (email → role)
+# These users will be CREATED if they don't exist, role will be SET/UPDATED
+SEED_USERS = [
+    {"email": "kaiserteam36@gmail.com", "name": "duong le", "role": "super_admin"},
+    {"email": "ledinhduongltn@gmail.com", "name": "le dinh duong", "role": "editor"},
+]
 
 
-async def create_initial_admin(email: str, name: str = None):
-    """Create the first admin user"""
-    from sqlalchemy import select
-    from backend.db.models import User, UserRole
+# =============================================================================
+# SYNC FUNCTIONS
+# =============================================================================
+
+async def sync_roles(session: AsyncSession):
+    """Sync roles: create missing, update existing."""
+    role_names = {r["name"] for r in ROLES}
     
-    AsyncSessionLocal = get_async_session_factory()
+    for role_data in ROLES:
+        result = await session.execute(
+            select(Role).where(Role.name == role_data["name"])
+        )
+        existing = result.scalars().first()
+        
+        if existing:
+            # Update description and priority if changed
+            existing.description = role_data["description"]
+            existing.priority = role_data["priority"]
+        else:
+            session.add(Role(**role_data))
+            print(f"  ✅ Created role: {role_data['name']}")
     
-    async with AsyncSessionLocal() as session:
-        # Check if user exists
+    await session.commit()
+    print("  📋 Roles synced")
+
+
+async def sync_permission_types(session: AsyncSession):
+    """Sync permission types: create missing, update existing."""
+    for pt_data in PERMISSION_TYPES:
+        result = await session.execute(
+            select(PermissionType).where(PermissionType.code == pt_data["code"])
+        )
+        existing = result.scalars().first()
+        
+        if existing:
+            existing.name = pt_data["name"]
+            existing.description = pt_data["description"]
+        else:
+            session.add(PermissionType(**pt_data))
+            print(f"  ✅ Created permission type: {pt_data['name']}")
+    
+    await session.commit()
+    print("  📋 Permission types synced")
+
+
+async def sync_role_permissions(session: AsyncSession):
+    """Sync role-permission mappings: add missing, remove extra."""
+    # Get all roles and permission types
+    roles = {r.name: r for r in (await session.execute(select(Role))).scalars().all()}
+    perms = {p.code: p for p in (await session.execute(select(PermissionType))).scalars().all()}
+    
+    for role_name, perm_codes in ROLE_PERMISSIONS.items():
+        role = roles.get(role_name)
+        if not role:
+            continue
+        
+        # Get existing permissions for this role
+        existing = await session.execute(
+            select(RolePermission).where(RolePermission.role_id == role.id)
+        )
+        existing_perm_ids = {rp.permission_type_id for rp in existing.scalars().all()}
+        desired_perm_ids = {perms[code].id for code in perm_codes if code in perms}
+        
+        # Add missing
+        for perm_id in desired_perm_ids - existing_perm_ids:
+            session.add(RolePermission(role_id=role.id, permission_type_id=perm_id))
+        
+        # Remove extra
+        for perm_id in existing_perm_ids - desired_perm_ids:
+            await session.execute(
+                delete(RolePermission).where(
+                    RolePermission.role_id == role.id,
+                    RolePermission.permission_type_id == perm_id,
+                )
+            )
+    
+    await session.commit()
+    print("  📋 Role permissions synced")
+
+
+async def sync_users(session: AsyncSession):
+    """Sync seed users: create missing, update roles."""
+    roles = {r.name: r for r in (await session.execute(select(Role))).scalars().all()}
+    
+    for user_data in SEED_USERS:
+        email = user_data["email"]
+        role_name = user_data["role"]
+        
+        # Find or create user
         result = await session.execute(select(User).where(User.email == email))
         user = result.scalars().first()
         
-        if user:
-            print(f"⚠️ User {email} already exists")
-            return user
+        if not user:
+            user = User(email=email, name=user_data.get("name", email.split("@")[0]), is_active=True)
+            session.add(user)
+            await session.commit()
+            print(f"  ✅ Created user: {email}")
         
-        # Get super_admin role
-        result = await session.execute(select(Role).where(Role.name == "super_admin"))
-        admin_role = result.scalars().first()
+        # Ensure correct role
+        role = roles.get(role_name)
+        if not role:
+            print(f"  ⚠️ Role '{role_name}' not found for {email}")
+            continue
         
-        if not admin_role:
-            print("❌ super_admin role not found. Run seed_roles_and_permissions first.")
-            return None
-        
-        # Create user
-        user = User(email=email, name=name or email.split("@")[0], is_active=True)
-        session.add(user)
-        await session.commit()
-        
-        # Assign super_admin role
-        user_role = UserRole(user_id=user.id, role_id=admin_role.id)
-        session.add(user_role)
-        await session.commit()
-        
-        print(f"✅ Created admin user: {email}")
-        return user
+        # Check if user already has this role
+        result = await session.execute(
+            select(UserRole).where(
+                UserRole.user_id == user.id,
+                UserRole.role_id == role.id,
+            )
+        )
+        if not result.scalars().first():
+            # Remove existing roles for this user first (single role per user)
+            await session.execute(
+                delete(UserRole).where(UserRole.user_id == user.id)
+            )
+            session.add(UserRole(user_id=user.id, role_id=role.id))
+            await session.commit()
+            print(f"  ✅ Assigned role '{role_name}' to {email}")
+    
+    print("  📋 Users synced")
+
+
+async def run_seed():
+    """Run all sync operations."""
+    print("🌱 Starting database seed/sync...")
+    
+    AsyncSessionLocal = get_async_session_factory()
+    
+    async with AsyncSessionLocal() as session:
+        await sync_roles(session)
+        await sync_permission_types(session)
+        await sync_role_permissions(session)
+        await sync_users(session)
+    
+    print("🌱 Seed/sync complete!")
 
 
 if __name__ == "__main__":
-    import sys
-    
-    async def main():
-        await seed_roles_and_permissions()
-        
-        # If email provided as argument, create admin
-        if len(sys.argv) > 1:
-            email = sys.argv[1]
-            name = sys.argv[2] if len(sys.argv) > 2 else None
-            await create_initial_admin(email, name)
-    
-    asyncio.run(main())
+    asyncio.run(run_seed())
