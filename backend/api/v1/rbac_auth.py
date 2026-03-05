@@ -199,4 +199,5 @@ async def check_auth(request: Request, db: AsyncSession = Depends(get_db)):
         "authenticated": True,
         "email": user_data["email"],
         "roles": user_data["roles"],
+        "department": user_data.get("department"),
     }

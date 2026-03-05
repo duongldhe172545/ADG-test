@@ -27,11 +27,13 @@ class AddUserRequest(BaseModel):
     email: str
     name: Optional[str] = None
     roles: List[str] = ["viewer"]  # Default role
+    department_id: Optional[str] = None  # UUID of department
 
 class UpdateUserRequest(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
     roles: Optional[List[str]] = None
+    department_id: Optional[str] = None  # UUID of department, or "" to clear
 
 class UserResponse(BaseModel):
     id: str
@@ -53,6 +55,12 @@ async def require_admin(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 
+async def require_admin_or_manager(current_user: dict = Depends(get_current_user)):
+    """Ensure current user is admin, super_admin, or manager"""
+    if not any(r in ["admin", "super_admin", "manager"] for r in current_user.get("roles", [])):
+        raise HTTPException(status_code=403, detail="Admin or Manager access required")
+    return current_user
+
 
 # =============================================================================
 # User Management
@@ -67,6 +75,8 @@ async def list_users(
     result = await db.execute(select(User).order_by(User.created_at.desc()))
     users = result.scalars().all()
     
+    from backend.db.models import UserDepartment, Department
+    
     user_list = []
     for user in users:
         # Get roles
@@ -77,12 +87,21 @@ async def list_users(
         )
         roles = [r[0] for r in role_result.all()]
         
+        # Get department
+        dept_result = await db.execute(
+            select(Department.id, Department.name).join(UserDepartment, UserDepartment.department_id == Department.id)
+            .where(UserDepartment.user_id == user.id)
+        )
+        dept_row = dept_result.first()
+        
         user_list.append({
             "id": str(user.id),
             "email": user.email,
             "name": user.name,
             "is_active": user.is_active,
             "roles": roles,
+            "department": dept_row[1] if dept_row else None,
+            "department_id": str(dept_row[0]) if dept_row else None,
             "last_login": user.last_login.isoformat() if user.last_login else None,
             "created_at": user.created_at.isoformat(),
         })
@@ -114,6 +133,37 @@ async def add_user(
         if role:
             user_role = UserRole(user_id=user.id, role_id=role.id)
             db.add(user_role)
+    
+    # Assign department if provided
+    if req.department_id:
+        from backend.db.models import UserDepartment, Department
+        dept_result = await db.execute(select(Department).where(Department.id == req.department_id))
+        dept = dept_result.scalars().first()
+        if dept:
+            ud = UserDepartment(user_id=user.id, department_id=dept.id)
+            db.add(ud)
+            # Auto-grant view permission to dept's drive folder
+            if dept.drive_folder_id:
+                await _ensure_view_permission_type(db)
+                from backend.db.models import Resource, Permission, PermissionType
+                pt_result = await db.execute(select(PermissionType).where(PermissionType.code == "view"))
+                view_pt = pt_result.scalars().first()
+                if view_pt:
+                    res_result = await db.execute(
+                        select(Resource).where(
+                            Resource.resource_id == dept.drive_folder_id,
+                            Resource.resource_type == "folder"
+                        )
+                    )
+                    resource = res_result.scalars().first()
+                    if resource:
+                        perm = Permission(
+                            user_id=user.id,
+                            resource_id=resource.id,
+                            permission_type_id=view_pt.id,
+                            is_granted=True
+                        )
+                        db.add(perm)
     
     await db.commit()
     
@@ -153,6 +203,75 @@ async def update_user(
                 user_role = UserRole(user_id=user.id, role_id=role.id)
                 db.add(user_role)
     
+    # Update department if provided (with auto folder permissions)
+    if req.department_id is not None:
+        from backend.db.models import UserDepartment, Department
+        
+        # Get OLD department's drive_folder_id (to remove permission)
+        old_dept_result = await db.execute(
+            select(Department).join(UserDepartment, UserDepartment.department_id == Department.id)
+            .where(UserDepartment.user_id == user.id)
+        )
+        old_dept = old_dept_result.scalars().first()
+        
+        # Remove old dept folder permission if exists
+        if old_dept and old_dept.drive_folder_id:
+            old_resource = await db.execute(
+                select(Resource).where(
+                    Resource.resource_type == "folder",
+                    Resource.resource_id == old_dept.drive_folder_id,
+                )
+            )
+            old_res = old_resource.scalars().first()
+            if old_res:
+                view_pt = await _ensure_view_permission_type(db)
+                await db.execute(
+                    delete(Permission).where(
+                        Permission.user_id == user.id,
+                        Permission.resource_id == old_res.id,
+                        Permission.permission_type_id == view_pt.id,
+                    )
+                )
+        
+        # Remove existing department assignments
+        await db.execute(delete(UserDepartment).where(UserDepartment.user_id == user.id))
+        
+        # Assign new department (if not empty)
+        if req.department_id:
+            dept_result = await db.execute(select(Department).where(Department.id == req.department_id))
+            dept = dept_result.scalars().first()
+            if dept:
+                ud = UserDepartment(user_id=user.id, department_id=dept.id)
+                db.add(ud)
+                
+                # Auto-add new dept folder permission
+                if dept.drive_folder_id:
+                    new_resource = await db.execute(
+                        select(Resource).where(
+                            Resource.resource_type == "folder",
+                            Resource.resource_id == dept.drive_folder_id,
+                        )
+                    )
+                    new_res = new_resource.scalars().first()
+                    if new_res:
+                        view_pt = await _ensure_view_permission_type(db)
+                        # Check if permission already exists
+                        existing_perm = await db.execute(
+                            select(Permission).where(
+                                Permission.user_id == user.id,
+                                Permission.resource_id == new_res.id,
+                                Permission.permission_type_id == view_pt.id,
+                            )
+                        )
+                        if not existing_perm.scalars().first():
+                            perm = Permission(
+                                user_id=user.id,
+                                resource_id=new_res.id,
+                                permission_type_id=view_pt.id,
+                                is_granted=True,
+                            )
+                            db.add(perm)
+    
     await db.commit()
     
     return {"success": True, "message": f"User {user.email} updated"}
@@ -175,6 +294,27 @@ async def deactivate_user(
     await db.commit()
     
     return {"success": True, "message": f"User {user.email} deactivated"}
+
+
+# =============================================================================
+# Departments
+# =============================================================================
+
+@router.get("/departments")
+async def list_departments(
+    db: AsyncSession = Depends(get_db),
+    admin: dict = Depends(require_admin)
+):
+    """List all departments"""
+    from backend.db.models import Department
+    result = await db.execute(select(Department).order_by(Department.name))
+    depts = result.scalars().all()
+    return {
+        "departments": [
+            {"id": str(d.id), "name": d.name, "parent_id": str(d.parent_id) if d.parent_id else None}
+            for d in depts
+        ]
+    }
 
 
 # =============================================================================
@@ -228,7 +368,7 @@ class CreateFolderRequest(BaseModel):
 async def create_folder(
     req: CreateFolderRequest,
     db: AsyncSession = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_or_manager),
 ):
     """
     Create a new folder on Google Drive (admin only).

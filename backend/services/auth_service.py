@@ -72,7 +72,7 @@ async def get_user_roles(db: AsyncSession, user_id: UUID) -> list[str]:
 
 
 async def get_user_with_roles(db: AsyncSession, user_id: UUID) -> Optional[dict]:
-    """Get user with their roles"""
+    """Get user with their roles and department"""
     result = await db.execute(
         select(User).where(User.id == user_id)
     )
@@ -82,6 +82,14 @@ async def get_user_with_roles(db: AsyncSession, user_id: UUID) -> Optional[dict]
     
     roles = await get_user_roles(db, user.id)
     
+    # Get user's department
+    from backend.db.models import UserDepartment, Department
+    dept_result = await db.execute(
+        select(Department.name).join(UserDepartment, UserDepartment.department_id == Department.id)
+        .where(UserDepartment.user_id == user.id)
+    )
+    department = dept_result.scalars().first()
+    
     return {
         "id": str(user.id),
         "email": user.email,
@@ -89,6 +97,7 @@ async def get_user_with_roles(db: AsyncSession, user_id: UUID) -> Optional[dict]
         "avatar_url": user.avatar_url,
         "is_active": user.is_active,
         "roles": roles,
+        "department": department,
         "last_login": user.last_login.isoformat() if user.last_login else None,
     }
 

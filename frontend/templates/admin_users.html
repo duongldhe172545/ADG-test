@@ -314,6 +314,16 @@
             color: #059669;
         }
 
+        .badge-manager {
+            background: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+        }
+
+        .badge-employer {
+            background: rgba(100, 116, 139, 0.15);
+            color: #475569;
+        }
+
         .badge-active {
             background: var(--success-light);
             color: #16a34a;
@@ -515,16 +525,23 @@
             </a>
         </div>
         <nav class="sidebar-nav">
-            <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
-            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
-            <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
-            <a href="/upload" class="nav-item" id="uploadNavLink" style="display:none;"><span>📤</span> Upload</a>
-            <a href="/approval-history" class="nav-item"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin/users" class="nav-item active" id="adminNavUsers" style="display:none;"><span>👥</span> Quản
+            <a href="/" class="nav-item" data-roles="all"><span>🏠</span> Trang chủ</a>
+            <a href="/dashboard" class="nav-item" data-roles="super_admin,admin,manager,employer"><span>📊</span>
+                Dashboard</a>
+            <a href="/sources" class="nav-item" data-roles="admin,manager,employer"
+                style="display:none;"><span>📁</span> Tài liệu</a>
+            <a href="/upload" class="nav-item" data-roles="admin,manager,employer" style="display:none;"><span>📤</span>
+                Upload</a>
+            <a href="/approval-history" class="nav-item" data-roles="admin,manager,employer"
+                style="display:none;"><span>📋</span> Lịch sử duyệt</a>
+            <a href="/admin/users" class="nav-item active" data-roles="super_admin,admin"
+                style="display:none;"><span>👥</span> Quản
                 lý Users</a>
-            <a href="/admin/approvals" class="nav-item" id="adminNavApprovals" style="display:none;"><span>📋</span> Phê
+            <a href="/admin/approvals" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📋</span>
+                Phê
                 duyệt</a>
-            <a href="/admin/folders" class="nav-item" id="adminNavFolders" style="display:none;"><span>📁</span> Tạo thư
+            <a href="/admin/folders" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📁</span>
+                Tạo thư
                 mục</a>
         </nav>
         <div class="sidebar-footer">
@@ -576,6 +593,7 @@
                         <tr>
                             <th>Email</th>
                             <th>Tên</th>
+                            <th>Phòng ban</th>
                             <th>Vai trò</th>
                             <th>Trạng thái</th>
                             <th>Đăng nhập cuối</th>
@@ -584,7 +602,7 @@
                     </thead>
                     <tbody id="usersTable">
                         <tr>
-                            <td colspan="6" class="empty-state">
+                            <td colspan="7" class="empty-state">
                                 <div class="empty-state-icon">⏳</div>
                                 <div>Đang tải...</div>
                             </td>
@@ -611,6 +629,12 @@
                 <label class="form-label">Vai trò</label>
                 <div class="checkbox-group" id="roleCheckboxes"></div>
             </div>
+            <div class="form-group">
+                <label class="form-label">Phòng ban</label>
+                <select class="form-input" id="newUserDept" style="cursor:pointer;">
+                    <option value="">— Không chọn —</option>
+                </select>
+            </div>
             <div class="modal-actions">
                 <button class="btn btn-outline" onclick="closeModal()">Hủy</button>
                 <button class="btn btn-primary" onclick="addUser()">Thêm User</button>
@@ -632,6 +656,41 @@
             <div class="modal-actions">
                 <button class="btn btn-outline" onclick="closeEditRoleModal()">Hủy</button>
                 <button class="btn btn-primary" onclick="saveUserRoles()">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unified Edit User Modal -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal" style="max-width:480px;">
+            <div class="modal-title">✏️ Cập nhật thông tin</div>
+            <div class="form-group">
+                <label class="form-label">User: <strong id="editUserEmail"></strong></label>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tên</label>
+                <input type="text" class="form-input" id="editUserName" placeholder="Nhập tên">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Phòng ban</label>
+                <select class="form-input" id="editUserDept">
+                    <option value="">— Không —</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Vai trò</label>
+                <div class="checkbox-group" id="editUserRoles"></div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Trạng thái</label>
+                <select class="form-input" id="editUserStatus">
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeEditUserModal()">Hủy</button>
+                <button class="btn btn-primary" onclick="saveUserUpdate()">Lưu thay đổi</button>
             </div>
         </div>
     </div>
@@ -701,16 +760,33 @@
             document.getElementById('userRole').textContent = authData.roles.join(', ');
             document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
             // Show/hide nav links based on roles
-            if (authData.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
-                document.getElementById('uploadNavLink').style.display = 'flex';
-            }
-            if (authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
-                document.getElementById('adminNavUsers').style.display = 'flex';
-                document.getElementById('adminNavApprovals').style.display = 'flex';
-                document.getElementById('adminNavFolders').style.display = 'flex';
-            }
+            document.querySelectorAll('.sidebar-nav .nav-item[data-roles]').forEach(link => {
+                const allowed = link.getAttribute('data-roles');
+                if (allowed === 'all') { link.style.display = 'flex'; return; }
+                const allowedRoles = allowed.split(',');
+                if (authData.roles.some(r => allowedRoles.includes(r))) {
+                    link.style.display = 'flex';
+                }
+            });
             loadUsers();
             loadRoles();
+            loadDepartments();
+        }
+
+        // Load departments for dropdown
+        async function loadDepartments() {
+            try {
+                const res = await fetch(`${API}/admin/departments`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const select = document.getElementById('newUserDept');
+                (data.departments || []).forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = d.name;
+                    select.appendChild(opt);
+                });
+            } catch (e) { console.error('Load departments error:', e); }
         }
 
         // Users
@@ -737,18 +813,16 @@
                 <tr>
                     <td><strong>${u.email}</strong></td>
                     <td>${u.name || '—'}</td>
+                    <td>${u.department ? '<span class="badge badge-manager">' + u.department + '</span>' : '—'}</td>
                     <td>${u.roles.map(r => `<span class="badge badge-${r}">${r}</span>`).join(' ')}</td>
                     <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
                     <td>${u.last_login ? toVNDate(u.last_login) : '—'}</td>
                     <td style="display:flex;gap:4px;flex-wrap:wrap;">
-                        <button class="btn btn-outline btn-sm" onclick="showEditRoleModal('${u.id}', '${u.email}', ${JSON.stringify(u.roles).replace(/"/g, '&quot;')})">
-                            ✏️ Đổi Role
+                        <button class="btn btn-outline btn-sm" onclick="showEditUserModal('${u.id}', '${u.email}', '${(u.name || '').replace(/'/g, "\\'")}', ${JSON.stringify(u.roles).replace(/"/g, '&quot;')}, '${u.department_id || ''}', ${u.is_active})">
+                            ✏️ Cập nhật
                         </button>
                         <button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:var(--accent);" onclick="showFolderPermModal('${u.id}', '${u.email}')">
                             🔐 Phân quyền
-                        </button>
-                        <button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}', ${!u.is_active})">
-                            ${u.is_active ? '⏸ Vô hiệu' : '▶ Kích hoạt'}
                         </button>
                     </td>
                 </tr>
@@ -779,13 +853,16 @@
             const email = document.getElementById('newUserEmail').value.trim();
             const name = document.getElementById('newUserName').value.trim();
             const roles = [...document.querySelectorAll('#roleCheckboxes input:checked')].map(c => c.value);
+            const deptId = document.getElementById('newUserDept').value;
             if (!email) { showToast('Vui lòng nhập email', 'error'); return; }
             if (roles.length === 0) { showToast('Vui lòng chọn vai trò', 'error'); return; }
             try {
+                const body = { email, name: name || null, roles };
+                if (deptId) body.department_id = deptId;
                 const res = await fetch(`${API}/admin/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, name: name || null, roles })
+                    body: JSON.stringify(body)
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -793,6 +870,7 @@
                     closeModal();
                     document.getElementById('newUserEmail').value = '';
                     document.getElementById('newUserName').value = '';
+                    document.getElementById('newUserDept').value = '';
                     loadUsers();
                 } else {
                     showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
@@ -847,6 +925,75 @@
                 if (res.ok) {
                     showToast('✅ Đã cập nhật vai trò', 'success');
                     closeEditRoleModal();
+                    loadUsers();
+                } else {
+                    const data = await res.json();
+                    showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
+                }
+            } catch (e) { showToast('❌ Lỗi kết nối', 'error'); }
+        }
+
+        // Unified Edit User
+        let editingUserIdUnified = null;
+        let allDepartments = [];
+
+        async function loadDepartments() {
+            try {
+                const res = await fetch(`${API}/admin/departments`, { credentials: 'include' });
+                const data = await res.json();
+                allDepartments = data.departments || [];
+            } catch (e) { allDepartments = []; }
+        }
+        loadDepartments();
+
+        function showEditUserModal(userId, email, currentName, currentRoles, deptId, isActive) {
+            editingUserIdUnified = userId;
+            document.getElementById('editUserEmail').textContent = email;
+            document.getElementById('editUserName').value = currentName || '';
+
+            // Populate departments dropdown
+            const deptSelect = document.getElementById('editUserDept');
+            deptSelect.innerHTML = '<option value="">— Không —</option>' +
+                allDepartments.map(d => `<option value="${d.id}" ${d.id === deptId ? 'selected' : ''}>${d.name}</option>`).join('');
+
+            // Populate role checkboxes
+            document.getElementById('editUserRoles').innerHTML = allRoles.map(r => `
+                <label class="checkbox-label">
+                    <input type="checkbox" name="editUserRole" value="${r.name}" ${currentRoles.includes(r.name) ? 'checked' : ''}>
+                    ${r.name} <small style="color:#999;">(${r.description || ''})</small>
+                </label>
+            `).join('');
+
+            // Set status
+            document.getElementById('editUserStatus').value = String(isActive);
+
+            document.getElementById('editUserModal').classList.add('show');
+            setTimeout(() => document.getElementById('editUserName').focus(), 100);
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').classList.remove('show');
+            editingUserIdUnified = null;
+        }
+
+        async function saveUserUpdate() {
+            if (!editingUserIdUnified) return;
+            const name = document.getElementById('editUserName').value.trim();
+            const roles = [...document.querySelectorAll('#editUserRoles input:checked')].map(c => c.value);
+            const department_id = document.getElementById('editUserDept').value;
+            const is_active = document.getElementById('editUserStatus').value === 'true';
+
+            if (roles.length === 0) { showToast('Phải chọn ít nhất 1 vai trò', 'error'); return; }
+
+            try {
+                const res = await fetch(`${API}/admin/users/${editingUserIdUnified}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name || null, roles, department_id, is_active })
+                });
+                if (res.ok) {
+                    showToast('✅ Đã cập nhật thông tin', 'success');
+                    closeEditUserModal();
                     loadUsers();
                 } else {
                     const data = await res.json();
@@ -921,7 +1068,7 @@
                 const grantedFolderIds = permData.folder_ids || [];
 
                 // Build tree HTML
-                const tree = buildFolderTree(allFolderResources, null, grantedFolderIds, 0);
+                const tree = buildFolderTree(allFolderResources, null, grantedFolderIds, 0, false);
                 document.getElementById('folderPermTree').innerHTML = tree || '<div style="padding:1rem;color:var(--text-secondary);">Không có folder nào</div>';
             } catch (e) {
                 console.error('Load folder perms error:', e);
@@ -929,14 +1076,15 @@
             }
         }
 
-        function buildFolderTree(folders, parentId, grantedIds, level) {
+        function buildFolderTree(folders, parentId, grantedIds, level, parentGranted) {
             const children = folders.filter(f => f.parent_id === parentId);
             if (children.length === 0) return '';
 
             return children.map(folder => {
-                const isChecked = grantedIds.includes(folder.resource_id) ? 'checked' : '';
+                const isGranted = grantedIds.includes(folder.resource_id) || parentGranted;
+                const isChecked = isGranted ? 'checked' : '';
                 const indent = level * 1.25;
-                const childHtml = buildFolderTree(folders, folder.id, grantedIds, level + 1);
+                const childHtml = buildFolderTree(folders, folder.id, grantedIds, level + 1, isGranted);
                 return `
                     <div style="padding-left:${indent}rem;" data-folder-wrapper="${folder.resource_id}">
                         <label style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0.5rem;border-radius:0.375rem;cursor:pointer;transition:background 0.15s;font-size:0.8125rem;" 
@@ -954,17 +1102,16 @@
             }).join('');
         }
 
-        // Cascade checkbox: uncheck parent → uncheck children, check child → check parents
+        // Cascade checkbox: check parent → check ALL children + ancestors, uncheck parent → uncheck children
         function cascadeCheck(cb) {
             const wrapper = cb.closest('[data-folder-wrapper]');
             if (!wrapper) return;
 
-            if (!cb.checked) {
-                // Uncheck: cascade DOWN — uncheck all children
+            if (cb.checked) {
+                // Check: cascade DOWN — check ALL children/descendants
                 wrapper.querySelectorAll('input[name=folderPerm]').forEach(child => {
-                    if (child !== cb) child.checked = false;
+                    child.checked = true;
                 });
-            } else {
                 // Check: cascade UP — check all parent ancestors
                 let parent = wrapper.parentElement;
                 while (parent) {
@@ -974,6 +1121,11 @@
                     if (parentCb && !parentCb.checked) parentCb.checked = true;
                     parent = pw.parentElement;
                 }
+            } else {
+                // Uncheck: cascade DOWN — uncheck all children
+                wrapper.querySelectorAll('input[name=folderPerm]').forEach(child => {
+                    if (child !== cb) child.checked = false;
+                });
             }
         }
 

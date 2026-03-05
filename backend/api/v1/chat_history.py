@@ -100,10 +100,33 @@ async def get_session(
         raise HTTPException(status_code=403, detail="Not your session")
 
     messages = await repo.get_messages(session_id)
+    
+    # Resolve file names for source_ids
+    all_file_ids = set()
+    for m in messages:
+        if m.source_ids:
+            all_file_ids.update(m.source_ids)
+    
+    source_names = {}
+    if all_file_ids:
+        try:
+            import asyncpg
+            from backend.config import settings
+            conn = await asyncpg.connect(settings.NEON_DATABASE_URL)
+            rows = await conn.fetch(
+                "SELECT DISTINCT file_id, file_name FROM document_chunks WHERE file_id = ANY($1)",
+                list(all_file_ids)
+            )
+            await conn.close()
+            source_names = {row["file_id"]: row["file_name"] for row in rows}
+        except Exception:
+            pass
+    
     return {
         "id": str(session.id),
         "title": session.title,
         "notebook_id": session.notebook_id,
+        "source_names": source_names,
         "messages": [
             {
                 "id": str(m.id),

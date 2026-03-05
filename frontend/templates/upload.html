@@ -956,16 +956,21 @@
             </a>
         </div>
         <nav class="sidebar-nav">
-            <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
-            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
-            <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
-            <a href="/upload" class="nav-item active"><span>📤</span> Upload</a>
-            <a href="/approval-history" class="nav-item"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin/users" class="nav-item" id="adminNavUsers" style="display:none;"><span>👥</span> Quản lý
+            <a href="/" class="nav-item" data-roles="all"><span>🏠</span> Trang chủ</a>
+            <a href="/dashboard" class="nav-item" data-roles="super_admin,admin,manager,employer"><span>📊</span>
+                Dashboard</a>
+            <a href="/sources" class="nav-item" data-roles="admin,manager,employer"><span>📁</span> Tài liệu</a>
+            <a href="/upload" class="nav-item active" data-roles="admin,manager,employer"><span>📤</span> Upload</a>
+            <a href="/approval-history" class="nav-item" data-roles="admin,manager,employer"
+                style="display:none;"><span>📋</span> Lịch sử duyệt</a>
+            <a href="/admin/users" class="nav-item" data-roles="super_admin,admin" style="display:none;"><span>👥</span>
+                Quản lý
                 Users</a>
-            <a href="/admin/approvals" class="nav-item" id="adminNavApprovals" style="display:none;"><span>📋</span> Phê
+            <a href="/admin/approvals" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📋</span>
+                Phê
                 duyệt</a>
-            <a href="/admin/folders" class="nav-item" id="adminNavFolders" style="display:none;"><span>📁</span> Tạo thư
+            <a href="/admin/folders" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📁</span>
+                Tạo thư
                 mục</a>
         </nav>
         <div class="sidebar-footer">
@@ -1192,10 +1197,16 @@
                     document.getElementById('userAvatar').textContent = email.substring(0, 2).toUpperCase();
                     document.getElementById('docOwner').value = email;
 
-                    if (userRoles.includes('super_admin') || userRoles.includes('admin')) {
-                        document.getElementById('adminNavUsers').style.display = 'flex';
-                        document.getElementById('adminNavApprovals').style.display = 'flex';
-                        document.getElementById('adminNavFolders').style.display = 'flex';
+                    if (userRoles.includes('super_admin') || userRoles.includes('admin') || userRoles.includes('manager') || userRoles.includes('employer')) {
+                        // Show nav items based on roles
+                        document.querySelectorAll('.sidebar-nav .nav-item[data-roles]').forEach(link => {
+                            const allowed = link.getAttribute('data-roles');
+                            if (allowed === 'all') { link.style.display = 'flex'; return; }
+                            const allowedRoles = allowed.split(',');
+                            if (userRoles.some(r => allowedRoles.includes(r))) {
+                                link.style.display = 'flex';
+                            }
+                        });
                     }
                 } else {
                     isAuthenticated = false;

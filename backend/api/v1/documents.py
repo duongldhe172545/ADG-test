@@ -157,10 +157,32 @@ async def list_folders(
                     )
                     allowed_ids = set(row[0] for row in perm_result.all())
                     
-                    # Filter: keep files (always visible if parent is visible), filter folders by permission
-                    items = [item for item in items 
-                             if item.get('mimeType') != 'application/vnd.google-apps.folder' 
-                             or item.get('id') in allowed_ids]
+                    # Check if parent_id is a descendant of any allowed folder
+                    # Walk up the parent chain via Drive API
+                    is_inside_allowed = parent_id in allowed_ids
+                    if not is_inside_allowed:
+                        check_id = parent_id
+                        for _ in range(10):  # max tree depth
+                            try:
+                                info = gdrive.service.files().get(
+                                    fileId=check_id, fields='parents',
+                                    supportsAllDrives=True
+                                ).execute()
+                                parents = info.get('parents', [])
+                                if not parents:
+                                    break
+                                check_id = parents[0]
+                                if check_id in allowed_ids:
+                                    is_inside_allowed = True
+                                    break
+                            except:
+                                break
+                    
+                    # Only filter if parent is NOT inside an allowed folder tree
+                    if not is_inside_allowed:
+                        items = [item for item in items 
+                                 if item.get('mimeType') != 'application/vnd.google-apps.folder' 
+                                 or item.get('id') in allowed_ids]
             
             return {
                 "parent_id": parent_id,
@@ -244,16 +266,21 @@ async def list_folders(
                 )
                 allowed_ids = set(row[0] for row in perm_result.all())
                 
-                # Filter the tree — show only allowed folders and their ancestors
-                def filter_tree(nodes):
+                # Filter the tree — show only allowed folders and their descendants
+                def filter_tree(nodes, parent_allowed=False):
                     filtered = []
                     for node in nodes:
-                        # Include if directly allowed or has allowed descendants
-                        filtered_children = filter_tree(node.get('children', []))
-                        if node['id'] in allowed_ids or filtered_children:
-                            node['children'] = filtered_children
-                            node['hasChildren'] = len(filtered_children) > 0
-                            filtered.append(node)
+                        is_allowed = node['id'] in allowed_ids or parent_allowed
+                        if is_allowed:
+                            # This folder (and all descendants) are allowed
+                            filtered.append(node)  # Keep children as-is
+                        else:
+                            # Not directly allowed — check if any descendants are allowed
+                            filtered_children = filter_tree(node.get('children', []), False)
+                            if filtered_children:
+                                node['children'] = filtered_children
+                                node['hasChildren'] = len(filtered_children) > 0
+                                filtered.append(node)
                     return filtered
                 
                 folders = filter_tree(folders)

@@ -524,16 +524,22 @@
             </a>
         </div>
         <nav class="sidebar-nav">
-            <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
-            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
-            <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
-            <a href="/upload" class="nav-item" id="uploadNavLink" style="display:none;"><span>📤</span> Upload</a>
-            <a href="/approval-history" class="nav-item"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin/users" class="nav-item" id="adminNavUsers" style="display:none;"><span>👥</span> Quản lý
+            <a href="/" class="nav-item" data-roles="all"><span>🏠</span> Trang chủ</a>
+            <a href="/dashboard" class="nav-item" data-roles="super_admin,admin,manager,employer"><span>📊</span>
+                Dashboard</a>
+            <a href="/sources" class="nav-item" data-roles="admin,manager,employer"
+                style="display:none;"><span>📁</span> Tài liệu</a>
+            <a href="/upload" class="nav-item" data-roles="admin,manager,employer" style="display:none;"><span>📤</span>
+                Upload</a>
+            <a href="/approval-history" class="nav-item" data-roles="admin,manager,employer"
+                style="display:none;"><span>📋</span> Lịch sử duyệt</a>
+            <a href="/admin/users" class="nav-item" data-roles="super_admin,admin" style="display:none;"><span>👥</span>
+                Quản lý
                 Users</a>
-            <a href="/admin/approvals" class="nav-item active" id="adminNavApprovals"
+            <a href="/admin/approvals" class="nav-item active" data-roles="admin,manager"
                 style="display:none;"><span>📋</span> Phê duyệt</a>
-            <a href="/admin/folders" class="nav-item" id="adminNavFolders" style="display:none;"><span>📁</span> Tạo thư
+            <a href="/admin/folders" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📁</span>
+                Tạo thư
                 mục</a>
         </nav>
         <div class="sidebar-footer">
@@ -673,7 +679,7 @@
             const authRes = await fetch(`${API}/rbac/check`);
             const authData = await authRes.json();
             if (!authData.authenticated) { window.location.href = '/login'; return; }
-            if (!authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
+            if (!authData.roles.some(r => ['admin', 'super_admin', 'manager'].includes(r))) {
                 document.querySelector('.main').innerHTML = `
                 <div class="empty-state" style="margin-top:5rem;">
                     <div class="empty-state-icon">🚫</div>
@@ -686,14 +692,14 @@
             document.getElementById('userRole').textContent = authData.roles.join(', ');
             document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
             // Show/hide nav links based on roles
-            if (authData.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
-                document.getElementById('uploadNavLink').style.display = 'flex';
-            }
-            if (authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
-                document.getElementById('adminNavUsers').style.display = 'flex';
-                document.getElementById('adminNavApprovals').style.display = 'flex';
-                document.getElementById('adminNavFolders').style.display = 'flex';
-            }
+            document.querySelectorAll('.sidebar-nav .nav-item[data-roles]').forEach(link => {
+                const allowed = link.getAttribute('data-roles');
+                if (allowed === 'all') { link.style.display = 'flex'; return; }
+                const allowedRoles = allowed.split(',');
+                if (authData.roles.some(r => allowedRoles.includes(r))) {
+                    link.style.display = 'flex';
+                }
+            });
             loadPendingApprovals();
             loadHistory();
         }
@@ -737,10 +743,23 @@
                     const detail = isDelete
                         ? ''
                         : `📁 ${a.extra_data.target_folder_name || a.extra_data.target_folder_id || '—'}`;
+
+                    // Show step info
+                    let stepBadge = '';
+                    let managerInfo = '';
+                    if (a.status === 'manager_approved') {
+                        stepBadge = '<span class="badge" style="background:#f59e0b;color:#fff;margin-left:4px;">Bước 2</span>';
+                        if (a.manager_reviewer) {
+                            managerInfo = `<br><small style="color:var(--text-secondary)">✅ Manager: ${a.manager_reviewer.email}</small>`;
+                        }
+                    } else if (a.status === 'pending') {
+                        stepBadge = '<span class="badge" style="background:#3b82f6;color:#fff;margin-left:4px;">Bước 1</span>';
+                    }
+
                     return `
                     <tr>
-                        <td><strong>${a.requester.email}</strong><br><small style="color:var(--text-secondary)">${a.requester.name || ''}</small></td>
-                        <td>${typeBadge}</td>
+                        <td><strong>${a.requester.email}</strong><br><small style="color:var(--text-secondary)">${a.requester.name || ''}</small>${managerInfo}</td>
+                        <td>${typeBadge}${stepBadge}</td>
                         <td>📄 ${a.extra_data.file_name || '—'}<br><small style="color:var(--text-secondary)">${formatBytes(a.extra_data.file_size)}</small></td>
                         <td>${detail}</td>
                         <td>${toVN(a.created_at)}</td>
@@ -770,15 +789,21 @@
                     return;
                 }
 
-                document.getElementById('historyTable').innerHTML = items.map(a => `
+                document.getElementById('historyTable').innerHTML = items.map(a => {
+                    let statusBadge = '';
+                    if (a.status === 'approved') statusBadge = '<span class="badge badge-approved">✅ Đã duyệt</span>';
+                    else if (a.status === 'rejected') statusBadge = '<span class="badge badge-rejected">❌ Từ chối</span>';
+                    else if (a.status === 'manager_approved') statusBadge = '<span class="badge" style="background:#f59e0b;color:#fff;">⏳ Chờ Admin</span>';
+                    else statusBadge = `<span class="badge">${a.status}</span>`;
+                    return `
                 <tr>
                     <td>${a.requester.email}</td>
                     <td>📄 ${(a.extra_data || {}).file_name || '—'}</td>
-                    <td><span class="badge badge-${a.status}">${a.status === 'approved' ? '✅ Đã duyệt' : '❌ Từ chối'}</span></td>
+                    <td>${statusBadge}</td>
                     <td>${a.reviewer ? a.reviewer.email : '—'}</td>
                     <td>${a.reviewed_at ? toVN(a.reviewed_at) : '—'}</td>
-                </tr>
-            `).join('');
+                </tr>`;
+                }).join('');
             } catch (e) { console.error(e); }
         }
 

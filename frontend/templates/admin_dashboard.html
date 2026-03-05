@@ -850,7 +850,7 @@
             currentUser = authData;
 
             // Check admin access
-            if (!authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
+            if (!authData.roles.some(r => ['admin', 'super_admin', 'manager'].includes(r))) {
                 document.querySelector('.main').innerHTML = `
                 <div class="empty-state" style="margin-top:5rem;">
                     <div class="empty-state-icon">🚫</div>

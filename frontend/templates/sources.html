@@ -1182,13 +1182,13 @@
             <span class="logo-text"><span>ADG</span> Tài liệu</span>
         </div>
         <nav class="nav-links">
-            <a href="/">Trang chủ</a>
+            <a href="/" data-roles="all">Trang chủ</a>
 
-            <a href="/sources" class="active">📁 Tài liệu</a>
-            <a href="/upload" id="uploadNavLink" style="display:none;">📤 Upload</a>
-            <a href="/dashboard">📊 Dashboard</a>
-            <a href="/approval-history">📋 Lịch sử duyệt</a>
-            <a href="/admin/users" id="adminNavLink" style="display:none;">⚙️ Admin</a>
+            <a href="/sources" class="active" data-roles="all">📁 Tài liệu</a>
+            <a href="/upload" data-roles="admin,manager,employer" style="display:none;">📤 Upload</a>
+            <a href="/dashboard" data-roles="super_admin,admin,manager,employer" style="display:none;">📊 Dashboard</a>
+            <a href="/approval-history" data-roles="admin,manager,employer" style="display:none;">📋 Lịch sử duyệt</a>
+            <a href="/admin/users" data-roles="super_admin,admin" style="display:none;">⚙️ Admin</a>
         </nav>
         <div style="display:flex;align-items:center;gap:8px;">
             <div id="userNav" style="display:none;align-items:center;gap:6px;">
@@ -1207,8 +1207,8 @@
     <main class="main-container">
         <!-- Folder Tree Panel -->
         <aside class="folder-panel" id="folderPanel">
-            <div class="panel-header">
-                📂 Thư mục
+            <div class="panel-header" id="panelHeader">
+                📂 Đang tải...
             </div>
             <div class="search-box">
                 <div class="search-input-wrapper">
@@ -1411,12 +1411,23 @@
 
                     // Show upload link for editor+ roles
                     if (data.roles && data.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
-                        document.getElementById('uploadNavLink').style.display = '';
+                        const uploadLink = document.querySelector('a[href="/upload"]');
+                        if (uploadLink) uploadLink.style.display = '';
                     }
                     // Show admin link for admin/super_admin
                     if (data.roles && (data.roles.includes('super_admin') || data.roles.includes('admin'))) {
-                        document.getElementById('adminNavLink').style.display = '';
+                        const adminLink = document.querySelector('a[href="/admin/users"]');
+                        if (adminLink) adminLink.style.display = '';
                     }
+                    // Show nav links based on roles
+                    document.querySelectorAll('.nav-links a[data-roles]').forEach(link => {
+                        const allowed = link.getAttribute('data-roles');
+                        if (allowed === 'all') { link.style.display = ''; return; }
+                        const allowedRoles = allowed.split(',');
+                        if (data.roles && data.roles.some(r => allowedRoles.includes(r))) {
+                            link.style.display = '';
+                        }
+                    });
 
                     if (authPrompt) authPrompt.style.display = 'none';
                     folderTree.style.display = 'block';
@@ -1627,7 +1638,8 @@
             // Determine preview method
             const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
 
-            if (isPreviewable(mimeType)) {
+            if (isPreviewable(mimeType) || !mimeType) {
+                // Use Drive iframe preview (works for most file types, even without mimeType)
                 previewContent.innerHTML = `<iframe class="preview-iframe" src="${previewUrl}" allowfullscreen></iframe>`;
             } else if (isImage(mimeType)) {
                 previewContent.innerHTML = `<img class="preview-image" src="https://drive.google.com/uc?id=${fileId}" alt="${escapeHtml(fileName)}">`;
@@ -1715,8 +1727,13 @@
                     mangle: false,
                 });
                 let html = marked.parse(text);
-                // Style citation refs [1] [2] as small badges
-                html = html.replace(/\[(\d+)\]/g, '<span class="citation-ref" title="Nguồn $1">[$1]</span>');
+                // Style citation refs [1] [2] as clickable badges with file name tooltip
+                html = html.replace(/\[(\d+)\]/g, function (match, num) {
+                    var c = window._citationsMap && window._citationsMap[num];
+                    var title = c ? c.file_name : 'Nguồn ' + num;
+                    var fileId = c ? (c.file_id || '') : '';
+                    return '<span class="citation-ref" title="' + escapeHtml(title) + '" data-file-id="' + fileId + '" onclick="openCitationFile(this)" style="cursor:pointer;">[' + num + ']</span>';
+                });
                 return html;
             } catch (e) {
                 // Fallback to basic
@@ -1953,6 +1970,43 @@
         let chatSessionId = null;  // Current session ID (from backend)
         let currentFolderId = null;  // Current folder context for RAG
         let chatSources = [];  // Selected source files [{id, name, indexed}]
+        window._citationsMap = {};  // Map of citation number → {file_name, file_id}
+
+        // Open file in left preview panel when clicking a citation ref
+        function openCitationFile(el) {
+            const fileId = el.getAttribute('data-file-id');
+            if (!fileId) return;
+            // Get file name from citationsMap or title attribute
+            const citNum = el.textContent.replace(/[\[\]]/g, '').trim();
+            const c = window._citationsMap && window._citationsMap[citNum];
+            const fileName = c ? c.file_name : (el.getAttribute('title') || fileId);
+
+            // Try to find in tree first (for full context)
+            const treeItem = document.querySelector(`.tree-item[data-id="${fileId}"]`);
+            if (treeItem) {
+                treeItem.click();
+                treeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                // Directly preview the file (works even if folder not expanded)
+                previewFile(fileId, fileName, '', '', '');
+            }
+        }
+
+        // Load user department and set panel header
+        async function loadUserDepartment() {
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/rbac/check`, { credentials: 'include' });
+                const data = await res.json();
+                if (data.authenticated && data.department) {
+                    document.getElementById('panelHeader').innerHTML = '🏢 ' + escapeHtml(data.department);
+                } else {
+                    document.getElementById('panelHeader').innerHTML = '📂 Tài liệu';
+                }
+            } catch (e) {
+                document.getElementById('panelHeader').innerHTML = '📂 Tài liệu';
+            }
+        }
+        loadUserDepartment();
 
         function toggleChat() {
             chatOpen = !chatOpen;
@@ -2158,6 +2212,10 @@
                 const data = await res.json();
                 chatSessionId = sessionId;
 
+                // Build citationsMap from source_names
+                const sourceNames = data.source_names || {};
+                window._citationsMap = {};
+
                 const chatMessages = document.getElementById('chatMessages');
                 const chatWelcome = document.getElementById('chatWelcome');
                 const chatSuggestions = document.getElementById('chatSuggestions');
@@ -2174,11 +2232,38 @@
                                 <div class="chat-msg-avatar">👤</div>
                             </div>`;
                     } else {
+                        // Build citationsMap from source_ids for this message
+                        let msgCitations = [];
+                        if (m.source_ids && m.source_ids.length > 0) {
+                            m.source_ids.forEach((fid, idx) => {
+                                const num = idx + 1;
+                                const c = { number: num, file_id: fid, file_name: sourceNames[fid] || fid };
+                                window._citationsMap[String(num)] = c;
+                                msgCitations.push(c);
+                            });
+                        }
+
                         let answer = renderMarkdown(m.content);
+
+                        // Add citations section
+                        let citationsHtml = '';
+                        if (msgCitations.length > 0) {
+                            citationsHtml = '<div class="chat-citations-wrapper">';
+                            citationsHtml += `<button class="citations-toggle" onclick="this.parentElement.classList.toggle('expanded')">📎 ${msgCitations.length} nguồn tham khảo</button>`;
+                            citationsHtml += '<div class="chat-citations">';
+                            msgCitations.forEach(c => {
+                                citationsHtml += `<div class="chat-citation">
+                                    <span class="citation-num">[${c.number}]</span>
+                                    <span class="citation-file">${escapeHtml(c.file_name)}</span>
+                                </div>`;
+                            });
+                            citationsHtml += '</div></div>';
+                        }
+
                         chatMessages.innerHTML += `
                             <div class="chat-msg assistant">
                                 <div class="chat-msg-avatar">✨</div>
-                                <div class="chat-msg-text md-content">${answer}</div>
+                                <div class="chat-msg-text md-content">${answer}${citationsHtml}</div>
                             </div>`;
                     }
                 });
@@ -2292,6 +2377,10 @@
                             const event = JSON.parse(line.substring(6));
                             if (event.type === 'meta') {
                                 citations = event.citations || [];
+                                // Build lookup map for inline citation refs
+                                citations.forEach(function (c) {
+                                    window._citationsMap[String(c.number)] = c;
+                                });
                             } else if (event.type === 'text') {
                                 fullText += event.chunk;
                                 streamText.innerHTML = renderMarkdown(fullText);

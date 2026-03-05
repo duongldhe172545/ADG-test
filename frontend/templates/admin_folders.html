@@ -317,16 +317,23 @@
             </a>
         </div>
         <nav class="sidebar-nav">
-            <a href="/" class="nav-item"><span>🏠</span> Trang chủ</a>
-            <a href="/dashboard" class="nav-item"><span>📊</span> Dashboard</a>
-            <a href="/sources" class="nav-item"><span>📁</span> Tài liệu</a>
-            <a href="/upload" class="nav-item" id="uploadNavLink" style="display:none;"><span>📤</span> Upload</a>
-            <a href="/approval-history" class="nav-item"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin/users" class="nav-item" id="adminNavUsers" style="display:none;"><span>👥</span> Quản lý
+            <a href="/" class="nav-item" data-roles="all"><span>🏠</span> Trang chủ</a>
+            <a href="/dashboard" class="nav-item" data-roles="super_admin,admin,manager,employer"><span>📊</span>
+                Dashboard</a>
+            <a href="/sources" class="nav-item" data-roles="admin,manager,employer"
+                style="display:none;"><span>📁</span> Tài liệu</a>
+            <a href="/upload" class="nav-item" data-roles="admin,manager,employer" style="display:none;"><span>📤</span>
+                Upload</a>
+            <a href="/approval-history" class="nav-item" data-roles="admin,manager,employer"
+                style="display:none;"><span>📋</span> Lịch sử duyệt</a>
+            <a href="/admin/users" class="nav-item" data-roles="super_admin,admin" style="display:none;"><span>👥</span>
+                Quản lý
                 Users</a>
-            <a href="/admin/approvals" class="nav-item" id="adminNavApprovals" style="display:none;"><span>📋</span> Phê
+            <a href="/admin/approvals" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📋</span>
+                Phê
                 duyệt</a>
-            <a href="/admin/folders" class="nav-item active" id="adminNavFolders" style="display:none;"><span>📁</span>
+            <a href="/admin/folders" class="nav-item active" data-roles="admin,manager"
+                style="display:none;"><span>📁</span>
                 Tạo thư mục</a>
         </nav>
         <div class="sidebar-footer">
@@ -377,7 +384,7 @@
             const authRes = await fetch(`${API}/rbac/check`);
             const authData = await authRes.json();
             if (!authData.authenticated) { window.location.href = '/login'; return; }
-            if (!authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
+            if (!authData.roles.some(r => ['admin', 'super_admin', 'manager'].includes(r))) {
                 document.querySelector('.main').innerHTML = `
                 <div class="empty-state" style="margin-top:5rem;">
                     <div class="empty-state-icon">🚫</div>
@@ -390,14 +397,14 @@
             document.getElementById('userRole').textContent = authData.roles.join(', ');
             document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
             // Show/hide nav links based on roles
-            if (authData.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
-                document.getElementById('uploadNavLink').style.display = 'flex';
-            }
-            if (authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
-                document.getElementById('adminNavUsers').style.display = 'flex';
-                document.getElementById('adminNavApprovals').style.display = 'flex';
-                document.getElementById('adminNavFolders').style.display = 'flex';
-            }
+            document.querySelectorAll('.sidebar-nav .nav-item[data-roles]').forEach(link => {
+                const allowed = link.getAttribute('data-roles');
+                if (allowed === 'all') { link.style.display = 'flex'; return; }
+                const allowedRoles = allowed.split(',');
+                if (authData.roles.some(r => allowedRoles.includes(r))) {
+                    link.style.display = 'flex';
+                }
+            });
             loadParentFolders();
         }
 

@@ -193,12 +193,12 @@ async def preview_file(
     Admin/super_admin only.
     """
     roles = current_user.get("roles", [])
-    if "admin" not in roles and "super_admin" not in roles:
-        raise HTTPException(status_code=403, detail="Admin only")
+    if "admin" not in roles and "super_admin" not in roles and "manager" not in roles:
+        raise HTTPException(status_code=403, detail="Admin/Manager only")
     
     try:
-        from backend.services.gdrive_service import GoogleDriveService
-        gdrive = GoogleDriveService.from_service_account(settings.GOOGLE_SERVICE_ACCOUNT_FILE)
+        from backend.api.v1.documents import get_gdrive_service
+        gdrive = get_gdrive_service()
         
         # Share file so preview iframe can access it
         gdrive.share_file_public(file_id)
@@ -261,7 +261,7 @@ async def submit_delete_request(
 
 async def require_approver(current_user: dict = Depends(get_current_user)):
     """Ensure user has approve permission"""
-    if not any(r in ["admin", "super_admin", "approver"] for r in current_user.get("roles", [])):
+    if not any(r in ["admin", "super_admin", "approver", "manager"] for r in current_user.get("roles", [])):
         raise HTTPException(status_code=403, detail="Approver access required")
     return current_user
 
@@ -271,10 +271,27 @@ async def list_pending(
     db: AsyncSession = Depends(get_db),
     approver: dict = Depends(require_approver),
 ):
-    """List all pending approval requests"""
+    """List pending approval requests based on role.
+    Manager sees 'pending' (Step 1). Admin sees 'manager_approved' (Step 2).
+    """
+    roles = approver.get("roles", [])
+    is_admin = any(r in ["admin", "super_admin"] for r in roles)
+    is_manager = "manager" in roles
+    
+    # Determine which statuses this user can act on
+    if is_admin and is_manager:
+        # Has both roles — show both queues
+        statuses = ["pending", "manager_approved"]
+    elif is_admin:
+        # Admin only sees manager-approved items (Step 2)
+        statuses = ["manager_approved"]
+    else:
+        # Manager/approver sees pending items (Step 1)
+        statuses = ["pending"]
+    
     result = await db.execute(
         select(ApprovalRequest)
-        .where(ApprovalRequest.status == "pending")
+        .where(ApprovalRequest.status.in_(statuses))
         .order_by(ApprovalRequest.created_at.desc())
     )
     requests = result.scalars().all()
@@ -284,6 +301,14 @@ async def list_pending(
         # Get requester info
         user_result = await db.execute(select(User).where(User.id == req.requester_id))
         requester = user_result.scalars().first()
+        
+        # Get manager reviewer info if manager_approved
+        manager_reviewer_info = None
+        if req.status == "manager_approved" and req.reviewer_id:
+            mgr_result = await db.execute(select(User).where(User.id == req.reviewer_id))
+            mgr = mgr_result.scalars().first()
+            if mgr:
+                manager_reviewer_info = {"email": mgr.email, "name": mgr.name}
         
         items.append({
             "id": str(req.id),
@@ -296,6 +321,7 @@ async def list_pending(
             "status": req.status,
             "extra_data": req.extra_data or {},
             "created_at": req.created_at.isoformat() + "Z",
+            "manager_reviewer": manager_reviewer_info,
         })
     
     return {"pending": items, "count": len(items)}
@@ -307,10 +333,10 @@ async def list_history(
     db: AsyncSession = Depends(get_db),
     approver: dict = Depends(require_approver),
 ):
-    """List approval history (approved/rejected)"""
+    """List approval history (approved/rejected/manager_approved)"""
     result = await db.execute(
         select(ApprovalRequest)
-        .where(ApprovalRequest.status.in_(["approved", "rejected"]))
+        .where(ApprovalRequest.status.in_(["approved", "rejected", "manager_approved"]))
         .order_by(ApprovalRequest.reviewed_at.desc())
         .limit(limit)
     )
@@ -399,8 +425,9 @@ async def approve_request(
     approver: dict = Depends(require_approver),
 ):
     """
-    Approve a pending request.
-    Moves file from Pending folder to target folder.
+    Approve a pending request. 2-step workflow:
+    Step 1 (Manager): pending → manager_approved
+    Step 2 (Admin): manager_approved → approved (file moves)
     """
     result = await db.execute(
         select(ApprovalRequest).where(ApprovalRequest.id == approval_id)
@@ -409,8 +436,38 @@ async def approve_request(
     
     if not approval:
         raise HTTPException(status_code=404, detail="Approval request not found")
-    if approval.status != "pending":
+    if approval.status not in ("pending", "manager_approved"):
         raise HTTPException(status_code=400, detail=f"Request already {approval.status}")
+    
+    roles = approver.get("roles", [])
+    is_admin = any(r in ["admin", "super_admin"] for r in roles)
+    is_manager = "manager" in roles
+    
+    # Step 1: Manager approves pending → manager_approved
+    if approval.status == "pending":
+        if not is_manager and not is_admin:
+            raise HTTPException(status_code=403, detail="Manager approval required for Step 1")
+        
+        # If admin approves directly (skip manager step), go straight to full approval
+        if is_admin and not is_manager:
+            pass  # Fall through to full approval logic below
+        else:
+            # Manager Step 1: mark as manager_approved, don't move file yet
+            approval.status = "manager_approved"
+            approval.reviewer_id = UUID(approver["id"])
+            approval.reviewed_at = datetime.utcnow()
+            approval.review_note = note or "Manager approved (Step 1)"
+            await db.commit()
+            return {
+                "success": True,
+                "message": f"✅ Manager đã duyệt (Bước 1). Chờ Admin duyệt (Bước 2).",
+                "status": "manager_approved",
+            }
+    
+    # Step 2: Admin approves manager_approved → approved (file moves)
+    if approval.status == "manager_approved":
+        if not is_admin:
+            raise HTTPException(status_code=403, detail="Admin approval required for Step 2")
     
     extra_data = approval.extra_data or {}
     file_id = extra_data.get("file_id")
@@ -618,7 +675,7 @@ async def reject_request(
     
     if not approval:
         raise HTTPException(status_code=404, detail="Approval request not found")
-    if approval.status != "pending":
+    if approval.status not in ("pending", "manager_approved"):
         raise HTTPException(status_code=400, detail=f"Request already {approval.status}")
     
     # Update approval record
