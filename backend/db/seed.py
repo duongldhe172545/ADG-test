@@ -64,9 +64,10 @@ SEED_USERS = [
 # =============================================================================
 
 async def sync_roles(session: AsyncSession):
-    """Sync roles: create missing, update existing."""
-    role_names = {r["name"] for r in ROLES}
+    """Sync roles: create missing, update existing, DELETE stale."""
+    desired_names = {r["name"] for r in ROLES}
     
+    # Create or update
     for role_data in ROLES:
         result = await session.execute(
             select(Role).where(Role.name == role_data["name"])
@@ -74,19 +75,31 @@ async def sync_roles(session: AsyncSession):
         existing = result.scalars().first()
         
         if existing:
-            # Update description and priority if changed
             existing.description = role_data["description"]
             existing.priority = role_data["priority"]
         else:
             session.add(Role(**role_data))
             print(f"  ✅ Created role: {role_data['name']}")
     
+    # DELETE roles not in the list
+    all_roles = (await session.execute(select(Role))).scalars().all()
+    for role in all_roles:
+        if role.name not in desired_names:
+            # First remove role_permissions and user_roles referencing this role
+            await session.execute(delete(RolePermission).where(RolePermission.role_id == role.id))
+            await session.execute(delete(UserRole).where(UserRole.role_id == role.id))
+            await session.delete(role)
+            print(f"  🗑️ Deleted role: {role.name}")
+    
     await session.commit()
     print("  📋 Roles synced")
 
 
 async def sync_permission_types(session: AsyncSession):
-    """Sync permission types: create missing, update existing."""
+    """Sync permission types: create missing, update existing, DELETE stale."""
+    desired_codes = {pt["code"] for pt in PERMISSION_TYPES}
+    
+    # Create or update
     for pt_data in PERMISSION_TYPES:
         result = await session.execute(
             select(PermissionType).where(PermissionType.code == pt_data["code"])
@@ -99,6 +112,14 @@ async def sync_permission_types(session: AsyncSession):
         else:
             session.add(PermissionType(**pt_data))
             print(f"  ✅ Created permission type: {pt_data['name']}")
+    
+    # DELETE permission types not in the list
+    all_pts = (await session.execute(select(PermissionType))).scalars().all()
+    for pt in all_pts:
+        if pt.code not in desired_codes:
+            await session.execute(delete(RolePermission).where(RolePermission.permission_type_id == pt.id))
+            await session.delete(pt)
+            print(f"  🗑️ Deleted permission type: {pt.name}")
     
     await session.commit()
     print("  📋 Permission types synced")
