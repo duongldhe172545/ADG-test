@@ -1,0 +1,13 @@
+.git
+.env
+.gitignore
+*.md
+__pycache__
+*.pyc
+.agents
+.gemini
+node_modules
+*.webp
+*.png
+*.jpg
+tmp/
