@@ -162,6 +162,83 @@ class Resource(Base):
 
 
 # =============================================================================
+# Departments (Phòng ban)
+# =============================================================================
+
+class Department(Base):
+    """
+    Organizational departments / divisions.
+    Hierarchical: Khối → Phòng.
+    """
+    __tablename__ = "departments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    parent_id = Column(UUID(as_uuid=True), ForeignKey("departments.id", ondelete="SET NULL"), nullable=True)
+    drive_folder_id = Column(String(255), nullable=True)  # Google Drive folder for this dept
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    parent = relationship("Department", remote_side=[id], backref="children")
+    user_departments = relationship("UserDepartment", back_populates="department", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("ix_departments_parent", "parent_id"),
+        Index("ix_departments_name", "name"),
+    )
+
+    def __repr__(self):
+        return f"<Department {self.name}>"
+
+
+class UserDepartment(Base):
+    """
+    User ↔ Department assignment.
+    is_head=True means this user is the Manager (trưởng phòng) of the department.
+    """
+    __tablename__ = "user_departments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    department_id = Column(UUID(as_uuid=True), ForeignKey("departments.id", ondelete="CASCADE"), nullable=False)
+    is_head = Column(Boolean, default=False, nullable=False)  # True = Manager of this dept
+
+    # Relationships
+    user = relationship("User")
+    department = relationship("Department", back_populates="user_departments")
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "department_id", name="uq_user_department"),
+        Index("ix_user_departments_user", "user_id"),
+        Index("ix_user_departments_dept", "department_id"),
+    )
+
+
+class FolderGrant(Base):
+    """
+    Admin grants a user access to view another department's folders/files.
+    """
+    __tablename__ = "folder_grants"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    department_id = Column(UUID(as_uuid=True), ForeignKey("departments.id", ondelete="CASCADE"), nullable=False)
+    granted_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id])
+    department = relationship("Department")
+    granter = relationship("User", foreign_keys=[granted_by])
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "department_id", name="uq_folder_grant"),
+        Index("ix_folder_grants_user", "user_id"),
+    )
+
+
+# =============================================================================
 # Granular Permissions
 # =============================================================================
 
@@ -196,41 +273,52 @@ class Permission(Base):
 
 class ApprovalRequest(Base):
     """
-    Document approval workflow.
+    Document approval workflow with 2-step support.
+    Step 1: Manager (trưởng phòng) reviews
+    Step 2: Admin (trưởng khối) reviews
     """
     __tablename__ = "approval_requests"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     requester_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     resource_id = Column(UUID(as_uuid=True), ForeignKey("resources.id", ondelete="SET NULL"), nullable=True)
+    department_id = Column(UUID(as_uuid=True), ForeignKey("departments.id", ondelete="SET NULL"), nullable=True)
     
     # What action needs approval
     action_type = Column(String(50), nullable=False)  # upload, edit, delete, publish
-    status = Column(String(20), default="pending", nullable=False)  # pending, approved, rejected, cancelled
+    status = Column(String(20), default="pending", nullable=False)  # pending, manager_approved, approved, rejected, cancelled
+    
+    # 2-step approval
+    approval_step = Column(Integer, default=1, nullable=False)  # 1 = waiting for Manager, 2 = waiting for Admin
+    manager_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    manager_approved_at = Column(DateTime, nullable=True)
     
     # Additional data
-    extra_data = Column(JSONB, nullable=True)  # Store extra info (file details, changes, etc.)
+    extra_data = Column(JSONB, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     reviewed_at = Column(DateTime, nullable=True)
     
-    # Reviewer info
+    # Final reviewer info (Admin)
     reviewer_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     review_note = Column(Text, nullable=True)
     
     # Relationships
     requester = relationship("User", foreign_keys=[requester_id])
     reviewer = relationship("User", foreign_keys=[reviewer_id])
+    manager = relationship("User", foreign_keys=[manager_id])
     resource = relationship("Resource")
+    department = relationship("Department")
     
     __table_args__ = (
         Index("ix_approval_status", "status"),
         Index("ix_approval_requester", "requester_id"),
+        Index("ix_approval_step", "approval_step"),
     )
     
     def __repr__(self):
-        return f"<ApprovalRequest {self.id} - {self.status}>"
+        return f"<ApprovalRequest {self.id} - step {self.approval_step} - {self.status}>"
 
 
 # =============================================================================
@@ -309,6 +397,7 @@ class Document(Base):
     file_size = Column(Integer, nullable=True)
     folder_id = Column(String(255), nullable=True, index=True)
     folder_path = Column(String(1000), nullable=True)
+    department_id = Column(UUID(as_uuid=True), ForeignKey("departments.id", ondelete="SET NULL"), nullable=True)
 
     # Versioning
     version = Column(Integer, default=1, nullable=False)
@@ -330,6 +419,7 @@ class Document(Base):
     # Relationships
     uploader = relationship("User", foreign_keys=[uploaded_by])
     approver = relationship("User", foreign_keys=[approved_by])
+    department = relationship("Department")
 
     __table_args__ = (
         Index("ix_document_drive_file_id", "drive_file_id"),

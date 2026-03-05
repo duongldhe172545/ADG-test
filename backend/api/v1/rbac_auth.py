@@ -136,15 +136,19 @@ async def rbac_callback(
         roles = result['user']['roles']
         if 'super_admin' in roles:
             redirect_url = "/admin/users"
+        elif 'admin' in roles:
+            redirect_url = "/dashboard"
         else:
             redirect_url = "/dashboard"
         
         response = RedirectResponse(url=redirect_url, status_code=302)
+        # secure=True only on HTTPS (production), False on HTTP (localhost)
+        is_https = settings.OAUTH_REDIRECT_URI.startswith("https://")
         response.set_cookie(
             key="access_token",
             value=result["token"],
             httponly=True,
-            secure=True,
+            secure=is_https,
             max_age=60 * 60 * 24,  # 24 hours
             samesite="lax",
         )
