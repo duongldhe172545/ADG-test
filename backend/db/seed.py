@@ -50,11 +50,12 @@ ROLE_PERMISSIONS = {
     "viewer": ["view"],
 }
 
-# Initial users to seed (email → role)
-# These users will be CREATED if they don't exist, role will be SET/UPDATED
+# Initial users to seed (email → roles)
+# These users will be CREATED if they don't exist, roles will be SET/UPDATED
 SEED_USERS = [
-    {"email": "kaiserteam36@gmail.com", "name": "duong le", "role": "super_admin"},
-    {"email": "ledinhduongltn@gmail.com", "name": "le dinh duong", "role": "editor"},
+    {"email": "duongldhe172545@fpt.edu.vn", "name": "Admin", "roles": ["super_admin", "admin", "editor", "viewer"]},
+    {"email": "ledinhduongltn@gmail.com", "name": "Le Dinh Duong", "roles": ["super_admin"]},
+    {"email": "ducanh2207123@gmail.com", "name": "Nguyen Van gay", "roles": ["editor", "viewer"]},
 ]
 
 
@@ -139,12 +140,12 @@ async def sync_role_permissions(session: AsyncSession):
 
 
 async def sync_users(session: AsyncSession):
-    """Sync seed users: create missing, update roles."""
+    """Sync seed users: create missing, set exact roles."""
     roles = {r.name: r for r in (await session.execute(select(Role))).scalars().all()}
     
     for user_data in SEED_USERS:
         email = user_data["email"]
-        role_name = user_data["role"]
+        role_names = user_data["roles"]
         
         # Find or create user
         result = await session.execute(select(User).where(User.email == email))
@@ -156,27 +157,37 @@ async def sync_users(session: AsyncSession):
             await session.commit()
             print(f"  ✅ Created user: {email}")
         
-        # Ensure correct role
-        role = roles.get(role_name)
-        if not role:
-            print(f"  ⚠️ Role '{role_name}' not found for {email}")
-            continue
+        # Get desired role IDs
+        desired_role_ids = set()
+        for rn in role_names:
+            role = roles.get(rn)
+            if role:
+                desired_role_ids.add(role.id)
+            else:
+                print(f"  ⚠️ Role '{rn}' not found for {email}")
         
-        # Check if user already has this role
+        # Get current role IDs
         result = await session.execute(
-            select(UserRole).where(
-                UserRole.user_id == user.id,
-                UserRole.role_id == role.id,
-            )
+            select(UserRole).where(UserRole.user_id == user.id)
         )
-        if not result.scalars().first():
-            # Remove existing roles for this user first (single role per user)
+        current_role_ids = {ur.role_id for ur in result.scalars().all()}
+        
+        # Add missing roles
+        for role_id in desired_role_ids - current_role_ids:
+            session.add(UserRole(user_id=user.id, role_id=role_id))
+        
+        # Remove extra roles
+        for role_id in current_role_ids - desired_role_ids:
             await session.execute(
-                delete(UserRole).where(UserRole.user_id == user.id)
+                delete(UserRole).where(
+                    UserRole.user_id == user.id,
+                    UserRole.role_id == role_id,
+                )
             )
-            session.add(UserRole(user_id=user.id, role_id=role.id))
+        
+        if desired_role_ids != current_role_ids:
             await session.commit()
-            print(f"  ✅ Assigned role '{role_name}' to {email}")
+            print(f"  ✅ Synced roles for {email}: {role_names}")
     
     print("  📋 Users synced")
 
