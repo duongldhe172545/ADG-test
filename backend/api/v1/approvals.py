@@ -261,7 +261,7 @@ async def submit_delete_request(
 
 async def require_approver(current_user: dict = Depends(get_current_user)):
     """Ensure user has approve permission"""
-    if not any(r in ["admin", "super_admin", "approver", "manager"] for r in current_user.get("roles", [])):
+    if not any(r in ["admin", "super_admin", "manager"] for r in current_user.get("roles", [])):
         raise HTTPException(status_code=403, detail="Approver access required")
     return current_user
 

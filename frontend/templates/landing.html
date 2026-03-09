@@ -310,7 +310,7 @@
                     const userNav = document.getElementById('userNav');
                     userNav.style.display = 'flex';
                     document.getElementById('userAvatar').textContent = (data.email || '?').substring(0, 2).toUpperCase();
-                    if (data.roles && data.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
+                    if (data.roles && data.roles.some(r => ['employer', 'manager', 'admin', 'super_admin'].includes(r))) {
                         document.getElementById('uploadNavLink').style.display = '';
                     }
                     if (data.roles && (data.roles.includes('super_admin') || data.roles.includes('admin'))) {

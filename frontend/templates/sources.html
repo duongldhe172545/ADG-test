@@ -1410,7 +1410,7 @@
                     loginBtn.style.display = 'none';
 
                     // Show upload link for editor+ roles
-                    if (data.roles && data.roles.some(r => ['editor', 'approver', 'admin', 'super_admin'].includes(r))) {
+                    if (data.roles && data.roles.some(r => ['employer', 'manager', 'admin', 'super_admin'].includes(r))) {
                         const uploadLink = document.querySelector('a[href="/upload"]');
                         if (uploadLink) uploadLink.style.display = '';
                     }

@@ -861,7 +861,7 @@
             }
 
             // Update sidebar user info
-            document.getElementById('userName').textContent = authData.email.split('@')[0];
+            document.getElementById('userName').textContent = authData.name || authData.email.split('@')[0];
             document.getElementById('userRole').textContent = authData.roles.join(', ');
             document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
 
@@ -960,7 +960,7 @@
 
                 document.getElementById('roleCheckboxes').innerHTML = allRoles.map(r => `
                 <label class="checkbox-label">
-                    <input type="checkbox" name="role" value="${r.name}" ${r.name === 'viewer' ? 'checked' : ''}>
+                    <input type="checkbox" name="role" value="${r.name}" ${r.name === 'employer' ? 'checked' : ''}>
                     ${r.name}
                 </label>
             `).join('');

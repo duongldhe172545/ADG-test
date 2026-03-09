@@ -51,9 +51,9 @@ def register_page_routes(app: FastAPI):
         return _serve("approval_history.html")
 
     # Admin pages
-    @app.get("/admin-dashboard")
-    async def admin_dashboard_redirect():
-        return RedirectResponse(url="/admin/users", status_code=302)
+    @app.get("/admin-dashboard", response_class=HTMLResponse)
+    async def admin_dashboard_page():
+        return _serve("admin_dashboard.html")
 
     @app.get("/admin/users", response_class=HTMLResponse)
     async def admin_users_page():

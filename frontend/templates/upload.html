@@ -1192,7 +1192,7 @@
 
                     authStatus.style.display = 'none';
                     loginBtn.style.display = 'none';
-                    document.getElementById('userName').textContent = email.split('@')[0] || 'User';
+                    document.getElementById('userName').textContent = data.name || email.split('@')[0] || 'User';
                     document.getElementById('userEmail').textContent = email;
                     document.getElementById('userAvatar').textContent = email.substring(0, 2).toUpperCase();
                     document.getElementById('docOwner').value = email;

@@ -321,7 +321,8 @@ async def search_files(q: str, max_results: int = 50):
         )
     
     try:
-        results = gdrive.search_files(q.strip(), max_results=max_results)
+        root_folder_id = settings.GDRIVE_ROOT_FOLDER_ID
+        results = gdrive.search_files(q.strip(), max_results=max_results, root_folder_id=root_folder_id)
         
         folders = [r for r in results if r.get('mimeType') == 'application/vnd.google-apps.folder']
         files = [r for r in results if r.get('mimeType') != 'application/vnd.google-apps.folder']

@@ -460,10 +460,10 @@
                 if (data.authenticated) {
                     const email = data.email || '';
                     const roles = data.roles || [];
-                    document.getElementById('userName').textContent = email.split('@')[0];
+                    document.getElementById('userName').textContent = data.name || email.split('@')[0];
                     document.getElementById('userEmail').textContent = email;
                     document.getElementById('userAvatar').textContent = email.substring(0, 2).toUpperCase();
-                    isAdmin = roles.includes('admin') || roles.includes('super_admin') || roles.includes('approver');
+                    isAdmin = roles.includes('admin') || roles.includes('super_admin') || roles.includes('manager');
 
                     // Show nav items based on roles
                     document.querySelectorAll('.sidebar-nav .nav-item[data-roles]').forEach(link => {

@@ -178,13 +178,14 @@ class GoogleDriveService:
         
         return results.get('files', [])
     
-    def search_files(self, query: str, max_results: int = 50) -> List[Dict[str, Any]]:
+    def search_files(self, query: str, max_results: int = 50, root_folder_id: str = None) -> List[Dict[str, Any]]:
         """
         Search for files and folders by name.
         
         Args:
             query: Search query (will match file/folder names)
             max_results: Maximum number of results to return
+            root_folder_id: If set, only return results within this folder tree
             
         Returns:
             List of matching file/folder dicts with full path
@@ -195,7 +196,7 @@ class GoogleDriveService:
             q=search_query,
             fields="files(id, name, mimeType, size, modifiedTime, webViewLink, parents)",
             orderBy="name",
-            pageSize=max_results,
+            pageSize=max_results * 3 if root_folder_id else max_results,  # Fetch more to account for filtering
             supportsAllDrives=True,
             includeItemsFromAllDrives=True
         ).execute()
@@ -218,6 +219,29 @@ class GoogleDriveService:
                 return folder
             except:
                 return None
+        
+        def is_within_root(file_entry, root_id):
+            """Check if a file is a descendant of root_id by walking up the parent chain."""
+            parents = file_entry.get('parents', [])
+            if not parents:
+                return False
+            check_id = parents[0]
+            for _ in range(15):  # Max depth
+                if check_id == root_id:
+                    return True
+                info = get_folder_info(check_id)
+                if not info:
+                    return False
+                parent_parents = info.get('parents', [])
+                if not parent_parents:
+                    return False
+                check_id = parent_parents[0]
+            return False
+        
+        # Filter to only files within root folder tree
+        if root_folder_id:
+            files = [f for f in files if is_within_root(f, root_folder_id)]
+            files = files[:max_results]  # Trim to requested limit
         
         def build_path(folder_id, depth=0):
             if depth > 15:  # Limit depth to prevent infinite loops (supports up to 15 levels)

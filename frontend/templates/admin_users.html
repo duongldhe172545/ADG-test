@@ -743,8 +743,27 @@
 
         // Init
         async function init() {
-            const authRes = await fetch(`${API}/rbac/check`);
-            const authData = await authRes.json();
+            // Check sessionStorage cache for auth (avoid extra roundtrip)
+            let authData = null;
+            const cached = sessionStorage.getItem('rbac_cache');
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    // Cache valid for 5 minutes
+                    if (Date.now() - parsed.ts < 5 * 60 * 1000) {
+                        authData = parsed.data;
+                    }
+                } catch (e) { }
+            }
+
+            if (!authData) {
+                const authRes = await fetch(`${API}/rbac/check`);
+                authData = await authRes.json();
+                if (authData.authenticated) {
+                    sessionStorage.setItem('rbac_cache', JSON.stringify({ data: authData, ts: Date.now() }));
+                }
+            }
+
             if (!authData.authenticated) { window.location.href = '/login'; return; }
             currentUser = authData;
             if (!authData.roles.some(r => ['admin', 'super_admin'].includes(r))) {
@@ -756,9 +775,9 @@
                 </div>`;
                 return;
             }
-            document.getElementById('userName').textContent = authData.email.split('@')[0];
+            document.getElementById('userName').textContent = authData.name || authData.email.split('@')[0];
             document.getElementById('userRole').textContent = authData.roles.join(', ');
-            document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
+            document.getElementById('userAvatar').textContent = (authData.name || authData.email)[0].toUpperCase();
             // Show/hide nav links based on roles
             document.querySelectorAll('.sidebar-nav .nav-item[data-roles]').forEach(link => {
                 const allowed = link.getAttribute('data-roles');
@@ -768,48 +787,54 @@
                     link.style.display = 'flex';
                 }
             });
-            loadUsers();
-            loadRoles();
-            loadDepartments();
+            // Single combined API call instead of 3 separate ones
+            loadPageData();
         }
 
-        // Load departments for dropdown
-        async function loadDepartments() {
+        // Combined page data loader (replaces separate loadUsers + loadRoles + loadDepartments)
+        async function loadPageData() {
             try {
-                const res = await fetch(`${API}/admin/departments`);
-                if (!res.ok) return;
+                const res = await fetch(`${API}/admin/page-data/users`);
+                if (res.status === 401) { sessionStorage.removeItem('rbac_cache'); window.location.href = '/login'; return; }
+                if (res.status === 403) return;
                 const data = await res.json();
+
+                // Process users
+                const users = data.users || [];
+                renderUsers(users);
+
+                // Process roles
+                allRoles = data.roles || [];
+                updateRoleCheckboxes();
+
+                // Process departments
+                const depts = data.departments || [];
+                allDepartments = depts;
                 const select = document.getElementById('newUserDept');
-                (data.departments || []).forEach(d => {
+                select.innerHTML = '<option value="">— Không chọn —</option>';
+                depts.forEach(d => {
                     const opt = document.createElement('option');
                     opt.value = d.id;
                     opt.textContent = d.name;
                     select.appendChild(opt);
                 });
-            } catch (e) { console.error('Load departments error:', e); }
+            } catch (e) { console.error('Load page data error:', e); }
         }
 
-        // Users
-        async function loadUsers() {
-            try {
-                const res = await fetch(`${API}/admin/users`);
-                if (res.status === 401) { window.location.href = '/login'; return; }
-                if (res.status === 403) return;
-                const data = await res.json();
-                const users = data.users || [];
-                document.getElementById('statUsers').textContent = users.length;
-                document.getElementById('statActive').textContent = users.filter(u => u.is_active).length;
+        function renderUsers(users) {
+            document.getElementById('statUsers').textContent = users.length;
+            document.getElementById('statActive').textContent = users.filter(u => u.is_active).length;
 
-                if (users.length === 0) {
-                    document.getElementById('usersTable').innerHTML = `
-                    <tr><td colspan="6" class="empty-state">
-                        <div class="empty-state-icon">👥</div>
-                        <div class="empty-state-text">Chưa có user nào. Nhấn "Thêm User" để bắt đầu.</div>
-                    </td></tr>`;
-                    return;
-                }
+            if (users.length === 0) {
+                document.getElementById('usersTable').innerHTML = `
+                <tr><td colspan="6" class="empty-state">
+                    <div class="empty-state-icon">👥</div>
+                    <div class="empty-state-text">Chưa có user nào. Nhấn "Thêm User" để bắt đầu.</div>
+                </td></tr>`;
+                return;
+            }
 
-                document.getElementById('usersTable').innerHTML = users.map(u => `
+            document.getElementById('usersTable').innerHTML = users.map(u => `
                 <tr>
                     <td><strong>${u.email}</strong></td>
                     <td>${u.name || '—'}</td>
@@ -827,23 +852,18 @@
                     </td>
                 </tr>
             `).join('');
-            } catch (e) { console.error('Load users error:', e); }
         }
 
-        async function loadRoles() {
-            try {
-                const res = await fetch(`${API}/admin/roles`);
-                if (!res.ok) return;
-                const data = await res.json();
-                allRoles = data.roles || [];
-                document.getElementById('statRoles').textContent = allRoles.length;
-                document.getElementById('roleCheckboxes').innerHTML = allRoles.map(r => `
+        // loadRoles is no longer needed as a separate API call
+        // Roles are loaded via loadPageData() into allRoles
+        function updateRoleCheckboxes() {
+            document.getElementById('statRoles').textContent = allRoles.length;
+            document.getElementById('roleCheckboxes').innerHTML = allRoles.map(r => `
                 <label class="checkbox-label">
-                    <input type="checkbox" name="role" value="${r.name}" ${r.name === 'viewer' ? 'checked' : ''}>
+                    <input type="checkbox" name="role" value="${r.name}" ${r.name === 'employer' ? 'checked' : ''}>
                     ${r.name}
                 </label>
             `).join('');
-            } catch (e) { console.error(e); }
         }
 
         function showAddUserModal() { document.getElementById('addUserModal').classList.add('show'); }
@@ -871,7 +891,7 @@
                     document.getElementById('newUserEmail').value = '';
                     document.getElementById('newUserName').value = '';
                     document.getElementById('newUserDept').value = '';
-                    loadUsers();
+                    loadPageData();
                 } else {
                     showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
                 }
@@ -887,7 +907,7 @@
                 });
                 if (res.ok) {
                     showToast(activate ? '✅ User đã kích hoạt' : '⏸ User đã vô hiệu', 'success');
-                    loadUsers();
+                    loadPageData();
                 }
             } catch (e) { showToast('❌ Lỗi', 'error'); }
         }
@@ -925,7 +945,7 @@
                 if (res.ok) {
                     showToast('✅ Đã cập nhật vai trò', 'success');
                     closeEditRoleModal();
-                    loadUsers();
+                    loadPageData();
                 } else {
                     const data = await res.json();
                     showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
@@ -937,14 +957,7 @@
         let editingUserIdUnified = null;
         let allDepartments = [];
 
-        async function loadDepartments() {
-            try {
-                const res = await fetch(`${API}/admin/departments`, { credentials: 'include' });
-                const data = await res.json();
-                allDepartments = data.departments || [];
-            } catch (e) { allDepartments = []; }
-        }
-        loadDepartments();
+        // allDepartments is populated from loadPageData() combined endpoint
 
         function showEditUserModal(userId, email, currentName, currentRoles, deptId, isActive) {
             editingUserIdUnified = userId;
@@ -994,7 +1007,7 @@
                 if (res.ok) {
                     showToast('✅ Đã cập nhật thông tin', 'success');
                     closeEditUserModal();
-                    loadUsers();
+                    loadPageData();
                 } else {
                     const data = await res.json();
                     showToast(`❌ ${data.detail || 'Lỗi'}`, 'error');
@@ -1004,6 +1017,7 @@
 
         // Utilities
         async function logout() {
+            sessionStorage.removeItem('rbac_cache');
             await fetch(`${API}/rbac/logout`, { method: 'POST' });
             window.location.href = '/login';
         }

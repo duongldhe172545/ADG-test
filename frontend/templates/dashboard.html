@@ -554,7 +554,7 @@
                 if (data.authenticated) {
                     const email = data.email || '';
                     const roles = data.roles || [];
-                    document.querySelector('.user-name').textContent = email.split('@')[0];
+                    document.querySelector('.user-name').textContent = data.name || email.split('@')[0];
                     document.querySelector('.user-email').textContent = email;
                     document.querySelector('.user-avatar').textContent = email.substring(0, 2).toUpperCase();
                     document.querySelector('.header-avatar').textContent = email.substring(0, 2).toUpperCase();

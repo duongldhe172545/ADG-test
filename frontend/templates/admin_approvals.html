@@ -688,7 +688,7 @@
                 </div>`;
                 return;
             }
-            document.getElementById('userName').textContent = authData.email.split('@')[0];
+            document.getElementById('userName').textContent = authData.name || authData.email.split('@')[0];
             document.getElementById('userRole').textContent = authData.roles.join(', ');
             document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
             // Show/hide nav links based on roles
