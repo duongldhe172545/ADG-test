@@ -3,6 +3,8 @@ Middleware Configuration
 Auth guard and CORS middleware for the application.
 """
 
+from uuid import UUID
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -64,11 +66,21 @@ def setup_middleware(app: FastAPI):
             response.delete_cookie("access_token")
             return response
 
-        # Page-level role check (use JWT roles for speed)
+        # Page-level role check — query DB for fresh roles
         allowed_roles = PAGE_ROLES.get(path)
         if allowed_roles:
-            user_roles = payload.get("roles", [])
-            if not any(r in allowed_roles for r in user_roles):
-                return RedirectResponse(url="/", status_code=302)
+            try:
+                from backend.db.connection import get_async_session_factory
+                from backend.services.auth_service import get_user_roles
+                AsyncSessionLocal = get_async_session_factory()
+                async with AsyncSessionLocal() as db:
+                    user_roles = await get_user_roles(db, UUID(payload["sub"]))
+                if not any(r in allowed_roles for r in user_roles):
+                    return RedirectResponse(url="/", status_code=302)
+            except Exception:
+                # Fallback to JWT roles if DB unavailable
+                user_roles = payload.get("roles", [])
+                if not any(r in allowed_roles for r in user_roles):
+                    return RedirectResponse(url="/", status_code=302)
 
         return await call_next(request)

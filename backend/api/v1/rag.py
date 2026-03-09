@@ -4,6 +4,8 @@ REST endpoints for RAG indexing and chat with persistent history.
 """
 
 import os
+import time
+from collections import defaultdict
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, Body, Depends
@@ -66,6 +68,30 @@ class StatusResponse(BaseModel):
 
 
 # ============================================================================
+# Rate Limiter (10 requests/minute per user)
+# ============================================================================
+
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+RATE_LIMIT_MAX = 10
+RATE_LIMIT_WINDOW = 60  # seconds
+
+
+async def check_rate_limit(current_user: dict = Depends(get_current_user)):
+    """Enforce rate limit on RAG chat: max 10 requests per minute per user."""
+    user_id = current_user["id"]
+    now = time.time()
+    # Clean old entries
+    _rate_limit_store[user_id] = [t for t in _rate_limit_store[user_id] if now - t < RATE_LIMIT_WINDOW]
+    if len(_rate_limit_store[user_id]) >= RATE_LIMIT_MAX:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Maximum {RATE_LIMIT_MAX} requests per minute. Please wait."
+        )
+    _rate_limit_store[user_id].append(now)
+    return current_user
+
+
+# ============================================================================
 # Endpoints
 # ============================================================================
 
@@ -73,7 +99,7 @@ class StatusResponse(BaseModel):
 async def rag_chat(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(check_rate_limit),
 ):
     """
     RAG Chat: Ask a question and get an AI answer with citations.
@@ -160,7 +186,7 @@ async def rag_chat(
 async def rag_chat_stream(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(check_rate_limit),
 ):
     """
     Streaming RAG Chat via Server-Sent Events.

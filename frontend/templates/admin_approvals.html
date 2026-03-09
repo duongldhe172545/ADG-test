@@ -541,6 +541,8 @@
             <a href="/admin/folders" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📁</span>
                 Tạo thư
                 mục</a>
+            <a href="/admin-dashboard" class="nav-item" data-roles="super_admin" style="display:none;"><span>⚙️</span>
+                Admin Panel</a>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
@@ -582,10 +584,20 @@
                 <div class="card-title">Yêu cầu chờ duyệt</div>
                 <button class="btn btn-outline btn-sm" onclick="loadPendingApprovals()">🔄 Làm mới</button>
             </div>
+            <!-- Batch action bar -->
+            <div id="batchBar"
+                style="display:none;padding:0.6rem 1rem;background:rgba(59,130,246,0.08);border-radius:8px;margin-bottom:0.5rem;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+                <span style="font-weight:600;font-size:0.9rem;">✅ <span id="batchCount">0</span> đã chọn</span>
+                <button class="btn btn-success btn-sm" onclick="batchApprove()">✅ Duyệt tất cả</button>
+                <button class="btn btn-danger btn-sm" onclick="batchReject()">❌ Từ chối tất cả</button>
+                <button class="btn btn-outline btn-sm" onclick="clearSelection()">Bỏ chọn</button>
+            </div>
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
+                            <th style="width:36px;"><input type="checkbox" id="selectAll"
+                                    onchange="toggleSelectAll(this)"></th>
                             <th>Người gửi</th>
                             <th>Loại</th>
                             <th>File</th>
@@ -596,7 +608,7 @@
                     </thead>
                     <tbody id="approvalsTable">
                         <tr>
-                            <td colspan="6" class="empty-state">
+                            <td colspan="7" class="empty-state">
                                 <div class="empty-state-icon">⏳</div>
                                 <div>Đang tải...</div>
                             </td>
@@ -728,10 +740,11 @@
 
                 if (items.length === 0) {
                     document.getElementById('approvalsTable').innerHTML = `
-                    <tr><td colspan="6" class="empty-state">
+                    <tr><td colspan="7" class="empty-state">
                         <div class="empty-state-icon">✅</div>
                         <div>Không có yêu cầu chờ duyệt</div>
                     </td></tr>`;
+                    document.getElementById('batchBar').style.display = 'none';
                     return;
                 }
 
@@ -758,6 +771,7 @@
 
                     return `
                     <tr>
+                        <td><input type="checkbox" class="approval-check" value="${a.id}" onchange="updateBatchBar()"></td>
                         <td><strong>${a.requester.email}</strong><br><small style="color:var(--text-secondary)">${a.requester.name || ''}</small>${managerInfo}</td>
                         <td>${typeBadge}${stepBadge}</td>
                         <td>📄 ${a.extra_data.file_name || '—'}<br><small style="color:var(--text-secondary)">${formatBytes(a.extra_data.file_size)}</small></td>
@@ -770,7 +784,69 @@
                         </td>
                     </tr>`;
                 }).join('');
+                document.getElementById('selectAll').checked = false;
+                updateBatchBar();
             } catch (e) { console.error(e); }
+        }
+
+        // Batch approval functions
+        function getSelectedIds() {
+            return [...document.querySelectorAll('.approval-check:checked')].map(c => c.value);
+        }
+
+        function updateBatchBar() {
+            const selected = getSelectedIds();
+            const bar = document.getElementById('batchBar');
+            bar.style.display = selected.length > 0 ? 'flex' : 'none';
+            document.getElementById('batchCount').textContent = selected.length;
+        }
+
+        function toggleSelectAll(el) {
+            document.querySelectorAll('.approval-check').forEach(c => c.checked = el.checked);
+            updateBatchBar();
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.approval-check').forEach(c => c.checked = false);
+            document.getElementById('selectAll').checked = false;
+            updateBatchBar();
+        }
+
+        async function batchApprove() {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return;
+            if (!confirm(`Duyệt ${ids.length} yêu cầu đã chọn?`)) return;
+            try {
+                const res = await fetch(`${API}/approvals/batch-approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ approval_ids: ids, note: 'Batch approved' })
+                });
+                const data = await res.json();
+                const msg = `✅ ${data.success} duyệt thành công` + (data.fail > 0 ? `, ❌ ${data.fail} lỗi` : '');
+                alert(msg);
+                loadPendingApprovals();
+                loadHistory();
+            } catch (e) { alert('Lỗi batch approve: ' + e); }
+        }
+
+        async function batchReject() {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return;
+            const reason = prompt(`Lý do từ chối ${ids.length} yêu cầu:`);
+            if (reason === null) return;
+            try {
+                const res = await fetch(`${API}/approvals/batch-reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ approval_ids: ids, note: reason })
+                });
+                const data = await res.json();
+                const msg = `❌ ${data.success} từ chối thành công` + (data.fail > 0 ? `, ⚠️ ${data.fail} lỗi` : '');
+                alert(msg);
+                loadPendingApprovals();
+                loadHistory();
+            } catch (e) { alert('Lỗi batch reject: ' + e); }
         }
 
         async function loadHistory() {

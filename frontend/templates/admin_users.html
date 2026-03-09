@@ -299,20 +299,8 @@
             color: #2563eb;
         }
 
-        .badge-editor {
-            background: rgba(245, 158, 11, 0.15);
-            color: #d97706;
-        }
 
-        .badge-viewer {
-            background: rgba(100, 116, 139, 0.15);
-            color: #475569;
-        }
 
-        .badge-approver {
-            background: rgba(16, 185, 129, 0.15);
-            color: #059669;
-        }
 
         .badge-manager {
             background: rgba(245, 158, 11, 0.15);
@@ -543,6 +531,8 @@
             <a href="/admin/folders" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📁</span>
                 Tạo thư
                 mục</a>
+            <a href="/admin-dashboard" class="nav-item" data-roles="super_admin" style="display:none;"><span>⚙️</span>
+                Admin Panel</a>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
@@ -609,6 +599,12 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            <div class="pagination" id="paginationControls" style="display:none;">
+                <button class="btn btn-outline btn-sm" id="prevPage" onclick="changePage(-1)">← Trước</button>
+                <span id="pageInfo" style="padding:0.4rem 0.8rem;font-size:0.85rem;color:var(--text-secondary);">Trang
+                    1/1</span>
+                <button class="btn btn-outline btn-sm" id="nextPage" onclick="changePage(1)">Sau →</button>
             </div>
         </div>
     </main>
@@ -791,17 +787,31 @@
             loadPageData();
         }
 
+        let currentPage = 1;
+        const PAGE_SIZE = 10;
+        let totalPages = 1;
+
         // Combined page data loader (replaces separate loadUsers + loadRoles + loadDepartments)
-        async function loadPageData() {
+        async function loadPageData(page) {
+            if (page !== undefined) currentPage = page;
             try {
-                const res = await fetch(`${API}/admin/page-data/users`);
+                const res = await fetch(`${API}/admin/page-data/users?page=${currentPage}&page_size=${PAGE_SIZE}`);
                 if (res.status === 401) { sessionStorage.removeItem('rbac_cache'); window.location.href = '/login'; return; }
                 if (res.status === 403) return;
                 const data = await res.json();
 
+                totalPages = data.total_pages || 1;
+
                 // Process users
                 const users = data.users || [];
-                renderUsers(users);
+                renderUsers(users, data.total || 0);
+
+                // Update pagination controls
+                const pgControls = document.getElementById('paginationControls');
+                pgControls.style.display = totalPages > 1 ? 'flex' : 'none';
+                document.getElementById('pageInfo').textContent = `Trang ${currentPage}/${totalPages}`;
+                document.getElementById('prevPage').disabled = currentPage <= 1;
+                document.getElementById('nextPage').disabled = currentPage >= totalPages;
 
                 // Process roles
                 allRoles = data.roles || [];
@@ -821,8 +831,15 @@
             } catch (e) { console.error('Load page data error:', e); }
         }
 
-        function renderUsers(users) {
-            document.getElementById('statUsers').textContent = users.length;
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                loadPageData(newPage);
+            }
+        }
+
+        function renderUsers(users, total) {
+            document.getElementById('statUsers').textContent = total !== undefined ? total : users.length;
             document.getElementById('statActive').textContent = users.filter(u => u.is_active).length;
 
             if (users.length === 0) {
@@ -1079,11 +1096,23 @@
                 // Load user's current permissions
                 const permRes = await fetch(`${API}/admin/permissions/folders/${userId}`);
                 const permData = await permRes.json();
-                const grantedFolderIds = permData.folder_ids || [];
+                let grantedFolderIds = permData.folder_ids || [];
+
+                // Check if this user is admin/super_admin — they see all folders by role
+                const userRoles = permData.roles || [];
+                const isAdminUser = userRoles.some(r => ['admin', 'super_admin'].includes(r));
+                if (isAdminUser) {
+                    // Admin has full access — tick all folders
+                    grantedFolderIds = allFolderResources.map(f => f.resource_id);
+                }
 
                 // Build tree HTML
                 const tree = buildFolderTree(allFolderResources, null, grantedFolderIds, 0, false);
-                document.getElementById('folderPermTree').innerHTML = tree || '<div style="padding:1rem;color:var(--text-secondary);">Không có folder nào</div>';
+                let adminNotice = '';
+                if (isAdminUser) {
+                    adminNotice = '<div style="padding:0.5rem 0.75rem;background:rgba(59,130,246,0.08);border-radius:6px;margin-bottom:0.5rem;font-size:0.8125rem;color:var(--accent);">ℹ️ Admin/Super Admin có quyền xem toàn bộ folder (theo role, không cần phân quyền thủ công).</div>';
+                }
+                document.getElementById('folderPermTree').innerHTML = adminNotice + (tree || '<div style="padding:1rem;color:var(--text-secondary);">Không có folder nào</div>');
             } catch (e) {
                 console.error('Load folder perms error:', e);
                 document.getElementById('folderPermTree').innerHTML = '<div style="padding:1rem;color:var(--error);">❌ Lỗi tải dữ liệu</div>';

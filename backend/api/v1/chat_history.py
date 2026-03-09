@@ -112,7 +112,7 @@ async def get_session(
         try:
             import asyncpg
             from backend.config import settings
-            conn = await asyncpg.connect(settings.NEON_DATABASE_URL)
+            conn = await asyncpg.connect(settings.RAG_DATABASE_URL)
             rows = await conn.fetch(
                 "SELECT DISTINCT file_id, file_name FROM document_chunks WHERE file_id = ANY($1)",
                 list(all_file_ids)

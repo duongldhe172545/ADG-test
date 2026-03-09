@@ -118,7 +118,7 @@ async def login_user(db: AsyncSession, email: str, name: str = None, avatar_url:
     
     # Update user info from Google
     user.last_login = datetime.utcnow()
-    if name and not user.name:
+    if name:
         user.name = name
     if avatar_url:
         user.avatar_url = avatar_url

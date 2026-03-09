@@ -92,10 +92,14 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or deactivated")
 
+    # Query fresh roles from DB (not stale JWT roles)
+    from backend.services.auth_service import get_user_roles
+    fresh_roles = await get_user_roles(db, user.id)
+
     return {
         "id": payload["sub"],
         "email": payload["email"],
-        "roles": payload["roles"],
+        "roles": fresh_roles,
     }
 
 

@@ -3,9 +3,10 @@ Health Check API Routes
 System health and monitoring endpoints
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from backend.models.responses import HealthResponse
+from backend.api.v1.admin import require_admin
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
@@ -35,8 +36,8 @@ async def ping():
 
 
 @router.get("/db-tables")
-async def db_tables():
-    """Show all tables in the database (diagnostic endpoint)"""
+async def db_tables(admin: dict = Depends(require_admin)):
+    """Show all tables in the database (admin only diagnostic endpoint)"""
     try:
         from backend.db.connection import get_async_engine
         from sqlalchemy import text

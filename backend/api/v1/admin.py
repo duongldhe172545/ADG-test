@@ -68,14 +68,25 @@ async def require_admin_or_manager(current_user: dict = Depends(get_current_user
 
 @router.get("/users")
 async def list_users(
+    page: int = 1,
+    page_size: int = 10,
     db: AsyncSession = Depends(get_db),
     admin: dict = Depends(require_admin)
 ):
-    """List all users with their roles"""
-    result = await db.execute(select(User).order_by(User.created_at.desc()))
-    users = result.scalars().all()
-    
+    """List all users with their roles (paginated)"""
+    from sqlalchemy import func
     from backend.db.models import UserDepartment, Department
+    
+    # Count total users
+    count_result = await db.execute(select(func.count(User.id)))
+    total = count_result.scalar()
+    
+    # Paginate
+    offset = (max(1, page) - 1) * page_size
+    result = await db.execute(
+        select(User).order_by(User.created_at.desc()).offset(offset).limit(page_size)
+    )
+    users = result.scalars().all()
     
     user_list = []
     for user in users:
@@ -106,7 +117,14 @@ async def list_users(
             "created_at": user.created_at.isoformat(),
         })
     
-    return {"users": user_list}
+    import math
+    return {
+        "users": user_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if page_size > 0 else 1,
+    }
 
 
 @router.post("/users")
@@ -196,12 +214,49 @@ async def update_user(
         await db.execute(delete(UserRole).where(UserRole.user_id == user.id))
         
         # Add new roles
+        new_is_admin = any(r in ["admin", "super_admin"] for r in req.roles)
         for role_name in req.roles:
             role_result = await db.execute(select(Role).where(Role.name == role_name))
             role = role_result.scalars().first()
             if role:
                 user_role = UserRole(user_id=user.id, role_id=role.id)
                 db.add(user_role)
+        
+        # When role changes: clear ALL folder permissions
+        # Then re-grant only the department folder permission
+        # This prevents stale admin-level perms from persisting
+        view_pt = await _ensure_view_permission_type(db)
+        await db.execute(
+            delete(Permission).where(
+                Permission.user_id == user.id,
+                Permission.permission_type_id == view_pt.id,
+            )
+        )
+        
+        # Re-grant department folder permission (unless new role is admin)
+        if not new_is_admin:
+            from backend.db.models import UserDepartment, Department
+            dept_result = await db.execute(
+                select(Department).join(UserDepartment, UserDepartment.department_id == Department.id)
+                .where(UserDepartment.user_id == user.id)
+            )
+            user_dept = dept_result.scalars().first()
+            if user_dept and user_dept.drive_folder_id:
+                res_result = await db.execute(
+                    select(Resource).where(
+                        Resource.resource_type == "folder",
+                        Resource.resource_id == user_dept.drive_folder_id,
+                    )
+                )
+                res = res_result.scalars().first()
+                if res:
+                    perm = Permission(
+                        user_id=user.id,
+                        resource_id=res.id,
+                        permission_type_id=view_pt.id,
+                        is_granted=True,
+                    )
+                    db.add(perm)
     
     # Update department if provided (with auto folder permissions)
     if req.department_id is not None:
@@ -302,65 +357,70 @@ async def deactivate_user(
 
 @router.get("/page-data/users")
 async def users_page_data(
+    page: int = 1,
+    page_size: int = 10,
     db: AsyncSession = Depends(get_db),
     admin: dict = Depends(require_admin)
 ):
     """Combined endpoint: returns users + roles + departments in one response.
     Reduces 3 API calls to 1, saving ~360ms on production.
+    Supports pagination via page/page_size query params.
     """
     from backend.db.models import UserDepartment, Department
+    from sqlalchemy import func
+    import math
     
-    # Fetch all data concurrently using asyncio
-    import asyncio
+    # Count total users
+    count_result = await db.execute(select(func.count(User.id)))
+    total = count_result.scalar()
     
-    async def fetch_users():
-        result = await db.execute(select(User).order_by(User.created_at.desc()))
-        users = result.scalars().all()
-        user_list = []
-        for user in users:
-            role_result = await db.execute(
-                select(Role.name)
-                .join(UserRole, UserRole.role_id == Role.id)
-                .where(UserRole.user_id == user.id)
-            )
-            roles = [r[0] for r in role_result.all()]
-            dept_result = await db.execute(
-                select(Department.id, Department.name)
-                .join(UserDepartment, UserDepartment.department_id == Department.id)
-                .where(UserDepartment.user_id == user.id)
-            )
-            dept_row = dept_result.first()
-            user_list.append({
-                "id": str(user.id),
-                "email": user.email,
-                "name": user.name,
-                "is_active": user.is_active,
-                "roles": roles,
-                "department": dept_row[1] if dept_row else None,
-                "department_id": str(dept_row[0]) if dept_row else None,
-                "last_login": user.last_login.isoformat() if user.last_login else None,
-                "created_at": user.created_at.isoformat(),
-            })
-        return user_list
+    # Paginate users
+    offset = (max(1, page) - 1) * page_size
+    result = await db.execute(
+        select(User).order_by(User.created_at.desc()).offset(offset).limit(page_size)
+    )
+    users = result.scalars().all()
     
-    async def fetch_roles():
-        result = await db.execute(select(Role).order_by(Role.priority.desc()))
-        roles = result.scalars().all()
-        return [{"id": str(r.id), "name": r.name, "description": r.description, "priority": r.priority} for r in roles]
+    user_list = []
+    for user in users:
+        role_result = await db.execute(
+            select(Role.name)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(UserRole.user_id == user.id)
+        )
+        roles = [r[0] for r in role_result.all()]
+        dept_result = await db.execute(
+            select(Department.id, Department.name)
+            .join(UserDepartment, UserDepartment.department_id == Department.id)
+            .where(UserDepartment.user_id == user.id)
+        )
+        dept_row = dept_result.first()
+        user_list.append({
+            "id": str(user.id),
+            "email": user.email,
+            "name": user.name,
+            "is_active": user.is_active,
+            "roles": roles,
+            "department": dept_row[1] if dept_row else None,
+            "department_id": str(dept_row[0]) if dept_row else None,
+            "last_login": user.last_login.isoformat() if user.last_login else None,
+            "created_at": user.created_at.isoformat(),
+        })
     
-    async def fetch_departments():
-        result = await db.execute(select(Department).order_by(Department.name))
-        depts = result.scalars().all()
-        return [{"id": str(d.id), "name": d.name, "parent_id": str(d.parent_id) if d.parent_id else None} for d in depts]
-    
-    users = await fetch_users()
-    roles = await fetch_roles()
-    departments = await fetch_departments()
+    # Roles + Departments (not paginated)
+    role_result = await db.execute(select(Role).order_by(Role.priority.desc()))
+    all_roles = role_result.scalars().all()
+    dept_result = await db.execute(select(Department).order_by(Department.name))
+    all_depts = dept_result.scalars().all()
     
     return {
-        "users": users,
-        "roles": roles,
-        "departments": departments
+        "users": user_list,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if page_size > 0 else 1,
+        "roles": [{"id": str(r.id), "name": r.name, "description": r.description, "priority": r.priority} for r in all_roles],
+        "departments": [{"id": str(d.id), "name": d.name, "parent_id": str(d.parent_id) if d.parent_id else None} for d in all_depts],
     }
 
 
@@ -571,8 +631,10 @@ async def get_user_folder_permissions(
 ):
     """
     Get which folders a specific user has view access to.
-    Returns list of Google Drive folder IDs.
+    Returns EFFECTIVE folder IDs (permission table + department folder tree).
     """
+    from backend.db.models import UserDepartment, Department
+    
     # Verify user exists
     user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalars().first()
@@ -581,7 +643,7 @@ async def get_user_folder_permissions(
     
     view_pt = await _ensure_view_permission_type(db)
     
-    # Get user's folder permissions
+    # Get user's explicit folder permissions from permissions table
     perm_result = await db.execute(
         select(Resource.resource_id)
         .join(Permission, Permission.resource_id == Resource.id)
@@ -592,12 +654,63 @@ async def get_user_folder_permissions(
             Resource.resource_type == "folder",
         )
     )
-    folder_ids = [row[0] for row in perm_result.all()]
+    folder_ids = set(row[0] for row in perm_result.all())
+    
+    # Also include department folder + all child folders
+    dept_result = await db.execute(
+        select(Department.drive_folder_id)
+        .join(UserDepartment, UserDepartment.department_id == Department.id)
+        .where(UserDepartment.user_id == user.id)
+    )
+    dept_row = dept_result.first()
+    if dept_row and dept_row[0]:
+        dept_folder_id = dept_row[0]
+        folder_ids.add(dept_folder_id)
+        
+        # Find the Resource record for dept folder, then get all children recursively
+        dept_res = await db.execute(
+            select(Resource).where(
+                Resource.resource_type == "folder",
+                Resource.resource_id == dept_folder_id,
+            )
+        )
+        dept_resource = dept_res.scalars().first()
+        if dept_resource:
+            # Get ALL folder resources and walk the tree
+            all_folders_result = await db.execute(
+                select(Resource).where(Resource.resource_type == "folder")
+            )
+            all_folders = all_folders_result.scalars().all()
+            
+            # Build parent->children map using parent_id
+            children_map = {}
+            for f in all_folders:
+                pid = f.parent_id
+                if pid not in children_map:
+                    children_map[pid] = []
+                children_map[pid].append(f)
+            
+            # Walk tree from dept folder to collect all descendant IDs
+            def collect_children(parent_id):
+                for child in children_map.get(parent_id, []):
+                    folder_ids.add(child.resource_id)
+                    collect_children(child.id)
+            
+            collect_children(dept_resource.id)
+    
+    # Also return user's roles so frontend can detect admin
+    role_result = await db.execute(
+        select(Role.name)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user.id)
+    )
+    user_roles = [r[0] for r in role_result.all()]
     
     return {
         "user_id": str(user.id),
         "email": user.email,
-        "folder_ids": folder_ids,  # Google Drive folder IDs
+        "folder_ids": list(folder_ids),
+        "roles": user_roles,
     }
 
 

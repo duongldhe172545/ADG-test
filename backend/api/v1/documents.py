@@ -1,18 +1,15 @@
 """
 Documents API Routes
-File upload and Google Drive operations
+Google Drive operations and file management
 """
 
 import os
-import tempfile
-import shutil
 from typing import List, Dict, Any
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+from fastapi import APIRouter, HTTPException, Depends
 
 from backend.config import settings
 from backend.services.gdrive_service import GoogleDriveService
-from backend.models.responses import FolderTreeResponse, UploadResponse
 from backend.services.permission_service import get_current_user, get_current_user_optional
 from backend.db.connection import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -299,7 +296,12 @@ async def list_folders(
 
 
 @router.get("/search")
-async def search_files(q: str, max_results: int = 50):
+async def search_files(
+    q: str,
+    max_results: int = 50,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """
     Search for files and folders by name.
     
@@ -308,6 +310,7 @@ async def search_files(q: str, max_results: int = 50):
         max_results: Maximum results (default 50)
     
     Only returns results within the Knowledge Management folder tree.
+    Non-admin users only see results in folders they have view permission for.
     """
     if not q or len(q.strip()) < 2:
         return {"results": [], "query": q, "total": 0}
@@ -323,6 +326,75 @@ async def search_files(q: str, max_results: int = 50):
     try:
         root_folder_id = settings.GDRIVE_ROOT_FOLDER_ID
         results = gdrive.search_files(q.strip(), max_results=max_results, root_folder_id=root_folder_id)
+        
+        # Permission filter: non-admin users only see results in allowed folders
+        is_admin = any(r in ['admin', 'super_admin'] for r in current_user.get('roles', []))
+        if not is_admin:
+            from backend.db.models import Resource, Permission, PermissionType, UserDepartment, Department
+            import uuid as uuid_mod
+            
+            user_uuid = current_user['id']
+            if isinstance(user_uuid, str):
+                user_uuid = uuid_mod.UUID(user_uuid)
+            
+            # Get allowed folder IDs from permissions table
+            pt_result = await db.execute(select(PermissionType).where(PermissionType.code == "view"))
+            view_pt = pt_result.scalars().first()
+            
+            allowed_folder_ids = set()
+            if view_pt:
+                perm_result = await db.execute(
+                    select(Resource.resource_id)
+                    .join(Permission, Permission.resource_id == Resource.id)
+                    .where(
+                        Permission.user_id == user_uuid,
+                        Permission.permission_type_id == view_pt.id,
+                        Permission.is_granted == True,
+                        Resource.resource_type == "folder",
+                    )
+                )
+                allowed_folder_ids = set(row[0] for row in perm_result.all())
+            
+            # Also get department folder ID directly
+            dept_result = await db.execute(
+                select(Department.drive_folder_id)
+                .join(UserDepartment, UserDepartment.department_id == Department.id)
+                .where(UserDepartment.user_id == user_uuid)
+            )
+            dept_row = dept_result.first()
+            if dept_row and dept_row[0]:
+                allowed_folder_ids.add(dept_row[0])
+            
+            if allowed_folder_ids:
+                # Build parent->children map from search results to walk up
+                def is_in_allowed_tree(item):
+                    """Check if file's parent or any ancestor is in allowed set"""
+                    parents = item.get('parents', [])
+                    if not parents:
+                        return False
+                    parent_id = parents[0]
+                    # Direct parent check
+                    if parent_id in allowed_folder_ids:
+                        return True
+                    # Check all ancestors by looking at other items in results
+                    # (search results include parent folder IDs)
+                    visited = set()
+                    current = parent_id
+                    while current and current not in visited:
+                        visited.add(current)
+                        if current in allowed_folder_ids:
+                            return True
+                        # Find this folder in results to get ITS parent
+                        parent_item = next((r for r in results if r.get('id') == current), None)
+                        if parent_item and parent_item.get('parents'):
+                            current = parent_item['parents'][0]
+                        else:
+                            break
+                    return False
+                
+                results = [r for r in results if is_in_allowed_tree(r)]
+            else:
+                results = []
         
         folders = [r for r in results if r.get('mimeType') == 'application/vnd.google-apps.folder']
         files = [r for r in results if r.get('mimeType') != 'application/vnd.google-apps.folder']
@@ -373,54 +445,6 @@ async def get_folder_children(folder_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.post("/upload", response_model=UploadResponse)
-async def upload_file(
-    file: UploadFile = File(...),
-    folder_id: str = Form(...),
-):
-    """
-    Upload file to Google Drive.
-    
-    Uses GDRIVE_REFRESH_TOKEN from .env for authentication.
-    """
-    tmp_path = None
-    try:
-        gdrive = get_gdrive_service()
-        
-        # Save uploaded file to temp location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
-            shutil.copyfileobj(file.file, tmp)
-            tmp_path = tmp.name
-        
-        # Upload to Google Drive with original filename
-        result = gdrive.upload_file(
-            tmp_path, 
-            folder_id, 
-            custom_name=file.filename
-        )
-        
-        return UploadResponse(
-            success=True,
-            id=result.get('id'),
-            name=result.get('name'),
-            mimeType=result.get('mimeType'),
-            webViewLink=result.get('webViewLink')
-        )
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        # Cleanup temp file (safe for Windows)
-        if tmp_path and os.path.exists(tmp_path):
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
 
 
 @router.get("/files/{folder_id}")

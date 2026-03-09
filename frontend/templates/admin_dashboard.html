@@ -306,25 +306,8 @@
             color: #7c3aed;
         }
 
-        .badge-editor {
-            background: rgba(59, 130, 246, 0.15);
-            color: #2563eb;
-        }
 
-        .badge-viewer {
-            background: rgba(100, 116, 139, 0.15);
-            color: #475569;
-        }
 
-        .badge-super {
-            background: rgba(234, 179, 8, 0.15);
-            color: #b45309;
-        }
-
-        .badge-approver {
-            background: rgba(16, 185, 129, 0.15);
-            color: #059669;
-        }
 
         .badge-active {
             background: var(--success-light);
@@ -868,8 +851,19 @@
             // Load data
             loadUsers();
             loadRoles();
-            loadPendingApprovals();
-            loadHistory();
+
+            // Only load approvals for admin/manager (not super_admin-only)
+            const hasApprovalRole = authData.roles.some(r => ['admin', 'manager'].includes(r));
+            if (hasApprovalRole) {
+                loadPendingApprovals();
+                loadHistory();
+            } else {
+                // Hide approvals tab for super_admin-only
+                const approvalTab = document.querySelector('.tab[data-tab="approvals"]');
+                if (approvalTab) approvalTab.style.display = 'none';
+                const approvalPanel = document.getElementById('tabApprovals');
+                if (approvalPanel) approvalPanel.remove();
+            }
 
             // Handle hash-based tab navigation
             handleHash();

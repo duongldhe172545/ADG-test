@@ -55,13 +55,18 @@ ROLE_PERMISSIONS = {
     "employer": ["view", "upload"],
 }
 
-# Departments (hierarchy)
+# Departments (hierarchy) with Google Drive folder IDs
 DEPARTMENTS = [
-    {"name": "Khối Marketing", "description": "Marketing Division", "parent": None, "children": [
-        {"name": "MarCom", "description": "Marketing Communications"},
-        {"name": "Product Marketing", "description": "Product Marketing Team"},
-        {"name": "Marketing Hybrid Team", "description": "Marketing Hybrid Team"},
-        {"name": "Growth & Performance", "description": "Growth & Performance Team"},
+    {"name": "Khối Marketing", "description": "Marketing Division", "parent": None,
+     "drive_folder_id": "1uCvrvjSeT7vOTMDx30eKYbqkqC5-zVTV", "children": [
+        {"name": "MarCom", "description": "Marketing Communications",
+         "drive_folder_id": "1fKk7oDiodRLyRoUqTjbKBM7Ew3rFUWZr"},
+        {"name": "Product Marketing", "description": "Product Marketing Team",
+         "drive_folder_id": "1IX8ak0YuU9ksO2gMidUbjKLpSd5jWHNL"},
+        {"name": "Marketing Hybrid Team", "description": "Marketing Hybrid Team",
+         "drive_folder_id": "1UF6-vjVQwFAT4A3bbIlJyay-ehPreOim"},
+        {"name": "Growth & Performance", "description": "Growth & Performance Team",
+         "drive_folder_id": "1HNUaLwOs0PIYhVw44U-_KvzDnstJjtix"},
     ]},
 ]
 
@@ -161,10 +166,18 @@ async def sync_departments(session: AsyncSession):
         result = await session.execute(select(Department).where(Department.name == dept_group["name"]))
         parent = result.scalars().first()
         if not parent:
-            parent = Department(name=dept_group["name"], description=dept_group.get("description"))
+            parent = Department(
+                name=dept_group["name"],
+                description=dept_group.get("description"),
+                drive_folder_id=dept_group.get("drive_folder_id"),
+            )
             session.add(parent)
             await session.commit()
             print(f"  ✅ Created department: {dept_group['name']}")
+        else:
+            # Always sync drive_folder_id
+            if dept_group.get("drive_folder_id"):
+                parent.drive_folder_id = dept_group["drive_folder_id"]
 
         # Children
         for child_data in dept_group.get("children", []):
@@ -175,9 +188,14 @@ async def sync_departments(session: AsyncSession):
                     name=child_data["name"],
                     description=child_data.get("description"),
                     parent_id=parent.id,
+                    drive_folder_id=child_data.get("drive_folder_id"),
                 )
                 session.add(child)
                 print(f"  ✅ Created department: {child_data['name']} (under {dept_group['name']})")
+            else:
+                # Always sync drive_folder_id
+                if child_data.get("drive_folder_id"):
+                    child.drive_folder_id = child_data["drive_folder_id"]
 
     await session.commit()
     print("  📋 Departments synced")
