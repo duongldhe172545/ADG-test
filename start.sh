@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # ADG KMS - Startup Script
-# Runs database migrations then starts the FastAPI server
+# Runs database migrations, syncs tables, then starts the FastAPI server
 # ==============================================================================
 
 set -e
@@ -20,6 +20,11 @@ if [ -n "$DATABASE_URL" ]; then
     echo "🔄 Running database migrations..."
     cd /app/backend && alembic upgrade head && cd /app
     echo "✅ Migrations complete"
+
+    # Sync tables: create any NEW tables from models.py that Alembic doesn't know about
+    echo "🔄 Syncing database tables..."
+    cd /app && python -m backend.db.sync_tables
+    echo "✅ Table sync complete"
     
     # Seed/sync roles, permissions, and users (idempotent)
     echo "🌱 Seeding database..."
