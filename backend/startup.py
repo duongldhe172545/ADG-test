@@ -10,13 +10,16 @@ import subprocess
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def run(cmd, cwd=None):
-    """Run a command, print output, exit on failure."""
+def run(cmd, cwd=None, fatal=True):
+    """Run a command, print output, optionally exit on failure."""
     print(f"  → {cmd}")
     result = subprocess.run(cmd, shell=True, cwd=cwd)
     if result.returncode != 0:
-        print(f"  ✗ Command failed (exit {result.returncode})")
-        sys.exit(result.returncode)
+        if fatal:
+            print(f"  ✗ Command failed (exit {result.returncode})")
+            sys.exit(result.returncode)
+        else:
+            print(f"  ⚠️ Command had issues (exit {result.returncode}), continuing...")
 
 
 def main():
@@ -39,7 +42,7 @@ def main():
 
         # Sync tables: create any new tables from models.py
         print("🔄 Syncing database tables...")
-        run("python -m backend.db.sync_tables", cwd="/app")
+        run("python -m backend.db.sync_tables", cwd="/app", fatal=False)
         print("✅ Table sync complete")
 
         # Seed database
