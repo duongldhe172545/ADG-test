@@ -217,12 +217,11 @@
         </div>
         <nav class="nav-links">
             <a href="/" class="active">Trang chủ</a>
-
-            <a href="/sources">📁 Tài liệu</a>
-            <a href="/upload" id="uploadNavLink" style="display:none;">📤 Upload</a>
-            <a href="/dashboard">📊 Dashboard</a>
-            <a href="/approval-history">📋 Lịch sử duyệt</a>
-            <a href="/admin/users" id="adminNavLink" style="display:none;">⚙️ Admin</a>
+            <a href="/sources" data-roles="admin,manager,employer" style="display:none;">📁 Tài liệu</a>
+            <a href="/upload" data-roles="admin,manager,employer" style="display:none;">📤 Upload</a>
+            <a href="/dashboard" data-roles="super_admin,admin,manager,employer" style="display:none;">📊 Dashboard</a>
+            <a href="/approval-history" data-roles="admin,manager,employer" style="display:none;">📋 Lịch sử duyệt</a>
+            <a href="/admin-dashboard" data-roles="super_admin,admin" style="display:none;">⚙️ Admin</a>
         </nav>
         <div style="display:flex;align-items:center;gap:12px;">
             <a href="/login" id="loginBtn" class="btn"
@@ -310,12 +309,13 @@
                     const userNav = document.getElementById('userNav');
                     userNav.style.display = 'flex';
                     document.getElementById('userAvatar').textContent = (data.email || '?').substring(0, 2).toUpperCase();
-                    if (data.roles && data.roles.some(r => ['employer', 'manager', 'admin', 'super_admin'].includes(r))) {
-                        document.getElementById('uploadNavLink').style.display = '';
-                    }
-                    if (data.roles && (data.roles.includes('super_admin') || data.roles.includes('admin'))) {
-                        document.getElementById('adminNavLink').style.display = '';
-                    }
+                    // Show nav links based on roles
+                    document.querySelectorAll('.nav-links a[data-roles]').forEach(link => {
+                        const allowed = link.getAttribute('data-roles').split(',');
+                        if (data.roles && data.roles.some(r => allowed.includes(r))) {
+                            link.style.display = '';
+                        }
+                    });
                 } else {
                     document.getElementById('loginBtn').style.display = '';
                 }

@@ -18,10 +18,11 @@ PUBLIC_PAGES = {"/", "/login", "/docs", "/redoc", "/openapi.json"}
 
 # Page → allowed roles mapping
 PAGE_ROLES = {
-    "/admin-dashboard": ["super_admin"],
+    "/admin-dashboard": ["super_admin", "admin", "manager"],
     "/admin/users":     ["super_admin", "admin"],
     "/admin/approvals": ["admin", "manager"],
     "/admin/folders":   ["admin", "manager"],
+    "/admin/activity-logs": ["super_admin", "admin"],
     "/upload":          ["admin", "manager", "employer"],
     "/approval-history":["admin", "manager", "employer"],
     "/dashboard":       ["super_admin", "admin", "manager", "employer"],

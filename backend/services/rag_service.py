@@ -1,22 +1,100 @@
 """
-RAG Service — Core RAG orchestration (pgvector + asyncpg)
+RAG Service — Core RAG orchestration (pgvector + psycopg2)
 Handles document indexing (parse → chunk → embed → PostgreSQL pgvector)
 and query pipeline (embed query → similarity search → LLM generate).
-Uses PostgreSQL + pgvector via asyncpg (same driver as the main app).
+Uses PostgreSQL + pgvector via psycopg2 (sync driver wrapped for async).
+Note: asyncpg is incompatible with PG17 on Windows, so we use psycopg2.
 """
 
 import os
+import re
 import time
+import asyncio
 from typing import List, Dict, Any, Optional
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 load_dotenv()  # Load .env vars so os.getenv() works
 
-import asyncpg
+import psycopg2
+import psycopg2.pool
+import psycopg2.extras
 
 from backend.services.document_parser import DocumentParser
 from backend.services.text_chunker import TextChunker
 from backend.services.embedding_service import EmbeddingService
+
+
+# ============================================================================
+# Psycopg2 async adapter — mimics asyncpg pool/connection interface
+# ============================================================================
+
+class _Psycopg2Conn:
+    """Wraps a psycopg2 connection to provide async fetch/execute/fetchval."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    async def execute(self, query, *args):
+        """Execute a query (no return)."""
+        sql, params = _convert_query(query, args)
+        def _run():
+            with self._conn.cursor() as cur:
+                cur.execute(sql, params)
+            self._conn.commit()
+        await asyncio.to_thread(_run)
+
+    async def fetch(self, query, *args):
+        """Fetch all rows as list of dict-like objects."""
+        sql, params = _convert_query(query, args)
+        def _run():
+            with self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, params)
+                return cur.fetchall()
+        return await asyncio.to_thread(_run)
+
+    async def fetchval(self, query, *args):
+        """Fetch single value."""
+        sql, params = _convert_query(query, args)
+        def _run():
+            with self._conn.cursor() as cur:
+                cur.execute(sql, params)
+                row = cur.fetchone()
+                return row[0] if row else None
+        return await asyncio.to_thread(_run)
+
+
+class _Psycopg2Pool:
+    """Wraps psycopg2 SimpleConnectionPool with asyncpg-like interface."""
+
+    def __init__(self, dsn, min_size=1, max_size=5):
+        self._pool = psycopg2.pool.ThreadedConnectionPool(min_size, max_size, dsn)
+
+    @asynccontextmanager
+    async def acquire(self):
+        conn = self._pool.getconn()
+        try:
+            yield _Psycopg2Conn(conn)
+        finally:
+            self._pool.putconn(conn)
+
+    async def close(self):
+        self._pool.closeall()
+
+
+def _convert_query(query, args):
+    """Convert asyncpg-style $1, $2 placeholders to psycopg2 %(name)s style.
+    
+    asyncpg uses $1, $2 etc where the same $N can appear multiple times.
+    psycopg2's %s is positional (each %s consumes next arg), so repeated $1 breaks.
+    Solution: use %(p1)s named params with a dict.
+    """
+    if not args:
+        return query, None
+    # Replace $N with %(pN)s — handles repeated references correctly
+    converted = re.sub(r'\$(\d+)', r'%(p\1)s', query)
+    params = {f'p{i+1}': arg for i, arg in enumerate(args)}
+    return converted, params
 
 
 class RAGService:
@@ -100,9 +178,9 @@ class RAGService:
                         continue
 
     async def _get_pool(self):
-        """Get or create asyncpg connection pool."""
+        """Get or create psycopg2 connection pool (async wrapper)."""
         if self._pool is None:
-            self._pool = await asyncpg.create_pool(self._db_url, min_size=1, max_size=5)
+            self._pool = _Psycopg2Pool(self._db_url, min_size=1, max_size=5)
         return self._pool
 
     async def _ensure_table(self):
@@ -342,12 +420,16 @@ class RAGService:
                 "elapsed_seconds": round(time.time() - start, 2),
             }
 
-        # 3. Build source references (deduplicated by file)
+        # 3. Build source references (deduplicated by file) — filter by relevance
+        MIN_RELEVANCE = 0.35
         sources = []
         chunks = []
         metadatas = []
         seen_files = {}  # file_id -> citation index
         for i, row in enumerate(results):
+            similarity = float(row["similarity"])
+            if similarity < MIN_RELEVANCE:
+                continue  # Skip low-relevance chunks
             chunk_text = row["chunk_text"]
             chunks.append(chunk_text)
             metadatas.append(dict(row))
@@ -364,9 +446,23 @@ class RAGService:
                     "file_id": fid,
                     "folder_path": row.get("folder_path", ""),
                     "chunk_text": chunk_text[:200] + "..." if len(chunk_text) > 200 else chunk_text,
-                    "relevance": round(float(row["similarity"]), 3),
+                    "relevance": round(similarity, 3),
                     "chunks_used": 1,
                 })
+
+        # If no chunks pass relevance filter, respond as general assistant
+        if not chunks:
+            general_prompt = f"Bạn là trợ lý AI thân thiện của ADG Knowledge Hub. Trả lời bằng tiếng Việt.\n\nNgười dùng: {question}\nTrợ lý:"
+            try:
+                answer = self._generate_text(general_prompt)
+            except Exception as e:
+                answer = f"Lỗi khi tạo câu trả lời: {e}"
+            return {
+                "answer": answer,
+                "citations": [],
+                "chunks_used": 0,
+                "elapsed_seconds": round(time.time() - start, 2),
+            }
 
         # 4. Build prompt
         prompt = self._build_prompt(question, chunks, metadatas, chat_history)
@@ -434,10 +530,14 @@ class RAGService:
             yield {"type": "done", "elapsed_seconds": round(time.time() - start, 2), "full_answer": ""}
             return
 
-        # Build sources
+        # Build sources — filter by minimum relevance
+        MIN_RELEVANCE = 0.35  # Skip chunks with low similarity (e.g. "hello")
         sources, chunks, metadatas = [], [], []
         seen_files = {}
         for row in results:
+            similarity = float(row["similarity"])
+            if similarity < MIN_RELEVANCE:
+                continue  # Skip low-relevance chunks
             chunk_text = row["chunk_text"]
             chunks.append(chunk_text)
             metadatas.append(dict(row))
@@ -452,9 +552,23 @@ class RAGService:
                     "file_id": fid,
                     "folder_path": row.get("folder_path", ""),
                     "chunk_text": chunk_text[:200] + "..." if len(chunk_text) > 200 else chunk_text,
-                    "relevance": round(float(row["similarity"]), 3),
+                    "relevance": round(similarity, 3),
                     "chunks_used": 1,
                 })
+        # If no chunks pass relevance filter, respond as general assistant
+        if not chunks:
+            yield {"type": "meta", "citations": [], "chunks_used": 0}
+            # Respond without RAG context — general conversation
+            general_prompt = f"Bạn là trợ lý AI thân thiện của ADG Knowledge Hub. Trả lời bằng tiếng Việt.\n\nNgười dùng: {question}\nTrợ lý:"
+            full_answer = ""
+            try:
+                for text_chunk in self._generate_text_stream(general_prompt):
+                    full_answer += text_chunk
+                    yield {"type": "text", "chunk": text_chunk}
+            except Exception as e:
+                yield {"type": "text", "chunk": f"\n\nLỗi: {e}"}
+            yield {"type": "done", "elapsed_seconds": round(time.time() - start, 2), "full_answer": full_answer}
+            return
 
         prompt = self._build_prompt(question, chunks, metadatas, chat_history)
 

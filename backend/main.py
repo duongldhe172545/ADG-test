@@ -28,6 +28,17 @@ async def lifespan(app: FastAPI):
     logger.info("Starting ADG Knowledge Management System...")
     for warn in settings.validate_critical():
         logger.warning(f"⚠️ {warn}")
+    
+    # Auto-create any new tables (activity_logs, notifications)
+    try:
+        from backend.db.connection import get_async_engine
+        from backend.db.models import Base
+        engine = get_async_engine()
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        logger.warning(f"⚠️ Could not auto-create tables: {e}")
+    
     yield
     logger.info("Shutting down...")
 

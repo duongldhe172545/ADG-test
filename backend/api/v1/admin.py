@@ -3,18 +3,24 @@ Admin API - User & Permission Management
 Only accessible by admin/super_admin roles.
 """
 
+import math
 from uuid import UUID
 from typing import Optional, List
-from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.connection import get_db
-from backend.db.models import User, Role, UserRole, PermissionType, Resource, Permission
+from backend.db.models import (
+    User, Role, UserRole, PermissionType, Resource, Permission,
+    UserDepartment, Department,
+)
 from backend.services.permission_service import get_current_user
+from backend.services.auth_service import get_user_roles
+from backend.services.activity_service import log_activity
+from backend.services.notification_service import create_notification
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -26,13 +32,19 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 class AddUserRequest(BaseModel):
     email: str
     name: Optional[str] = None
-    roles: List[str] = ["employer"]  # Default role
+    roles: List[str] = ["employer"]  # Default role (single role only)
     department_id: Optional[str] = None  # UUID of department
+
+    @property
+    def validated_roles(self):
+        if len(self.roles) > 1:
+            raise ValueError("Each user can only have 1 role")
+        return self.roles
 
 class UpdateUserRequest(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
-    roles: Optional[List[str]] = None
+    roles: Optional[List[str]] = None  # Single role only
     department_id: Optional[str] = None  # UUID of department, or "" to clear
 
 class UserResponse(BaseModel):
@@ -71,20 +83,52 @@ async def list_users(
     page: int = 1,
     page_size: int = 10,
     db: AsyncSession = Depends(get_db),
-    admin: dict = Depends(require_admin)
+    admin: dict = Depends(require_admin_or_manager)
 ):
-    """List all users with their roles (paginated)"""
+    """List all users with their roles (paginated). Managers see only their department."""
     from sqlalchemy import func
     from backend.db.models import UserDepartment, Department
     
+    is_manager_only = (
+        "manager" in admin.get("roles", [])
+        and "admin" not in admin.get("roles", [])
+        and "super_admin" not in admin.get("roles", [])
+    )
+    
+    # For manager: find their department, filter users by same department
+    dept_filter_user_ids = None
+    if is_manager_only:
+        import uuid as _uuid
+        mgr_id = _uuid.UUID(admin["id"]) if isinstance(admin["id"], str) else admin["id"]
+        mgr_dept = await db.execute(
+            select(UserDepartment.department_id).where(UserDepartment.user_id == mgr_id)
+        )
+        mgr_dept_id = mgr_dept.scalar()
+        if mgr_dept_id:
+            dept_users = await db.execute(
+                select(UserDepartment.user_id).where(UserDepartment.department_id == mgr_dept_id)
+            )
+            dept_filter_user_ids = [r[0] for r in dept_users.all()]
+        else:
+            # Manager not in any department -> show only themselves
+            dept_filter_user_ids = [mgr_id]
+    
+    # Build query
+    query = select(User)
+    if dept_filter_user_ids is not None:
+        query = query.where(User.id.in_(dept_filter_user_ids))
+    
     # Count total users
-    count_result = await db.execute(select(func.count(User.id)))
+    count_q = select(func.count(User.id))
+    if dept_filter_user_ids is not None:
+        count_q = count_q.where(User.id.in_(dept_filter_user_ids))
+    count_result = await db.execute(count_q)
     total = count_result.scalar()
     
     # Paginate
     offset = (max(1, page) - 1) * page_size
     result = await db.execute(
-        select(User).order_by(User.created_at.desc()).offset(offset).limit(page_size)
+        query.order_by(User.created_at.desc()).offset(offset).limit(page_size)
     )
     users = result.scalars().all()
     
@@ -117,7 +161,6 @@ async def list_users(
             "created_at": user.created_at.isoformat(),
         })
     
-    import math
     return {
         "users": user_list,
         "total": total,
@@ -144,7 +187,11 @@ async def add_user(
     db.add(user)
     await db.flush()
     
-    # Assign roles
+    # Validate single role
+    if len(req.roles) > 1:
+        raise HTTPException(status_code=400, detail="Each user can only have 1 role")
+
+    # Assign role
     for role_name in req.roles:
         role_result = await db.execute(select(Role).where(Role.name == role_name))
         role = role_result.scalars().first()
@@ -154,7 +201,6 @@ async def add_user(
     
     # Assign department if provided
     if req.department_id:
-        from backend.db.models import UserDepartment, Department
         dept_result = await db.execute(select(Department).where(Department.id == req.department_id))
         dept = dept_result.scalars().first()
         if dept:
@@ -202,18 +248,38 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Get target user's current roles
+    target_roles = await get_user_roles(db, user.id)
+    is_target_sa = "super_admin" in target_roles
+    is_caller_sa = "super_admin" in admin.get("roles", [])
+    
+    # Super Admin users cannot be modified by non-super_admin
+    if is_target_sa and not is_caller_sa:
+        raise HTTPException(status_code=403, detail="Không được phép chỉnh sửa Super Admin")
+    
+    # Super Admin's role cannot be changed by anyone
+    if is_target_sa and req.roles is not None:
+        raise HTTPException(status_code=403, detail="Không được đổi role của Super Admin")
+    
     # Update basic info
     if req.name is not None:
         user.name = req.name
     if req.is_active is not None:
         user.is_active = req.is_active
     
-    # Update roles if provided
+    # Update roles if provided (single role only)
     if req.roles is not None:
+        if len(req.roles) > 1:
+            raise HTTPException(status_code=400, detail="Each user can only have 1 role")
+
+        # Cannot assign super_admin role
+        if "super_admin" in req.roles:
+            raise HTTPException(status_code=403, detail="Không được gán role super_admin")
+
         # Remove existing roles
         await db.execute(delete(UserRole).where(UserRole.user_id == user.id))
         
-        # Add new roles
+        # Add new role
         new_is_admin = any(r in ["admin", "super_admin"] for r in req.roles)
         for role_name in req.roles:
             role_result = await db.execute(select(Role).where(Role.name == role_name))
@@ -235,7 +301,6 @@ async def update_user(
         
         # Re-grant department folder permission (unless new role is admin)
         if not new_is_admin:
-            from backend.db.models import UserDepartment, Department
             dept_result = await db.execute(
                 select(Department).join(UserDepartment, UserDepartment.department_id == Department.id)
                 .where(UserDepartment.user_id == user.id)
@@ -260,7 +325,6 @@ async def update_user(
     
     # Update department if provided (with auto folder permissions)
     if req.department_id is not None:
-        from backend.db.models import UserDepartment, Department
         
         # Get OLD department's drive_folder_id (to remove permission)
         old_dept_result = await db.execute(
@@ -329,6 +393,24 @@ async def update_user(
     
     await db.commit()
     
+    # Log activity + notify
+    try:
+        details = {}
+        if req.roles is not None:
+            details["roles"] = req.roles
+            await log_activity(db, admin["id"], admin["email"], "user.role_change",
+                               target_type="user", target_id=str(user.id),
+                               details={"target_email": user.email, "new_roles": req.roles})
+            await create_notification(db, user.id, "🔄 Role đã thay đổi",
+                f"Vai trò của bạn đã được cập nhật thành: {', '.join(req.roles)}",
+                "role_changed", link="/dashboard")
+        if req.department_id is not None:
+            await log_activity(db, admin["id"], admin["email"], "user.dept_change",
+                               target_type="user", target_id=str(user.id),
+                               details={"target_email": user.email, "dept_id": str(req.department_id)})
+    except Exception:
+        pass
+    
     return {"success": True, "message": f"User {user.email} updated"}
 
 
@@ -344,6 +426,11 @@ async def deactivate_user(
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if target is super_admin
+    target_roles = await get_user_roles(db, user.id)
+    if "super_admin" in target_roles:
+        raise HTTPException(status_code=403, detail="Không được vô hiệu Super Admin")
     
     user.is_active = False
     await db.commit()
@@ -366,9 +453,6 @@ async def users_page_data(
     Reduces 3 API calls to 1, saving ~360ms on production.
     Supports pagination via page/page_size query params.
     """
-    from backend.db.models import UserDepartment, Department
-    from sqlalchemy import func
-    import math
     
     # Count total users
     count_result = await db.execute(select(func.count(User.id)))
@@ -430,7 +514,6 @@ async def list_departments(
     admin: dict = Depends(require_admin)
 ):
     """List all departments"""
-    from backend.db.models import Department
     result = await db.execute(select(Department).order_by(Department.name))
     depts = result.scalars().all()
     return {
@@ -448,7 +531,7 @@ async def list_departments(
 @router.get("/roles")
 async def list_roles(
     db: AsyncSession = Depends(get_db),
-    admin: dict = Depends(require_admin)
+    admin: dict = Depends(require_admin_or_manager)
 ):
     """List all available roles"""
     result = await db.execute(select(Role).order_by(Role.priority.desc()))
@@ -499,7 +582,6 @@ async def create_folder(
     Also registers as a resource in the RBAC system.
     """
     from backend.api.v1.documents import get_gdrive_service
-    from backend.db.models import Resource
     from backend.config import settings
     
     parent_id = req.parent_folder_id or settings.GDRIVE_ROOT_FOLDER_ID
@@ -771,6 +853,14 @@ async def set_user_folder_permissions(
             granted_count += 1
     
     await db.commit()
+    
+    # Log folder permission change
+    try:
+        await log_activity(db, admin["id"], admin["email"], "folder.permission",
+            target_type="user", target_id=str(user.id),
+            details={"target_email": user.email, "folder_count": granted_count})
+    except Exception:
+        pass
     
     return {
         "success": True,

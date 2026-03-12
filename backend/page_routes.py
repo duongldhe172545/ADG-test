@@ -59,6 +59,11 @@ def register_page_routes(app: FastAPI):
     async def admin_users_page():
         return _serve("admin_users.html")
 
+    @app.get("/admin-users")
+    async def admin_users_page_alias():
+        """Redirect to canonical /admin/users URL"""
+        return RedirectResponse(url="/admin/users", status_code=302)
+
     @app.get("/admin/approvals", response_class=HTMLResponse)
     async def admin_approvals_page():
         return _serve("admin_approvals.html")
@@ -66,3 +71,7 @@ def register_page_routes(app: FastAPI):
     @app.get("/admin/folders", response_class=HTMLResponse)
     async def admin_folders_page():
         return _serve("admin_folders.html")
+
+    @app.get("/admin/activity-logs", response_class=HTMLResponse)
+    async def admin_activity_logs_page():
+        return _serve("admin_activity_logs.html")

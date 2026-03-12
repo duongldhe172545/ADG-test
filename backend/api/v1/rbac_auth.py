@@ -3,8 +3,11 @@ RBAC Authentication API Routes
 Google OAuth login with whitelist check and JWT tokens.
 """
 
+import traceback
+from uuid import UUID
 from urllib.parse import urlparse, urlencode
 
+import httpx
 from fastapi import APIRouter, HTTPException, Depends, Response, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +19,9 @@ from backend.services.auth_service import (
 )
 from backend.services.permission_service import get_current_user
 from backend.config import settings
+from backend.logger import get_logger
+
+logger = get_logger("rbac_auth")
 
 router = APIRouter(prefix="/rbac", tags=["RBAC Authentication"])
 
@@ -38,7 +44,7 @@ async def rbac_login(request: Request):
         raise HTTPException(status_code=500, detail="OAuth not configured")
     
     rbac_redirect_uri = _get_rbac_redirect_uri()
-    print(f"🔑 RBAC redirect URI: {rbac_redirect_uri}")
+    logger.info(f"RBAC redirect URI: {rbac_redirect_uri}")
     
     # Build scopes
     rbac_scopes = list(set(oauth_service.SCOPES + ['openid']))
@@ -75,7 +81,6 @@ async def rbac_callback(
         return RedirectResponse(url="/login?error=no_code")
     
     try:
-        import httpx
         
         rbac_redirect_uri = _get_rbac_redirect_uri()
         
@@ -95,7 +100,7 @@ async def rbac_callback(
         if token_response.status_code != 200:
             error_data = token_response.json()
             error_msg = error_data.get('error_description', error_data.get('error', 'Token exchange failed'))
-            print(f"❌ Token exchange failed: {error_data}")
+            logger.error(f"Token exchange failed: {error_data}")
             return RedirectResponse(url=f"/login?error={error_msg}")
         
         token_data = token_response.json()
@@ -116,7 +121,7 @@ async def rbac_callback(
         name = user_info.get('name')
         avatar_url = user_info.get('picture')
         
-        print(f"🔍 RBAC callback - Google email: {email}, name: {name}")
+        logger.info(f"RBAC callback - Google email: {email}, name: {name}")
         
         if not email:
             return RedirectResponse(url="/login?error=no_email")
@@ -125,12 +130,12 @@ async def rbac_callback(
         result = await login_user(db, email, name, avatar_url)
         
         if not result:
-            print(f"❌ User {email} NOT in whitelist")
+            logger.warning(f"User {email} NOT in whitelist")
             return RedirectResponse(
                 url=f"/login?error=not_whitelisted&email={email}"
             )
         
-        print(f"✅ User {email} logged in, roles: {result['user']['roles']}")
+        logger.info(f"User {email} logged in, roles: {result['user']['roles']}")
         
         # Redirect based on role
         roles = result['user']['roles']
@@ -155,9 +160,7 @@ async def rbac_callback(
         return response
         
     except Exception as e:
-        print(f"❌ RBAC login error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"RBAC login error: {e}", exc_info=True)
         return RedirectResponse(url=f"/login?error={str(e)}")
 
 
@@ -190,7 +193,6 @@ async def check_auth(request: Request, db: AsyncSession = Depends(get_db)):
         return {"authenticated": False}
     
     # Query fresh roles from database (not JWT payload)
-    from uuid import UUID
     user_data = await get_user_with_roles(db, UUID(payload["sub"]))
     if not user_data or not user_data.get("is_active"):
         return {"authenticated": False}

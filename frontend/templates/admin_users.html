@@ -851,7 +851,24 @@
                 return;
             }
 
-            document.getElementById('usersTable').innerHTML = users.map(u => `
+            const isSA = currentUser.roles.includes('super_admin') && !currentUser.roles.includes('admin');
+
+            document.getElementById('usersTable').innerHTML = users.map(u => {
+                const targetIsSA = u.roles.includes('super_admin');
+                let actions = '';
+                if (targetIsSA) {
+                    actions = '<span style="color:var(--text-secondary);font-size:0.75rem;">🔒 Protected</span>';
+                } else {
+                    actions += `<button class="btn btn-outline btn-sm" onclick="showEditUserModal('${u.id}', '${u.email}', '${(u.name || '').replace(/'/g, "\\'")}'  , ${JSON.stringify(u.roles).replace(/"/g, '&quot;')}, '${u.department_id || ''}', ${u.is_active})">
+                        ✏️ Cập nhật
+                    </button>`;
+                    if (!isSA) {
+                        actions += `<button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:var(--accent);" onclick="showFolderPermModal('${u.id}', '${u.email}')">
+                            🔐 Phân quyền
+                        </button>`;
+                    }
+                }
+                return `
                 <tr>
                     <td><strong>${u.email}</strong></td>
                     <td>${u.name || '—'}</td>
@@ -860,24 +877,31 @@
                     <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
                     <td>${u.last_login ? toVNDate(u.last_login) : '—'}</td>
                     <td style="display:flex;gap:4px;flex-wrap:wrap;">
-                        <button class="btn btn-outline btn-sm" onclick="showEditUserModal('${u.id}', '${u.email}', '${(u.name || '').replace(/'/g, "\\'")}', ${JSON.stringify(u.roles).replace(/"/g, '&quot;')}, '${u.department_id || ''}', ${u.is_active})">
-                            ✏️ Cập nhật
-                        </button>
-                        <button class="btn btn-outline btn-sm" style="color:var(--accent);border-color:var(--accent);" onclick="showFolderPermModal('${u.id}', '${u.email}')">
-                            🔐 Phân quyền
-                        </button>
+                        ${actions}
                     </td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
+
+            // Auto-open folder permission modal if ?user= param exists
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoUserId = urlParams.get('user');
+            if (autoUserId) {
+                const targetUser = users.find(u => u.id === autoUserId);
+                if (targetUser && !targetUser.roles.includes('super_admin')) {
+                    showFolderPermModal(autoUserId, targetUser.email);
+                    window.history.replaceState({}, '', window.location.pathname);
+                }
+            }
         }
 
         // loadRoles is no longer needed as a separate API call
         // Roles are loaded via loadPageData() into allRoles
         function updateRoleCheckboxes() {
             document.getElementById('statRoles').textContent = allRoles.length;
-            document.getElementById('roleCheckboxes').innerHTML = allRoles.map(r => `
+            const assignableRoles = allRoles.filter(r => r.name !== 'super_admin');
+            document.getElementById('roleCheckboxes').innerHTML = assignableRoles.map(r => `
                 <label class="checkbox-label">
-                    <input type="checkbox" name="role" value="${r.name}" ${r.name === 'employer' ? 'checked' : ''}>
+                    <input type="radio" name="role" value="${r.name}" ${r.name === 'employer' ? 'checked' : ''}>
                     ${r.name}
                 </label>
             `).join('');
@@ -889,7 +913,8 @@
         async function addUser() {
             const email = document.getElementById('newUserEmail').value.trim();
             const name = document.getElementById('newUserName').value.trim();
-            const roles = [...document.querySelectorAll('#roleCheckboxes input:checked')].map(c => c.value);
+            const roleEl = document.querySelector('#roleCheckboxes input:checked');
+            const roles = roleEl ? [roleEl.value] : [];
             const deptId = document.getElementById('newUserDept').value;
             if (!email) { showToast('Vui lòng nhập email', 'error'); return; }
             if (roles.length === 0) { showToast('Vui lòng chọn vai trò', 'error'); return; }
@@ -935,9 +960,10 @@
         function showEditRoleModal(userId, email, currentRoles) {
             editingUserId = userId;
             document.getElementById('editRoleEmail').textContent = email;
-            document.getElementById('editRoleCheckboxes').innerHTML = allRoles.map(r => `
+            const assignableRoles = allRoles.filter(r => r.name !== 'super_admin');
+            document.getElementById('editRoleCheckboxes').innerHTML = assignableRoles.map(r => `
                 <label class="checkbox-label">
-                    <input type="checkbox" name="editRole" value="${r.name}" ${currentRoles.includes(r.name) ? 'checked' : ''}>
+                    <input type="radio" name="editRole" value="${r.name}" ${currentRoles.includes(r.name) ? 'checked' : ''}>
                     ${r.name} <small style="color:#999;">(${r.description || ''})</small>
                 </label>
             `).join('');
@@ -951,8 +977,9 @@
 
         async function saveUserRoles() {
             if (!editingUserId) return;
-            const roles = [...document.querySelectorAll('#editRoleCheckboxes input:checked')].map(c => c.value);
-            if (roles.length === 0) { showToast('Phải chọn ít nhất 1 vai trò', 'error'); return; }
+            const roleEl = document.querySelector('#editRoleCheckboxes input:checked');
+            if (!roleEl) { showToast('Phải chọn 1 vai trò', 'error'); return; }
+            const roles = [roleEl.value];
             try {
                 const res = await fetch(`${API}/admin/users/${editingUserId}`, {
                     method: 'PUT',
@@ -986,10 +1013,11 @@
             deptSelect.innerHTML = '<option value="">— Không —</option>' +
                 allDepartments.map(d => `<option value="${d.id}" ${d.id === deptId ? 'selected' : ''}>${d.name}</option>`).join('');
 
-            // Populate role checkboxes
-            document.getElementById('editUserRoles').innerHTML = allRoles.map(r => `
+            // Populate role radio buttons (exclude super_admin)
+            const assignableRoles = allRoles.filter(r => r.name !== 'super_admin');
+            document.getElementById('editUserRoles').innerHTML = assignableRoles.map(r => `
                 <label class="checkbox-label">
-                    <input type="checkbox" name="editUserRole" value="${r.name}" ${currentRoles.includes(r.name) ? 'checked' : ''}>
+                    <input type="radio" name="editUserRole" value="${r.name}" ${currentRoles.includes(r.name) ? 'checked' : ''}>
                     ${r.name} <small style="color:#999;">(${r.description || ''})</small>
                 </label>
             `).join('');

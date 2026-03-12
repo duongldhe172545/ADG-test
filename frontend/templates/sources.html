@@ -1188,7 +1188,7 @@
             <a href="/upload" data-roles="admin,manager,employer" style="display:none;">📤 Upload</a>
             <a href="/dashboard" data-roles="super_admin,admin,manager,employer" style="display:none;">📊 Dashboard</a>
             <a href="/approval-history" data-roles="admin,manager,employer" style="display:none;">📋 Lịch sử duyệt</a>
-            <a href="/admin/users" data-roles="super_admin,admin" style="display:none;">⚙️ Admin</a>
+            <a href="/admin-dashboard" data-roles="super_admin,admin" style="display:none;">⚙️ Admin</a>
         </nav>
         <div style="display:flex;align-items:center;gap:8px;">
             <div id="userNav" style="display:none;align-items:center;gap:6px;">
@@ -1284,8 +1284,10 @@
             <div class="chat-messages" id="chatMessages">
                 <div class="chat-welcome" id="chatWelcome">
                     <div class="chat-welcome-icon">💬</div>
-                    <h3>Xin chào!</h3>
-                    <p>Hỏi bất cứ điều gì về tài liệu. AI sẽ trả lời dựa trên nguồn tài liệu trong thư mục.</p>
+                    <h3>ADG Knowledge Assistant</h3>
+                    <p>Hỏi bất cứ điều gì — AI sẽ tìm trong <strong>toàn bộ tài liệu</strong> đã được index.</p>
+                    <p style="font-size:0.75rem;color:#94a3b8;margin-top:0.25rem;">💡 Muốn hỏi về file cụ thể? Click
+                        file bên trái rồi ấn 📎 để thêm nguồn.</p>
                 </div>
             </div>
 
@@ -1300,11 +1302,13 @@
                 <div class="chat-sources" id="chatSourcesBar">
                     <div class="chat-sources-label">📎 Nguồn:</div>
                     <div class="chat-sources-chips" id="chatSourcesChips"></div>
+                    <button class="chat-header-btn" onclick="addCurrentFile()" title="Thêm file đang xem vào nguồn"
+                        style="font-size:0.75rem;padding:2px 6px;">＋</button>
                     <button class="chat-index-all-btn" id="indexAllBtn" onclick="indexAllFolder()"
                         title="Index tất cả file trong thư mục hiện tại" style="display:none;">📂 Index tất cả</button>
                 </div>
                 <div class="chat-input-box">
-                    <textarea class="chat-input-field" id="chatInput" placeholder="Hỏi về tài liệu..."
+                    <textarea class="chat-input-field" id="chatInput" placeholder="Hỏi về tài liệu dự án..."
                         rows="1"></textarea>
                     <button class="chat-send-btn" id="chatSendBtn" title="Gửi">▶</button>
                 </div>
@@ -1416,7 +1420,7 @@
                     }
                     // Show admin link for admin/super_admin
                     if (data.roles && (data.roles.includes('super_admin') || data.roles.includes('admin'))) {
-                        const adminLink = document.querySelector('a[href="/admin/users"]');
+                        const adminLink = document.querySelector('a[href="/admin-dashboard"]');
                         if (adminLink) adminLink.style.display = '';
                     }
                     // Show nav links based on roles
@@ -1610,10 +1614,6 @@
         // ========================================================================
         function previewFile(fileId, fileName, mimeType, webViewLink, filePath = '') {
             selectedFileId = fileId;
-            // Auto-add to chat sources if chat is open
-            if (chatOpen && !chatSources.find(s => s.id === fileId)) {
-                addChatSource(fileId, fileName);
-            }
             // Show path before filename (use truncatePath to show last 2 folders)
             const displayPath = filePath ? filterPath(filePath) : '';
             if (displayPath) {
@@ -2015,13 +2015,18 @@
             document.getElementById('chatFab').textContent = chatOpen ? '✕' : '💬';
             if (chatOpen) {
                 document.getElementById('chatInput').focus();
-                // Auto-add currently viewed file if any
-                if (selectedFileId && !chatSources.find(s => s.id === selectedFileId)) {
-                    const titleEl = document.getElementById('previewTitle');
-                    const name = titleEl ? titleEl.textContent.replace(/^📁.*\/|^📄\s*/g, '').trim() : selectedFileId;
-                    addChatSource(selectedFileId, name);
-                }
+                renderChatSources(); // Show source bar with hint
             }
+        }
+
+        function addCurrentFile() {
+            if (!selectedFileId) {
+                alert('Chưa chọn file nào. Click vào file bên trái trước.');
+                return;
+            }
+            const titleEl = document.getElementById('previewTitle');
+            const name = titleEl ? titleEl.textContent.replace(/^📁.*\/|^📄\s*/g, '').trim() : selectedFileId;
+            addChatSource(selectedFileId, name);
         }
 
         // ---- Source selection helpers ----
@@ -2047,11 +2052,11 @@
         function renderChatSources() {
             const bar = document.getElementById('chatSourcesBar');
             const chips = document.getElementById('chatSourcesChips');
+            bar.style.display = 'flex';
             if (chatSources.length === 0) {
-                bar.style.display = 'none';
+                chips.innerHTML = '<span style="color:#94a3b8;font-size:0.75rem;">🌐 Tìm trong toàn bộ tài liệu</span>';
                 return;
             }
-            bar.style.display = 'flex';
             chips.innerHTML = chatSources.map(s => {
                 const status = s.indexed === null ? '⏳' : (s.indexed ? '✅' : '📥');
                 const shortName = s.name.length > 25 ? s.name.substring(0, 22) + '...' : s.name;
@@ -2330,7 +2335,7 @@
                         question: text,
                         session_id: chatSessionId,
                         file_ids: chatSources.length > 0 ? chatSources.map(s => s.id) : null,
-                        folder_ids: chatSources.length === 0 && currentFolderId ? [currentFolderId] : null,
+                        folder_ids: null,
                     }),
                 });
 

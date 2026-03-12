@@ -3,7 +3,7 @@ Document Repository — CRUD for the 'documents' table.
 Supports versioning, indexing tracking, and dashboard stats.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from sqlalchemy import select, func, update
@@ -85,7 +85,7 @@ class DocumentRepository:
             doc.uploaded_by = uploaded_by
         if approved_by:
             doc.approved_by = approved_by
-        doc.approved_at = datetime.utcnow()
+        doc.approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
         doc.indexed_at = None  # Needs re-indexing
         await self.db.flush()
         return doc
@@ -94,7 +94,7 @@ class DocumentRepository:
         await self.db.execute(
             update(Document)
             .where(Document.drive_file_id == drive_file_id)
-            .values(indexed_at=datetime.utcnow())
+            .values(indexed_at=datetime.now(timezone.utc).replace(tzinfo=None))
         )
 
     async def mark_deleted(self, drive_file_id: str):

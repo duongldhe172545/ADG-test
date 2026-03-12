@@ -27,25 +27,32 @@ def get_sync_engine():
     return create_engine(url, echo=settings.DEBUG)
 
 
-# Async engine (for application)
+# Async engine (for application) — cached singleton
+_async_engine = None
+
 def get_async_engine():
-    """Get async engine for application use"""
-    if not settings.DATABASE_URL:
-        raise ValueError("DATABASE_URL not configured")
-    
-    # Convert postgresql:// to postgresql+asyncpg://
-    url = settings.DATABASE_URL
-    if url.startswith("postgresql://"):
-        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    
-    return create_async_engine(url, echo=settings.DEBUG)
+    """Get async engine for application use (cached)"""
+    global _async_engine
+    if _async_engine is None:
+        if not settings.DATABASE_URL:
+            raise ValueError("DATABASE_URL not configured")
+        url = settings.DATABASE_URL
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        _async_engine = create_async_engine(url, echo=settings.DEBUG)
+    return _async_engine
 
 
-# Async session factory
+# Async session factory — cached singleton
+_async_session_factory = None
+
 def get_async_session_factory():
-    """Get async session factory"""
-    engine = get_async_engine()
-    return sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    """Get async session factory (cached)"""
+    global _async_session_factory
+    if _async_session_factory is None:
+        engine = get_async_engine()
+        _async_session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    return _async_session_factory
 
 
 # Dependency for FastAPI

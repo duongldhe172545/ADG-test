@@ -3,20 +3,66 @@ Approval Workflow API
 Upload to pending folder → Admin approves → Move to target folder
 """
 
+import os
+import tempfile
+import traceback
 from uuid import UUID
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.connection import get_db
-from backend.db.models import ApprovalRequest, Resource, User
+from backend.db.models import ApprovalRequest, Resource, User, UserDepartment
 from backend.services.permission_service import get_current_user
+from backend.services.activity_service import log_activity
+from backend.services.notification_service import create_notification
+from backend.api.v1.documents import get_gdrive_service
+from backend.db.repositories.document_repo import DocumentRepository
 from backend.config import settings
+from backend.logger import get_logger
+
+logger = get_logger("approvals")
 
 router = APIRouter(prefix="/approvals", tags=["Approval Workflow"])
+
+
+async def _get_user_department_id(db: AsyncSession, user_id) -> Optional[UUID]:
+    """Look up the user's department_id from user_departments table."""
+    if isinstance(user_id, str):
+        user_id = UUID(user_id)
+    result = await db.execute(
+        select(UserDepartment.department_id).where(UserDepartment.user_id == user_id)
+    )
+    row = result.first()
+    return row[0] if row else None
+
+
+async def _notify_department_approvers(db: AsyncSession, department_id, file_name: str, requester_email: str):
+    """Notify managers and admins in the same department about a new submission."""
+    from backend.db.models import UserRole, Role
+    # Find managers in the same department
+    mgr_result = await db.execute(
+        select(UserDepartment.user_id)
+        .join(UserRole, UserRole.user_id == UserDepartment.user_id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(
+            UserDepartment.department_id == department_id,
+            Role.name.in_(["manager", "admin", "super_admin"]),
+        )
+    )
+    approver_ids = set(row[0] for row in mgr_result.all())
+    for uid in approver_ids:
+        await create_notification(
+            db, uid,
+            "📄 File mới cần duyệt",
+            f"{requester_email} đã gửi file '{file_name}' cần duyệt.",
+            "approval_needed",
+            link="/admin/approvals",
+        )
 
 
 # =============================================================================
@@ -35,24 +81,19 @@ async def submit_for_approval(
     Upload file to Pending folder and create approval request.
     File is uploaded to _PENDING_ folder, NOT to the target folder yet.
     """
-    import tempfile, shutil, os
-    from backend.api.v1.documents import get_gdrive_service
-    
     pending_folder_id = settings.GDRIVE_PENDING_FOLDER_ID
     if not pending_folder_id:
         raise HTTPException(status_code=500, detail="Pending folder not configured")
-    
+
     tmp_path = None
     try:
-        # Read file content first (async), then save to temp
         file_content = await file.read()
         with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as tmp:
             tmp.write(file_content)
             tmp_path = tmp.name
-        
+
         file_size = len(file_content)
-        
-        # Upload to pending folder using correct API
+
         gdrive = get_gdrive_service()
         uploaded_file = gdrive.upload_file(
             file_path=tmp_path,
@@ -60,10 +101,13 @@ async def submit_for_approval(
             mime_type=file.content_type,
             custom_name=file.filename,
         )
-        
-        # Create approval request
+
+        # Look up user's department
+        dept_id = await _get_user_department_id(db, current_user["id"])
+
         approval = ApprovalRequest(
             requester_id=UUID(current_user["id"]),
+            department_id=dept_id,
             action_type="upload",
             status="pending",
             extra_data={
@@ -76,25 +120,34 @@ async def submit_for_approval(
             }
         )
         db.add(approval)
-        await db.commit()
-        
+
+        # Activity log
+        await log_activity(db, current_user["id"], current_user["email"], "file.upload",
+            target_type="file", target_id=uploaded_file.get("id"),
+            details={"file_name": file.filename, "target_folder": target_folder_name})
+
+        # Notify department approvers (managers/admins)
+        if dept_id:
+            await _notify_department_approvers(db, dept_id, file.filename, current_user["email"])
+
         return {
             "success": True,
             "approval_id": str(approval.id),
             "message": f"File '{file.filename}' submitted for approval",
             "status": "pending",
         }
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Upload failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
     finally:
         if tmp_path and os.path.exists(tmp_path):
             try:
                 os.remove(tmp_path)
             except OSError:
-                pass  # Windows may lock the file briefly
+                pass
 
 
 # =============================================================================
@@ -116,9 +169,6 @@ async def submit_update_for_approval(
     Upload updated file to Pending folder and create approval request.
     When approved, old file moves to _OLD/ subfolder and new file takes its place.
     """
-    import tempfile, os
-    from backend.api.v1.documents import get_gdrive_service
-
     pending_folder_id = settings.GDRIVE_PENDING_FOLDER_ID
     if not pending_folder_id:
         raise HTTPException(status_code=500, detail="Pending folder not configured")
@@ -140,8 +190,11 @@ async def submit_update_for_approval(
             custom_name=file.filename,
         )
 
+        dept_id = await _get_user_department_id(db, current_user["id"])
+
         approval = ApprovalRequest(
             requester_id=UUID(current_user["id"]),
+            department_id=dept_id,
             action_type="update",
             status="pending",
             extra_data={
@@ -157,7 +210,13 @@ async def submit_update_for_approval(
             }
         )
         db.add(approval)
-        await db.commit()
+
+        # Activity log + notify
+        await log_activity(db, current_user["id"], current_user["email"], "file.submit_update",
+            target_type="file", target_id=uploaded_file.get("id"),
+            details={"file_name": file.filename, "replaces": replace_file_name})
+        if dept_id:
+            await _notify_department_approvers(db, dept_id, file.filename, current_user["email"])
 
         return {
             "success": True,
@@ -166,9 +225,10 @@ async def submit_update_for_approval(
             "status": "pending",
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Update submit failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
     finally:
         if tmp_path and os.path.exists(tmp_path):
@@ -197,7 +257,6 @@ async def preview_file(
         raise HTTPException(status_code=403, detail="Admin/Manager only")
     
     try:
-        from backend.api.v1.documents import get_gdrive_service
         gdrive = get_gdrive_service()
         
         # Share file so preview iframe can access it
@@ -231,9 +290,11 @@ async def submit_delete_request(
     Non-admin users request file deletion, admin approves.
     """
     try:
-        # Create approval request for deletion
+        dept_id = await _get_user_department_id(db, current_user["id"])
+
         approval = ApprovalRequest(
             requester_id=UUID(current_user["id"]),
+            department_id=dept_id,
             action_type="delete",
             status="pending",
             extra_data={
@@ -242,15 +303,22 @@ async def submit_delete_request(
             }
         )
         db.add(approval)
-        await db.commit()
-        
+
+        await log_activity(db, current_user["id"], current_user["email"], "file.submit_delete",
+            target_type="file", target_id=file_id,
+            details={"file_name": file_name})
+        if dept_id:
+            await _notify_department_approvers(db, dept_id, file_name, current_user["email"])
+
         return {
             "success": True,
             "approval_id": str(approval.id),
             "message": f"Delete request for '{file_name}' submitted for approval",
             "status": "pending",
         }
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Submit delete request failed: {str(e)}")
 
@@ -289,10 +357,16 @@ async def list_pending(
         # Manager/approver sees pending items (Step 1)
         statuses = ["pending"]
     
+    query = select(ApprovalRequest).where(ApprovalRequest.status.in_(statuses))
+
+    # Manager (non-admin) only sees approvals from their own department
+    if is_manager and not is_admin:
+        mgr_dept_id = await _get_user_department_id(db, approver["id"])
+        if mgr_dept_id:
+            query = query.where(ApprovalRequest.department_id == mgr_dept_id)
+
     result = await db.execute(
-        select(ApprovalRequest)
-        .where(ApprovalRequest.status.in_(statuses))
-        .order_by(ApprovalRequest.created_at.desc())
+        query.order_by(ApprovalRequest.created_at.desc())
     )
     requests = result.scalars().all()
     
@@ -379,8 +453,7 @@ async def list_my_requests(
     db: AsyncSession = Depends(get_db),
 ):
     """List current user's own approval requests (for editors to track status)"""
-    from uuid import UUID as PyUUID
-    user_id = PyUUID(current_user["id"])
+    user_id = UUID(current_user["id"])
     
     result = await db.execute(
         select(ApprovalRequest)
@@ -423,30 +496,26 @@ async def list_my_requests(
 
 async def _handle_delete_approval(approval, extra_data, approver, note, db):
     """Handle delete file approval: remove from Google Drive."""
-    from backend.api.v1.documents import get_gdrive_service
     gdrive = get_gdrive_service()
-    
+
     file_id = extra_data.get("file_id")
     file_name = extra_data.get("file_name", "Unknown")
-    
+
     gdrive.delete_file(file_id)
-    print(f"🗑️ [Approval] Deleted file: {file_id} ({file_name})")
-    
+    logger.info(f"Deleted file via approval: {file_id} ({file_name})")
+
     approval.status = "approved"
     approval.reviewer_id = UUID(approver["id"])
-    approval.reviewed_at = datetime.utcnow()
+    approval.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     approval.review_note = note
-    await db.commit()
-    
+
     return {"success": True, "message": f"File '{file_name}' has been deleted", "file_id": file_id}
 
 
 async def _handle_update_approval(approval, extra_data, approver, note, db):
     """Handle update file approval: move old to _OLD/, move new to target."""
-    from backend.api.v1.documents import get_gdrive_service
-    from backend.db.repositories.document_repo import DocumentRepository
     gdrive = get_gdrive_service()
-    
+
     file_id = extra_data.get("file_id")
     replace_file_id = extra_data.get("replace_file_id")
     target_folder_id = extra_data.get("target_folder_id")
@@ -501,25 +570,22 @@ async def _handle_update_approval(approval, extra_data, approver, note, db):
             folder_id=target_folder_id, folder_path=extra_data.get("target_folder_name", ""),
             version=2, old_drive_id=replace_file_id, change_note=change_note,
             uploaded_by=approval.requester_id, approved_by=UUID(approver["id"]),
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
 
     # 5. Update approval
     approval.status = "approved"
     approval.reviewer_id = UUID(approver["id"])
-    approval.reviewed_at = datetime.utcnow()
+    approval.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     approval.review_note = note
-    await db.commit()
 
     return {"success": True, "message": f"File '{file_name}' updated (old version moved to _OLD/)", "file_id": file_id}
 
 
 async def _handle_upload_approval(approval, extra_data, approver, note, db):
     """Handle upload file approval: move from pending to target folder."""
-    from backend.api.v1.documents import get_gdrive_service
-    from backend.db.repositories.document_repo import DocumentRepository
     gdrive = get_gdrive_service()
-    
+
     file_id = extra_data.get("file_id")
     target_folder_id = extra_data.get("target_folder_id")
 
@@ -539,14 +605,22 @@ async def _handle_upload_approval(approval, extra_data, approver, note, db):
         mime_type=extra_data.get("mime_type"), file_size=extra_data.get("file_size"),
         folder_id=target_folder_id, folder_path=extra_data.get("target_folder_name", ""),
         uploaded_by=approval.requester_id, approved_by=UUID(approver["id"]),
-        approved_at=datetime.utcnow(),
+        approved_at=datetime.now(timezone.utc).replace(tzinfo=None),
     )
 
     approval.status = "approved"
     approval.reviewer_id = UUID(approver["id"])
-    approval.reviewed_at = datetime.utcnow()
+    approval.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     approval.review_note = note
-    await db.commit()
+
+    # Log + notify requester
+    await log_activity(db, approver["id"], approver["email"], "file.approve",
+        target_type="approval", target_id=str(approval.id),
+        details={"step": 2, "file_name": file_name, "action": "final_approve"})
+    await create_notification(db, approval.requester_id,
+        "✅ File đã được duyệt",
+        f"File '{file_name}' đã được duyệt và di chuyển vào thư mục đích.",
+        "approved", link="/sources")
 
     return {"success": True, "message": f"File '{file_name}' approved and moved to target folder", "file_id": file_id}
 
@@ -591,9 +665,29 @@ async def approve_request(
         else:
             approval.status = "manager_approved"
             approval.reviewer_id = UUID(approver["id"])
-            approval.reviewed_at = datetime.utcnow()
+            approval.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             approval.review_note = note or "Manager approved (Step 1)"
-            await db.commit()
+
+            await log_activity(db, approver["id"], approver["email"], "file.approve",
+                target_type="approval", target_id=str(approval.id),
+                details={"step": 1, "file_name": (approval.extra_data or {}).get("file_name")})
+
+            # Notify admins that Step 1 is complete
+            from backend.db.models import UserRole, Role
+            admin_result = await db.execute(
+                select(UserRole.user_id)
+                .join(Role, Role.id == UserRole.role_id)
+                .where(Role.name.in_(["admin", "super_admin"]))
+            )
+            for row in admin_result.all():
+                await create_notification(
+                    db, row[0],
+                    "📝 Chờ duyệt Bước 2",
+                    f"Manager đã duyệt file '{(approval.extra_data or {}).get('file_name', '')}'. Chờ Admin duyệt Bước 2.",
+                    "approval_needed",
+                    link="/admin/approvals",
+                )
+
             return {
                 "success": True,
                 "message": f"✅ Manager đã duyệt (Bước 1). Chờ Admin duyệt (Bước 2).",
@@ -645,11 +739,19 @@ async def reject_request(
     # Update approval record
     approval.status = "rejected"
     approval.reviewer_id = UUID(approver["id"])
-    approval.reviewed_at = datetime.utcnow()
+    approval.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     approval.review_note = note
-    
-    await db.commit()
-    
+
+    # Log + notify requester
+    file_name = (approval.extra_data or {}).get("file_name", "")
+    await log_activity(db, approver["id"], approver["email"], "file.reject",
+        target_type="approval", target_id=str(approval.id),
+        details={"file_name": file_name, "reason": note})
+    await create_notification(db, approval.requester_id,
+        "❌ Yêu cầu bị từ chối",
+        f"File '{file_name}' đã bị từ chối." + (f" Lý do: {note}" if note else ""),
+        "rejected", link="/approval-history")
+
     return {
         "success": True,
         "message": f"Request rejected",
@@ -659,9 +761,6 @@ async def reject_request(
 
 # =============================================================================
 # Batch Approve / Reject
-# =============================================================================
-
-from pydantic import BaseModel
 
 
 class BatchActionRequest(BaseModel):
@@ -715,7 +814,7 @@ async def batch_approve(
                 else:
                     approval.status = "manager_approved"
                     approval.reviewer_id = UUID(approver["id"])
-                    approval.reviewed_at = datetime.utcnow()
+                    approval.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                     approval.review_note = body.note or "Manager approved (Step 1 - batch)"
                     results["success"] += 1
                     continue
@@ -776,7 +875,7 @@ async def batch_reject(
 
             approval.status = "rejected"
             approval.reviewer_id = UUID(approver["id"])
-            approval.reviewed_at = datetime.utcnow()
+            approval.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             approval.review_note = body.note
             results["success"] += 1
 

@@ -3,8 +3,13 @@ RBAC Models - Users, Roles, Permissions
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
+
+
+def _utcnow():
+    """Naive UTC now, compatible with TIMESTAMP WITHOUT TIME ZONE columns."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from sqlalchemy import (
     Column, String, Boolean, DateTime, Integer, Text, ForeignKey,
@@ -32,7 +37,7 @@ class User(Base):
     name = Column(String(255), nullable=True)
     avatar_url = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
     last_login = Column(DateTime, nullable=True)
     
     # Relationships
@@ -76,7 +81,7 @@ class UserRole(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role_id = Column(UUID(as_uuid=True), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False)
-    assigned_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    assigned_at = Column(DateTime, default=_utcnow, nullable=False)
     
     # Relationships
     user = relationship("User", back_populates="user_roles")
@@ -177,7 +182,7 @@ class Department(Base):
     description = Column(Text, nullable=True)
     parent_id = Column(UUID(as_uuid=True), ForeignKey("departments.id", ondelete="SET NULL"), nullable=True)
     drive_folder_id = Column(String(255), nullable=True)  # Google Drive folder for this dept
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     # Relationships
     parent = relationship("Department", remote_side=[id], backref="children")
@@ -215,27 +220,59 @@ class UserDepartment(Base):
     )
 
 
-class FolderGrant(Base):
+# =============================================================================
+# Activity Log / Audit Trail
+# =============================================================================
+
+class ActivityLog(Base):
     """
-    Admin grants a user access to view another department's folders/files.
+    Audit trail: who did what, when, to what.
     """
-    __tablename__ = "folder_grants"
+    __tablename__ = "activity_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    user_email = Column(String(255), nullable=False)
+    action = Column(String(100), nullable=False)       # e.g. user.login, file.approve
+    target_type = Column(String(50), nullable=True)     # user, file, approval, department
+    target_id = Column(String(255), nullable=True)
+    details = Column(JSONB, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("ix_activity_user", "user_id", "created_at"),
+        Index("ix_activity_action", "action", "created_at"),
+    )
+
+
+# =============================================================================
+# Notifications
+# =============================================================================
+
+class Notification(Base):
+    """
+    In-app notifications for users.
+    """
+    __tablename__ = "notifications"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    department_id = Column(UUID(as_uuid=True), ForeignKey("departments.id", ondelete="CASCADE"), nullable=False)
-    granted_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String(50), nullable=False)  # approval_needed, approved, rejected, role_changed
+    link = Column(String(500), nullable=True)
+    is_read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
 
-    # Relationships
-    user = relationship("User", foreign_keys=[user_id])
-    department = relationship("Department")
-    granter = relationship("User", foreign_keys=[granted_by])
+    user = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint("user_id", "department_id", name="uq_folder_grant"),
-        Index("ix_folder_grants_user", "user_id"),
+        Index("ix_notif_user", "user_id", "is_read", "created_at"),
     )
+
 
 
 # =============================================================================
@@ -297,7 +334,7 @@ class ApprovalRequest(Base):
     extra_data = Column(JSONB, nullable=True)
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
     reviewed_at = Column(DateTime, nullable=True)
     
     # Final reviewer info (Admin)
@@ -336,8 +373,8 @@ class ChatSession(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     notebook_id = Column(String(255), nullable=True)  # Optional context ID
     title = Column(String(500), default="New Chat", nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     # Relationships
     user = relationship("User")
@@ -365,7 +402,7 @@ class ChatMessage(Base):
     role = Column(String(20), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
     source_ids = Column(JSONB, nullable=True)  # Optional: selected source IDs for this message
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     # Relationships
     session = relationship("ChatSession", back_populates="messages")
@@ -407,7 +444,7 @@ class Document(Base):
     # Tracking
     uploaded_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    uploaded_at = Column(DateTime, default=_utcnow, nullable=False)
     approved_at = Column(DateTime, nullable=True)
 
     # RAG indexing
@@ -451,8 +488,8 @@ class DocumentChunk(Base):
     chunk_text = Column(Text, nullable=False)
     token_count = Column(Integer)
     metadata_ = Column("metadata", JSONB, default={})
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     __table_args__ = (
         UniqueConstraint("file_id", "chunk_index", name="uq_chunk_file_index"),

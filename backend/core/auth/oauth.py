@@ -14,6 +14,9 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 from backend.config import settings
+from backend.logger import get_logger
+
+logger = get_logger("oauth")
 
 
 class OAuthService:
@@ -113,7 +116,7 @@ class OAuthService:
         with open(self._token_file, 'w') as f:
             json.dump(token_data, f, indent=2)
         
-        print(f"✅ OAuth tokens saved to {self._token_file}")
+        logger.info(f"OAuth tokens saved to {self._token_file}")
     
     def _load_tokens(self) -> Optional[Credentials]:
         """Load OAuth tokens from file"""
@@ -135,7 +138,7 @@ class OAuthService:
             
             return credentials
         except Exception as e:
-            print(f"⚠️ Error loading tokens: {e}")
+            logger.warning(f"Error loading tokens: {e}")
             return None
     
     def get_valid_credentials(self) -> Optional[Credentials]:
@@ -155,9 +158,9 @@ class OAuthService:
             try:
                 credentials.refresh(Request())
                 self._save_tokens(credentials)
-                print("🔄 Access token refreshed")
+                logger.info("Access token refreshed")
             except Exception as e:
-                print(f"❌ Token refresh failed: {e}")
+                logger.error(f"Token refresh failed: {e}")
                 return None
         
         return credentials if credentials.valid else None
@@ -166,7 +169,7 @@ class OAuthService:
         """Clear all saved tokens (logout)"""
         if self._token_file.exists():
             self._token_file.unlink()
-            print("🗑️ OAuth tokens cleared")
+            logger.info("OAuth tokens cleared")
     
     # ==========================================================================
     # Status & User Info
@@ -206,7 +209,7 @@ class OAuthService:
             user_info = service.userinfo().get().execute()
             return user_info.get('email')
         except Exception as e:
-            print(f"⚠️ Could not get user email: {e}")
+            logger.warning(f"Could not get user email: {e}")
             return None
     
     def is_authenticated(self) -> bool:

@@ -9,6 +9,7 @@ from backend.api.v1 import auth, documents, health
 from backend.api.v1 import rbac_auth, admin, approvals, chat_history
 from backend.api.v1 import rag
 from backend.api.v1 import dashboard
+from backend.api.v1 import activity_logs, notifications
 
 # Create main API router
 api_router = APIRouter(prefix="/api/v1")
@@ -31,6 +32,7 @@ api_router.include_router(rag.router)
 # Dashboard routes
 api_router.include_router(dashboard.router)
 
-
-
+# Activity logs & notifications
+api_router.include_router(activity_logs.router)
+api_router.include_router(notifications.router)
 

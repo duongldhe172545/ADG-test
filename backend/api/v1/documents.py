@@ -4,16 +4,23 @@ Google Drive operations and file management
 """
 
 import os
+import uuid as uuid_mod
 from typing import List, Dict, Any
 
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
 from backend.config import settings
 from backend.services.gdrive_service import GoogleDriveService
 from backend.services.permission_service import get_current_user, get_current_user_optional
 from backend.db.connection import get_db
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from backend.db.models import Resource, Permission, PermissionType, UserDepartment, Department
+from backend.logger import get_logger
+
+logger = get_logger("documents")
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -31,9 +38,6 @@ def _build_credentials_from_env():
     
     if not settings.OAUTH_CLIENT_ID or not settings.OAUTH_CLIENT_SECRET:
         return None
-    
-    from google.oauth2.credentials import Credentials
-    from google.auth.transport.requests import Request
     
     credentials = Credentials(
         token=None,  # Will be refreshed automatically
@@ -53,7 +57,7 @@ def _build_credentials_from_env():
         credentials.refresh(Request())
         return credentials
     except Exception as e:
-        print(f"⚠️ Failed to refresh Drive token from .env: {e}")
+        logger.warning(f"Failed to refresh Drive token from .env: {e}")
         return None
 
 
@@ -131,8 +135,7 @@ async def list_folders(
             
             # ─── Permission filter for lazy-loaded items ───
             if current_user and not any(r in ['admin', 'super_admin'] for r in current_user.get('roles', [])):
-                from backend.db.models import Resource, Permission, PermissionType
-                import uuid as uuid_mod
+                # Models already imported at top of file (Resource, Permission, PermissionType)
                 
                 user_uuid = current_user['id']
                 if isinstance(user_uuid, str):
@@ -238,9 +241,6 @@ async def list_folders(
         
         # ─── Permission filter: non-admin users only see allowed folders ───
         if current_user and not any(r in ['admin', 'super_admin'] for r in current_user.get('roles', [])):
-            from backend.db.models import Resource, Permission, PermissionType
-            import uuid as uuid_mod
-            
             user_uuid = current_user['id']
             if isinstance(user_uuid, str):
                 user_uuid = uuid_mod.UUID(user_uuid)
@@ -292,6 +292,8 @@ async def list_folders(
         }
         
     except Exception as e:
+        import traceback
+        logger.error(f"Error in list_folders: {e}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -330,9 +332,6 @@ async def search_files(
         # Permission filter: non-admin users only see results in allowed folders
         is_admin = any(r in ['admin', 'super_admin'] for r in current_user.get('roles', []))
         if not is_admin:
-            from backend.db.models import Resource, Permission, PermissionType, UserDepartment, Department
-            import uuid as uuid_mod
-            
             user_uuid = current_user['id']
             if isinstance(user_uuid, str):
                 user_uuid = uuid_mod.UUID(user_uuid)

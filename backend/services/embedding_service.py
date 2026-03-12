@@ -13,6 +13,10 @@ from typing import List, Optional
 from dotenv import load_dotenv
 load_dotenv()
 
+from backend.logger import get_logger
+
+logger = get_logger("embedding")
+
 
 class EmbeddingService:
     """
@@ -81,11 +85,11 @@ class EmbeddingService:
                 last_error = e
                 if "429" in str(e) or "quota" in str(e).lower():
                     wait = (2 ** attempt) * 2
-                    print(f"[EmbeddingService] Rate limited, waiting {wait}s...")
+                    logger.warning(f"Rate limited, waiting {wait}s...")
                     time.sleep(wait)
                 elif attempt < self.MAX_RETRIES - 1:
                     wait = 2 ** attempt
-                    print(f"[EmbeddingService] Error: {e}, retrying in {wait}s...")
+                    logger.warning(f"Error: {e}, retrying in {wait}s...")
                     time.sleep(wait)
 
         raise RuntimeError(f"Embedding failed after {self.MAX_RETRIES} retries: {last_error}")

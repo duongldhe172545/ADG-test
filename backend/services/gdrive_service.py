@@ -14,6 +14,10 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
+from backend.logger import get_logger
+
+logger = get_logger("gdrive")
+
 # Google Drive MIME types
 MIME_FOLDER = 'application/vnd.google-apps.folder'
 
@@ -135,7 +139,7 @@ class GoogleDriveService:
             supportsAllDrives=True
         ).execute()
         
-        print(f"✅ Created folder: {name} (ID: {folder.get('id')})")
+        logger.info(f"Created folder: {name} (ID: {folder.get('id')})")
         return folder
     
     def list_folders(self, parent_id: str) -> List[Dict[str, Any]]:
@@ -295,16 +299,33 @@ class GoogleDriveService:
         if parent_id:
             file_metadata['parents'] = [parent_id]
         
+        # Auto-detect Shared Drive from parent folder
+        # Service Accounts have no personal storage quota, so we MUST
+        # target a Shared Drive for uploads to succeed
+        drive_id = None
+        if parent_id:
+            try:
+                parent_info = self.service.files().get(
+                    fileId=parent_id,
+                    fields='driveId',
+                    supportsAllDrives=True
+                ).execute()
+                drive_id = parent_info.get('driveId')
+            except Exception as e:
+                logger.warning(f"Could not detect driveId for parent {parent_id}: {e}")
+        
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
         
-        file = self.service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id, name, webViewLink, mimeType',
-            supportsAllDrives=True
-        ).execute()
+        create_kwargs = {
+            'body': file_metadata,
+            'media_body': media,
+            'fields': 'id, name, webViewLink, mimeType',
+            'supportsAllDrives': True,
+        }
         
-        print(f"✅ Uploaded file: {file_name} (ID: {file.get('id')})")
+        file = self.service.files().create(**create_kwargs).execute()
+        
+        logger.info(f"Uploaded file: {file_name} (ID: {file.get('id')}) driveId={drive_id}")
         return file
     
     def share_file_public(self, file_id: str) -> bool:
@@ -329,10 +350,10 @@ class GoogleDriveService:
                 body=permission,
                 supportsAllDrives=True
             ).execute()
-            print(f"🔓 Shared file publicly: {file_id}")
+            logger.info(f"Shared file publicly: {file_id}")
             return True
         except Exception as e:
-            print(f"⚠️ Failed to share file: {e}")
+            logger.warning(f"Failed to share file: {e}")
             return False
     
     def delete_file(self, file_id: str) -> None:
@@ -341,7 +362,7 @@ class GoogleDriveService:
             fileId=file_id,
             supportsAllDrives=True
         ).execute()
-        print(f"🗑️ Deleted file: {file_id}")
+        logger.info(f"Deleted file: {file_id}")
     
     def move_file(
         self, 
@@ -377,7 +398,7 @@ class GoogleDriveService:
             supportsAllDrives=True
         ).execute()
         
-        print(f"📁 Moved file {file_id} to {new_parent_id}")
+        logger.info(f"Moved file {file_id} to {new_parent_id}")
         return file
     
     # ==========================================================================

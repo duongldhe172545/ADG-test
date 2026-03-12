@@ -236,36 +236,46 @@
         }
 
         .sidebar-footer {
-            padding: 1rem 1.25rem;
+            padding: 1rem;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
 
         .user-avatar {
-            width: 32px;
-            height: 32px;
-            background: var(--accent);
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.875rem;
+        }
+
+        .user-details {
+            overflow: hidden;
         }
 
         .user-name {
-            font-size: 0.8rem;
+            font-size: 0.875rem;
             font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .user-role {
-            font-size: 0.7rem;
+        .user-role,
+        .user-email {
+            font-size: 0.75rem;
             color: rgba(255, 255, 255, 0.5);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .logout-btn {
@@ -514,7 +524,7 @@
 <body>
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header">
+        <div class="sidebar-header" style="display:flex;align-items:center;justify-content:space-between;">
             <a href="/dashboard" class="sidebar-logo">
                 <div class="sidebar-logo-icon">✨</div>
                 <div>
@@ -522,37 +532,48 @@
                     <div class="sidebar-logo-sub">Knowledge Hub</div>
                 </div>
             </a>
+            <div style="position:relative;">
+                <a href="javascript:void(0)" id="notifBell" onclick="toggleNotifDropdown()"
+                    style="color:rgba(255,255,255,0.7);font-size:1.1rem;cursor:pointer;position:relative;">🔔<span id="notifBadge">0</span></a>
+                <div id="notifDropdown" class="notif-dropdown">
+                    <div class="notif-header">
+                        <strong>🔔 Thông báo</strong>
+                        <a href="javascript:markAllRead()">Đọc hết</a>
+                    </div>
+                    <div class="notif-tabs">
+                        <button class="notif-tab active" data-filter="all" onclick="setNotifFilter('all')">Tất cả</button>
+                        <button class="notif-tab" data-filter="unread" onclick="setNotifFilter('unread')">Chưa đọc</button>
+                    </div>
+                    <div id="notifList" style="padding:0.375rem;"></div>
+                </div>
+            </div>
         </div>
         <nav class="sidebar-nav">
             <a href="/" class="nav-item" data-roles="all"><span>🏠</span> Trang chủ</a>
-            <a href="/dashboard" class="nav-item" data-roles="super_admin,admin,manager,employer"><span>📊</span>
-                Dashboard</a>
+            <a href="/dashboard" class="nav-item" data-roles="super_admin,admin,manager,employer"
+                style="display:none;"><span>📊</span> Dashboard</a>
             <a href="/sources" class="nav-item" data-roles="admin,manager,employer"
                 style="display:none;"><span>📁</span> Tài liệu</a>
             <a href="/upload" class="nav-item" data-roles="admin,manager,employer" style="display:none;"><span>📤</span>
                 Upload</a>
             <a href="/approval-history" class="nav-item" data-roles="admin,manager,employer"
                 style="display:none;"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin/users" class="nav-item" data-roles="super_admin,admin" style="display:none;"><span>👥</span>
-                Quản lý
-                Users</a>
-            <a href="/admin/approvals" class="nav-item active" data-roles="admin,manager"
-                style="display:none;"><span>📋</span> Phê duyệt</a>
-            <a href="/admin/folders" class="nav-item" data-roles="admin,manager" style="display:none;"><span>📁</span>
-                Tạo thư
-                mục</a>
-            <a href="/admin-dashboard" class="nav-item" data-roles="super_admin" style="display:none;"><span>⚙️</span>
-                Admin Panel</a>
+            <a href="/admin-dashboard" class="nav-item active" data-roles="super_admin,admin"
+                style="display:none;"><span>⚙️</span> Admin Panel</a>
+            <a href="/admin-dashboard" class="nav-item active" data-roles="manager"
+                style="display:none;"><span>📋</span> Manager Panel</a>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
                 <div class="user-avatar" id="userAvatar">?</div>
                 <div class="user-details">
                     <div class="user-name" id="userName">Loading...</div>
-                    <div class="user-email" id="userRole">-</div>
+                    <div class="user-email" id="userEmail">-</div>
                 </div>
-                <button class="logout-btn" onclick="logout()" title="Đăng xuất">🚪</button>
             </div>
+            <a href="javascript:void(0)" onclick="logout()"
+                style="display:block;margin-top:0.5rem;color:rgba(255,255,255,0.5);font-size:0.75rem;text-decoration:none;text-align:center;">🚪
+                Đăng xuất</a>
         </div>
     </aside>
 
@@ -701,7 +722,7 @@
                 return;
             }
             document.getElementById('userName').textContent = authData.name || authData.email.split('@')[0];
-            document.getElementById('userRole').textContent = authData.roles.join(', ');
+            document.getElementById('userEmail').textContent = authData.email || '-';
             document.getElementById('userAvatar').textContent = authData.email[0].toUpperCase();
             // Show/hide nav links based on roles
             document.querySelectorAll('.sidebar-nav .nav-item[data-roles]').forEach(link => {
@@ -917,7 +938,10 @@
             } catch (e) { showToast('❌ Lỗi kết nối', 'error'); }
         }
 
-        // Utilities
+    </script>
+    <script src="/static/js/notification.js"></script>
+    <script>
+
         async function logout() {
             await fetch(`${API}/rbac/logout`, { method: 'POST' });
             window.location.href = '/login';

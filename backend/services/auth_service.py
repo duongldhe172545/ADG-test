@@ -3,7 +3,7 @@ JWT Authentication Service for RBAC
 Handles JWT token creation/validation and user whitelist checking.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -22,13 +22,13 @@ from backend.db.models import User, UserRole, Role, RolePermission, PermissionTy
 
 def create_access_token(user_id: str, email: str, roles: list[str]) -> str:
     """Create JWT access token"""
-    expire = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
     payload = {
         "sub": str(user_id),
         "email": email,
         "roles": roles,
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(timezone.utc).replace(tzinfo=None),
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
@@ -116,11 +116,12 @@ async def login_user(db: AsyncSession, email: str, name: str = None, avatar_url:
     if not user:
         return None
     
-    # Update user info from Google
-    user.last_login = datetime.utcnow()
-    if name:
+    # Update last_login
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Only update name/avatar from Google if not already set in DB
+    if name and not user.name:
         user.name = name
-    if avatar_url:
+    if avatar_url and not user.avatar_url:
         user.avatar_url = avatar_url
     
     await db.commit()

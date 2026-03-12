@@ -3,11 +3,16 @@ Authentication API Routes
 OAuth2 endpoints for Google authentication
 """
 
+import os
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
 
 from backend.core.auth.oauth import get_oauth_service
 from backend.models.responses import AuthStatusResponse
+from backend.logger import get_logger
+
+logger = get_logger("auth")
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -47,28 +52,22 @@ async def callback(code: str = None, error: str = None):
     
     try:
         # Fix scope mismatch: Google may add 'openid' to scopes
-        import os
         os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
         
         credentials = oauth_service.exchange_code(code)
         email = oauth_service.get_user_email(credentials)
         
-        # Print refresh token to console for .env setup
+        # Log refresh token for .env setup
         if credentials.refresh_token:
-            print()
-            print("=" * 60)
-            print("  🔑 REFRESH TOKEN (copy to .env)")
-            print("=" * 60)
-            print()
-            print(f"  GDRIVE_REFRESH_TOKEN={credentials.refresh_token}")
-            print()
-            print("=" * 60)
-            print()
+            logger.info("=" * 60)
+            logger.info("  REFRESH TOKEN (copy to .env)")
+            logger.info("=" * 60)
+            logger.info(f"  GDRIVE_REFRESH_TOKEN={credentials.refresh_token}")
+            logger.info("=" * 60)
         
         return RedirectResponse(url=f"/upload?auth=success&email={email or 'user'}")
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error(f"OAuth callback error: {e}", exc_info=True)
         return RedirectResponse(url=f"/upload?error={str(e)}")
 
 
