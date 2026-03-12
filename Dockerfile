@@ -1,5 +1,5 @@
 # ==============================================================================
-# ADG Knowledge Management System - Production Dockerfile (Optimized)
+# ADG Knowledge Management System - Production Dockerfile
 # ==============================================================================
 
 FROM python:3.13-slim
@@ -8,7 +8,6 @@ FROM python:3.13-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
-    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -22,10 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # Copy only what's needed (not entire repo)
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
-COPY start.sh .
-RUN dos2unix start.sh && chmod +x start.sh
 
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["./start.sh"]
+# Use Python startup script instead of bash (avoids CRLF line ending issues)
+CMD ["python", "-m", "backend.startup"]
