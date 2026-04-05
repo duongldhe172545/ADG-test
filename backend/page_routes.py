@@ -41,28 +41,28 @@ def register_page_routes(app: FastAPI):
 
     @app.get("/sources", response_class=HTMLResponse)
     async def sources_page(request: Request):
-        return templates.TemplateResponse("sources.html", {"request": request, "active_page": "sources"})
+        return templates.TemplateResponse(name="sources.html", context={"request": request, "active_page": "sources"})
 
     @app.get("/upload", response_class=HTMLResponse)
     async def upload_page(request: Request):
-        return templates.TemplateResponse("upload.html", {"request": request, "active_page": "upload"})
+        return templates.TemplateResponse(name="upload.html", context={"request": request, "active_page": "upload"})
 
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard_page(request: Request):
-        return templates.TemplateResponse("dashboard.html", {"request": request, "active_page": "dashboard"})
+        return templates.TemplateResponse(name="dashboard.html", context={"request": request, "active_page": "dashboard"})
 
     @app.get("/approval-history", response_class=HTMLResponse)
     async def approval_history_page(request: Request):
-        return templates.TemplateResponse("approval_history.html", {"request": request, "active_page": "approval_history"})
+        return templates.TemplateResponse(name="approval_history.html", context={"request": request, "active_page": "approval_history"})
 
     # Admin pages
     @app.get("/admin-dashboard", response_class=HTMLResponse)
     async def admin_dashboard_page(request: Request):
-        return templates.TemplateResponse("admin_dashboard.html", {"request": request, "active_page": "admin_dashboard"})
+        return templates.TemplateResponse(name="admin_dashboard.html", context={"request": request, "active_page": "admin_dashboard"})
 
     @app.get("/admin/users", response_class=HTMLResponse)
     async def admin_users_page(request: Request):
-        return templates.TemplateResponse("admin_users.html", {"request": request, "active_page": "admin_users"})
+        return templates.TemplateResponse(name="admin_users.html", context={"request": request, "active_page": "admin_users"})
 
     @app.get("/admin-users")
     async def admin_users_page_alias():
@@ -71,12 +71,12 @@ def register_page_routes(app: FastAPI):
 
     @app.get("/admin/approvals", response_class=HTMLResponse)
     async def admin_approvals_page(request: Request):
-        return templates.TemplateResponse("admin_approvals.html", {"request": request, "active_page": "admin_approvals"})
+        return templates.TemplateResponse(name="admin_approvals.html", context={"request": request, "active_page": "admin_approvals"})
 
     @app.get("/admin/folders", response_class=HTMLResponse)
     async def admin_folders_page(request: Request):
-        return templates.TemplateResponse("admin_folders.html", {"request": request, "active_page": "admin_folders"})
+        return templates.TemplateResponse(name="admin_folders.html", context={"request": request, "active_page": "admin_folders"})
 
     @app.get("/admin/activity-logs", response_class=HTMLResponse)
     async def admin_activity_logs_page(request: Request):
-        return templates.TemplateResponse("admin_activity_logs.html", {"request": request, "active_page": "admin_activity_logs"})
+        return templates.TemplateResponse(name="admin_activity_logs.html", context={"request": request, "active_page": "admin_activity_logs"})
