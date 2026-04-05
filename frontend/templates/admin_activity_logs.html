@@ -1,684 +1,335 @@
-<!DOCTYPE html>
-<html lang="vi">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Activity Log - ADG Marketing Hub</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-primary: #f8fafc;
-            --bg-secondary: #ffffff;
-            --bg-sidebar: #1e293b;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --accent: #3b82f6;
-            --accent-light: rgba(59, 130, 246, 0.1);
-            --border: #e2e8f0;
-            --success: #22c55e;
-            --success-light: rgba(34, 197, 94, 0.1);
-            --warning: #f59e0b;
-            --warning-light: rgba(245, 158, 11, 0.1);
-            --error: #ef4444;
-            --error-light: rgba(239, 68, 68, 0.1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 220px;
-            background: var(--bg-sidebar);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            height: 100vh;
-            z-index: 50;
-        }
-
-        .sidebar-header {
-            padding: 1.25rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .sidebar-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: white;
-        }
-
-        .sidebar-logo-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        .sidebar-logo-text {
-            font-weight: 700;
-            font-size: 0.9rem;
-        }
-
-        .sidebar-logo-sub {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .sidebar-nav {
-            padding: 1rem 0;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.25rem;
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-        }
-
-        .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .nav-item.active {
-            background: rgba(59, 130, 246, 0.3);
-            color: white;
-            border-left: 3px solid var(--accent);
-        }
-
-        .sidebar-footer {
-            padding: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-        }
-
-        .user-details {
-            overflow: hidden;
-        }
-
-        .user-name {
-            font-size: 0.875rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-email {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.5);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .logout-btn {
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.5);
-            cursor: pointer;
-            font-size: 1rem;
-            padding: 4px;
-            border-radius: 6px;
-        }
-
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        /* Badge for notification */
-        .notif-badge {
-            background: var(--error);
-            color: white;
-            font-size: 0.625rem;
-            font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 10px;
-            margin-left: auto;
-            min-width: 18px;
-            text-align: center;
-            display: none;
-        }
-
-        /* Main */
-        .main {
-            margin-left: 220px;
-            flex: 1;
-            padding: 1.5rem 2rem;
-        }
-
-        .page-header {
-            margin-bottom: 1.5rem;
-        }
-
-        .page-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .page-subtitle {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-
-        /* Filters */
-        .filters {
-            display: flex;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .filters input,
-        .filters select {
-            padding: 0.5rem 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.8125rem;
-            background: var(--bg-secondary);
-            font-family: inherit;
-            outline: none;
-            transition: border 0.15s;
-        }
-
-        .filters input:focus,
-        .filters select:focus {
-            border-color: var(--accent);
-        }
-
-        /* Card */
-        .card {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-        }
-
-        .card-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-title {
-            font-size: 1rem;
-            font-weight: 600;
-        }
-
-        /* Table */
-        .table-wrap {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8125rem;
-        }
-
-        th {
-            background: var(--bg-primary);
-            padding: 0.625rem 1rem;
-            text-align: left;
-            color: var(--text-secondary);
-            font-weight: 500;
-            text-transform: uppercase;
-            font-size: 0.6875rem;
-            letter-spacing: 0.05em;
-        }
-
-        td {
-            padding: 0.625rem 1rem;
-            border-top: 1px solid var(--border);
-            vertical-align: middle;
-        }
-
-        tr:hover td {
-            background: rgba(59, 130, 246, 0.02);
-        }
-
-        /* Action badge */
-        .action-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .action-badge.login {
-            background: rgba(59, 130, 246, 0.1);
-            color: #3b82f6;
-        }
-
-        .action-badge.approve {
-            background: rgba(34, 197, 94, 0.1);
-            color: #22c55e;
-        }
-
-        .action-badge.reject {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-        }
-
-        .action-badge.upload {
-            background: rgba(245, 158, 11, 0.1);
-            color: #f59e0b;
-        }
-
-        .action-badge.role {
-            background: rgba(168, 85, 247, 0.1);
-            color: #a855f7;
-        }
-
-        .action-badge.default {
-            background: rgba(100, 116, 139, 0.1);
-            color: #64748b;
-        }
-
-        /* Pagination */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem;
-        }
-
-        .pagination .btn {
-            padding: 0.375rem 0.75rem;
-            border-radius: 8px;
-            font-size: 0.8125rem;
-        }
-
-        .page-info {
-            font-size: 0.8125rem;
-            color: var(--text-secondary);
-        }
-
-        /* Buttons */
-        .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-            transition: all 0.15s;
-            font-family: inherit;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #2563eb;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-        }
-
-        .btn-outline:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .btn-sm {
-            padding: 0.375rem 0.625rem;
-            font-size: 0.75rem;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-state-icon {
-            font-size: 2.5rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .empty-state-text {
-            font-size: 0.875rem;
-        }
-
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            padding: 0.75rem 1.25rem;
-            border-radius: 10px;
-            color: white;
-            font-size: 0.8125rem;
-            z-index: 9999;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <aside class="sidebar">
-        <div class="sidebar-header" style="display:flex;align-items:center;justify-content:space-between;">
-            <a href="/dashboard" class="sidebar-logo">
-                <div class="sidebar-logo-icon">✨</div>
-                <div>
-                    <div class="sidebar-logo-text">ADG Admin</div>
-                    <div class="sidebar-logo-sub">Knowledge Hub</div>
-                </div>
-            </a>
-            <div style="position:relative;">
-                <a href="javascript:void(0)" id="notifBell" onclick="toggleNotifDropdown()"
-                    style="color:rgba(255,255,255,0.7);font-size:1.1rem;cursor:pointer;position:relative;">🔔<span id="notifBadge">0</span></a>
-                <div id="notifDropdown" class="notif-dropdown">
-                    <div class="notif-header">
-                        <strong>🔔 Thông báo</strong>
-                        <a href="javascript:markAllRead()">Đọc hết</a>
-                    </div>
-                    <div class="notif-tabs">
-                        <button class="notif-tab active" data-filter="all" onclick="setNotifFilter('all')">Tất cả</button>
-                        <button class="notif-tab" data-filter="unread" onclick="setNotifFilter('unread')">Chưa đọc</button>
-                    </div>
-                    <div id="notifList" style="padding:0.375rem;"></div>
-                </div>
-            </div>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="/" class="nav-item" data-roles="all"><span>🏠</span> Trang chủ</a>
-            <a href="/dashboard" class="nav-item" data-roles="super_admin,admin,manager,employer"
-                style="display:none;"><span>📊</span> Dashboard</a>
-            <a href="/sources" class="nav-item" data-roles="admin,manager,employer"
-                style="display:none;"><span>📁</span> Tài liệu</a>
-            <a href="/upload" class="nav-item" data-roles="admin,manager,employer" style="display:none;"><span>📤</span>
-                Upload</a>
-            <a href="/approval-history" class="nav-item" data-roles="admin,manager,employer"
-                style="display:none;"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin-dashboard" class="nav-item active" data-roles="super_admin,admin"
-                style="display:none;"><span>⚙️</span> Admin Panel</a>
-            <a href="/admin-dashboard" class="nav-item active" data-roles="manager"
-                style="display:none;"><span>📋</span> Manager Panel</a>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <div class="user-avatar" id="userAvatar">?</div>
-                <div class="user-details">
-                    <div class="user-name" id="userName">Loading...</div>
-                    <div class="user-email" id="userEmail">-</div>
-                </div>
-            </div>
-            <a href="javascript:void(0)" onclick="logout()"
-                style="display:block;margin-top:0.5rem;color:rgba(255,255,255,0.5);font-size:0.75rem;text-decoration:none;text-align:center;">🚪
-                Đăng xuất</a>
-        </div>
-    </aside>
-
-    <main class="main">
-        <div class="page-header">
-            <div class="page-title">📝 Activity Log</div>
-            <div class="page-subtitle">Lịch sử hoạt động hệ thống — ai làm gì, khi nào</div>
-        </div>
-
-        <!-- Filters -->
-        <div class="filters">
-            <input type="text" id="filterEmail" placeholder="🔍 Tìm theo email..." style="width:200px;"
-                oninput="debouncedLoad()">
-            <select id="filterAction" onchange="loadLogs(1)">
-                <option value="">Tất cả hành động</option>
-                <option value="user.role_change">👤 Đổi role</option>
-                <option value="user.dept_change">🏢 Đổi phòng ban</option>
-                <option value="file.approve">✅ Duyệt file</option>
-                <option value="file.reject">❌ Từ chối file</option>
-                <option value="file.upload">📤 Upload file</option>
-                <option value="folder.permission">🔐 Phân quyền</option>
-            </select>
-            <button class="btn btn-outline btn-sm" onclick="loadLogs(1)">🔄 Làm mới</button>
-            <span class="page-info" id="totalInfo" style="margin-left:auto;"></span>
-        </div>
-
-        <!-- Log Table -->
-        <div class="card">
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>THỜI GIAN</th>
-                            <th>NGƯỜI THỰC HIỆN</th>
-                            <th>HÀNH ĐỘNG</th>
-                            <th>ĐỐI TƯỢNG</th>
-                            <th>CHI TIẾT</th>
-                            <th>IP</th>
-                        </tr>
-                    </thead>
-                    <tbody id="logsTable">
-                        <tr>
-                            <td colspan="6" class="empty-state">
-                                <div class="empty-state-icon">⏳</div>
-                                <div>Đang tải...</div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <!-- Pagination -->
-            <div class="pagination" id="paginationControls" style="display:none;">
-                <button class="btn btn-outline btn-sm" id="btnPrev" onclick="loadLogs(currentPage-1)" disabled>←
-                    Trước</button>
-                <span class="page-info" id="pageInfo">Trang 1/1</span>
-                <button class="btn btn-outline btn-sm" id="btnNext" onclick="loadLogs(currentPage+1)" disabled>Tiếp
-                    →</button>
-            </div>
-        </div>
-    </main>
-
-    <script>
-        const API = '/api/v1';
-        let currentPage = 1;
-        let debounceTimer = null;
-
-        function debouncedLoad() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => loadLogs(1), 400);
-        }
-
-        // =====================================================================
-        // Auth
-        // =====================================================================
-        async function checkAuth() {
-            try {
-                const res = await fetch(`${API}/rbac/check`);
-                if (!res.ok) { window.location.href = '/login'; return; }
-                const data = await res.json();
-                document.getElementById('userName').textContent = data.name || data.email.split('@')[0];
-                document.getElementById('userEmail').textContent = data.email || '-';
-                document.getElementById('userAvatar').textContent = data.email[0].toUpperCase();
-
-                // Show sidebar items by role
-                document.querySelectorAll('.nav-item[data-roles]').forEach(item => {
-                    const roles = item.dataset.roles;
-                    if (roles === 'all' || data.roles.some(r => roles.includes(r))) {
-                        item.style.display = '';
-                    }
-                });
-
-                loadLogs(1);
-            } catch (e) {
-                window.location.href = '/login';
-            }
-        }
-
-    </script>
-    <script src="/static/js/notification.js"></script>
-    <script>
-
-        function logout() {
-            document.cookie = 'access_token=; Max-Age=0; path=/';
-            window.location.href = '/login';
-        }
-
-        // =====================================================================
-        // Activity Logs
-        // =====================================================================
-        async function loadLogs(page = 1) {
-            currentPage = page;
-            const email = document.getElementById('filterEmail').value.trim();
-            const action = document.getElementById('filterAction').value;
-
-            let url = `${API}/activity-logs?page=${page}&page_size=20`;
-            if (email) url += `&user_email=${encodeURIComponent(email)}`;
-            if (action) url += `&action=${encodeURIComponent(action)}`;
-
-            try {
-                const res = await fetch(url);
-                if (!res.ok) throw new Error('API error');
-                const data = await res.json();
-
-                document.getElementById('totalInfo').textContent = `Tổng: ${data.total} bản ghi`;
-
-                if (data.logs.length === 0) {
-                    document.getElementById('logsTable').innerHTML = `
-                        <tr><td colspan="6" class="empty-state">
-                            <div class="empty-state-icon">📭</div>
-                            <div class="empty-state-text">Chưa có hoạt động nào</div>
-                        </td></tr>`;
-                    document.getElementById('paginationControls').style.display = 'none';
-                    return;
-                }
-
-                document.getElementById('logsTable').innerHTML = data.logs.map(log => `
+{% extends "base.html" %}
+
+{% block title %}Activity Log - ADG Marketing Hub{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Page header */
+    .page-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .page-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Filters */
+    .filters {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .filters input,
+    .filters select {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.8125rem;
+        background: var(--bg-secondary);
+        font-family: inherit;
+        outline: none;
+        transition: border 0.15s;
+    }
+
+    .filters input:focus,
+    .filters select:focus {
+        border-color: var(--accent);
+    }
+
+    /* Card */
+    .card {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+    }
+
+    /* Table */
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+    }
+
+    th {
+        background: var(--bg-primary);
+        padding: 0.625rem 1rem;
+        text-align: left;
+        color: var(--text-secondary);
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 0.6875rem;
+        letter-spacing: 0.05em;
+    }
+
+    td {
+        padding: 0.625rem 1rem;
+        border-top: 1px solid var(--border);
+        vertical-align: middle;
+    }
+
+    tr:hover td {
+        background: rgba(59, 130, 246, 0.02);
+    }
+
+    /* Action badge */
+    .action-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .action-badge.login { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .action-badge.approve { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .action-badge.reject { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .action-badge.upload { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .action-badge.role { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+    .action-badge.default { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+
+    .pagination .btn {
+        padding: 0.375rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+    }
+
+    .page-info {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+    }
+
+    /* Buttons */
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+        font-family: inherit;
+    }
+
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm { padding: 0.375rem 0.625rem; font-size: 0.75rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Empty/Toast */
+    .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-secondary); }
+    .empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state-text { font-size: 0.875rem; }
+
+    .toast {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 10px;
+        color: white;
+        font-size: 0.8125rem;
+        z-index: 9999;
+        animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+    }
+</style>
+{% endblock %}
+
+{% block header %}{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem 2rem;">
+    <div class="page-header">
+        <div class="page-title">📝 Activity Log</div>
+        <div class="page-subtitle">Lịch sử hoạt động hệ thống — ai làm gì, khi nào</div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <input type="text" id="filterEmail" placeholder="🔍 Tìm theo email..." style="width:200px;"
+            oninput="debouncedLoad()">
+        <select id="filterAction" onchange="loadLogs(1)">
+            <option value="">Tất cả hành động</option>
+            <option value="user.role_change">👤 Đổi role</option>
+            <option value="user.dept_change">🏢 Đổi phòng ban</option>
+            <option value="file.approve">✅ Duyệt file</option>
+            <option value="file.reject">❌ Từ chối file</option>
+            <option value="file.upload">📤 Upload file</option>
+            <option value="folder.permission">🔐 Phân quyền</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="loadLogs(1)">🔄 Làm mới</button>
+        <span class="page-info" id="totalInfo" style="margin-left:auto;"></span>
+    </div>
+
+    <!-- Log Table -->
+    <div class="card">
+        <div class="table-wrap">
+            <table>
+                <thead>
                     <tr>
-                        <td style="white-space:nowrap;color:var(--text-secondary);font-size:0.75rem;">${toVN(log.created_at)}</td>
-                        <td><strong>${log.user_email}</strong></td>
-                        <td>${actionBadge(log.action)}</td>
-                        <td>${log.target_type ? `<span style="color:var(--text-secondary);">${log.target_type}</span>` : '—'}</td>
-                        <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title='${JSON.stringify(log.details || {})}'>${formatDetails(log.details)}</td>
-                        <td style="color:var(--text-secondary);font-size:0.75rem;">${log.ip_address || '—'}</td>
+                        <th>THỜI GIAN</th>
+                        <th>NGƯỜI THỰC HIỆN</th>
+                        <th>HÀNH ĐỘNG</th>
+                        <th>ĐỐI TƯỢNG</th>
+                        <th>CHI TIẾT</th>
+                        <th>IP</th>
                     </tr>
-                `).join('');
+                </thead>
+                <tbody id="logsTable">
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-icon">⏳</div>
+                            <div>Đang tải...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination -->
+        <div class="pagination" id="paginationControls" style="display:none;">
+            <button class="btn btn-outline btn-sm" id="btnPrev" onclick="loadLogs(currentPage-1)" disabled>←
+                Trước</button>
+            <span class="page-info" id="pageInfo">Trang 1/1</span>
+            <button class="btn btn-outline btn-sm" id="btnNext" onclick="loadLogs(currentPage+1)" disabled>Tiếp
+                →</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-                // Pagination
-                if (data.total_pages > 1) {
-                    document.getElementById('paginationControls').style.display = 'flex';
-                    document.getElementById('pageInfo').textContent = `Trang ${data.page}/${data.total_pages}`;
-                    document.getElementById('btnPrev').disabled = data.page <= 1;
-                    document.getElementById('btnNext').disabled = data.page >= data.total_pages;
-                } else {
-                    document.getElementById('paginationControls').style.display = 'none';
-                }
-            } catch (e) {
-                console.error(e);
+{% block extra_js %}
+<script>
+    const API = '/api/v1';
+    let currentPage = 1;
+    let debounceTimer = null;
+
+    function debouncedLoad() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => loadLogs(1), 400);
+    }
+
+    async function loadLogs(page = 1) {
+        currentPage = page;
+        const email = document.getElementById('filterEmail').value.trim();
+        const action = document.getElementById('filterAction').value;
+
+        let url = `${API}/activity-logs?page=${page}&page_size=20`;
+        if (email) url += `&user_email=${encodeURIComponent(email)}`;
+        if (action) url += `&action=${encodeURIComponent(action)}`;
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('API error');
+            const data = await res.json();
+
+            document.getElementById('totalInfo').textContent = `Tổng: ${data.total} bản ghi`;
+
+            if (data.logs.length === 0) {
                 document.getElementById('logsTable').innerHTML = `
                     <tr><td colspan="6" class="empty-state">
-                        <div class="empty-state-icon">❌</div>
-                        <div class="empty-state-text">Lỗi tải dữ liệu</div>
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">Chưa có hoạt động nào</div>
                     </td></tr>`;
+                document.getElementById('paginationControls').style.display = 'none';
+                return;
             }
+
+            document.getElementById('logsTable').innerHTML = data.logs.map(log => `
+                <tr>
+                    <td style="white-space:nowrap;color:var(--text-secondary);font-size:0.75rem;">${toVN(log.created_at)}</td>
+                    <td><strong>${log.user_email}</strong></td>
+                    <td>${actionBadge(log.action)}</td>
+                    <td>${log.target_type ? `<span style="color:var(--text-secondary);">${log.target_type}</span>` : '—'}</td>
+                    <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title='${JSON.stringify(log.details || {})}'>${formatDetails(log.details)}</td>
+                    <td style="color:var(--text-secondary);font-size:0.75rem;">${log.ip_address || '—'}</td>
+                </tr>
+            `).join('');
+
+            // Pagination
+            if (data.total_pages > 1) {
+                document.getElementById('paginationControls').style.display = 'flex';
+                document.getElementById('pageInfo').textContent = `Trang ${data.page}/${data.total_pages}`;
+                document.getElementById('btnPrev').disabled = data.page <= 1;
+                document.getElementById('btnNext').disabled = data.page >= data.total_pages;
+            } else {
+                document.getElementById('paginationControls').style.display = 'none';
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('logsTable').innerHTML = `
+                <tr><td colspan="6" class="empty-state">
+                    <div class="empty-state-icon">❌</div>
+                    <div class="empty-state-text">Lỗi tải dữ liệu</div>
+                </td></tr>`;
         }
+    }
 
-        function actionBadge(action) {
-            const map = {
-                'user.login': ['login', '🔑 Đăng nhập'],
-                'user.role_change': ['role', '👤 Đổi role'],
-                'user.dept_change': ['role', '🏢 Đổi phòng'],
-                'file.approve': ['approve', '✅ Duyệt'],
-                'file.reject': ['reject', '❌ Từ chối'],
-                'file.upload': ['upload', '📤 Upload'],
-                'file.batch_approve': ['approve', '✅ Batch duyệt'],
-                'file.batch_reject': ['reject', '❌ Batch từ chối'],
-                'folder.permission': ['role', '🔐 Phân quyền'],
-                'user.create': ['login', '➕ Tạo user'],
-                'user.deactivate': ['reject', '🚫 Vô hiệu hoá'],
-            };
-            const [cls, label] = map[action] || ['default', action];
-            return `<span class="action-badge ${cls}">${label}</span>`;
-        }
+    function actionBadge(action) {
+        const map = {
+            'user.login': ['login', '🔑 Đăng nhập'],
+            'user.role_change': ['role', '👤 Đổi role'],
+            'user.dept_change': ['role', '🏢 Đổi phòng'],
+            'file.approve': ['approve', '✅ Duyệt'],
+            'file.reject': ['reject', '❌ Từ chối'],
+            'file.upload': ['upload', '📤 Upload'],
+            'file.batch_approve': ['approve', '✅ Batch duyệt'],
+            'file.batch_reject': ['reject', '❌ Batch từ chối'],
+            'folder.permission': ['role', '🔐 Phân quyền'],
+            'user.create': ['login', '➕ Tạo user'],
+            'user.deactivate': ['reject', '🚫 Vô hiệu hoá'],
+        };
+        const [cls, label] = map[action] || ['default', action];
+        return `<span class="action-badge ${cls}">${label}</span>`;
+    }
 
-        function formatDetails(details) {
-            if (!details) return '—';
-            const parts = [];
-            if (details.file_name) parts.push(`📄 ${details.file_name}`);
-            if (details.role_from && details.role_to) parts.push(`${details.role_from} → ${details.role_to}`);
-            if (details.dept_name) parts.push(`🏢 ${details.dept_name}`);
-            if (details.target_email) parts.push(details.target_email);
-            if (details.reason) parts.push(`Lý do: ${details.reason}`);
-            if (details.success !== undefined) parts.push(`${details.success}✅ ${details.fail || 0}❌`);
-            return parts.length > 0 ? parts.join(' · ') : JSON.stringify(details).slice(0, 60);
-        }
+    function formatDetails(details) {
+        if (!details) return '—';
+        const parts = [];
+        if (details.file_name) parts.push(`📄 ${details.file_name}`);
+        if (details.role_from && details.role_to) parts.push(`${details.role_from} → ${details.role_to}`);
+        if (details.dept_name) parts.push(`🏢 ${details.dept_name}`);
+        if (details.target_email) parts.push(details.target_email);
+        if (details.reason) parts.push(`Lý do: ${details.reason}`);
+        if (details.success !== undefined) parts.push(`${details.success}✅ ${details.fail || 0}❌`);
+        return parts.length > 0 ? parts.join(' · ') : JSON.stringify(details).slice(0, 60);
+    }
 
-        function toVN(iso) {
-            if (!iso) return '—';
-            const d = new Date(iso);
-            return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        }
+    function toVN(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
 
-        // Init
-        checkAuth();
-    </script>
-</body>
-
-</html>
+    // Init: load logs after base.html's loadUserInfo completes
+    loadLogs(1);
+</script>
+{% endblock %}

@@ -16,6 +16,7 @@ from backend.services.rag_service import get_rag_service
 from backend.db.connection import get_db
 from backend.db.repositories.chat_repo import ChatRepository
 from backend.services.permission_service import get_current_user
+from backend.api.v1.admin import require_admin
 
 
 router = APIRouter(prefix="/rag", tags=["RAG"])
@@ -232,7 +233,7 @@ async def rag_chat_stream(
     async def event_generator():
         full_answer = ""
         citations = []
-        async for event in rag.query_stream(
+        async for event in rag.smart_query_stream(
             question=request.question,
             chat_history=chat_history,
             file_ids=request.file_ids,
@@ -241,6 +242,8 @@ async def rag_chat_stream(
             event_type = event.get("type", "")
             if event_type == "meta":
                 citations = event.get("citations", [])
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            elif event_type == "status":
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
             elif event_type == "text":
                 full_answer += event.get("chunk", "")
@@ -271,7 +274,7 @@ async def rag_chat_stream(
 
 
 @router.post("/index", response_model=IndexResponse)
-async def index_file(request: IndexFileRequest):
+async def index_file(request: IndexFileRequest, admin: dict = Depends(require_admin)):
     """
     Index a file from Google Drive for RAG.
     Downloads the file, parses text, chunks it, generates embeddings,
@@ -292,7 +295,7 @@ async def index_file(request: IndexFileRequest):
 
 
 @router.post("/reindex")
-async def reindex_folder(folder_id: str = Body(..., embed=True)):
+async def reindex_folder(folder_id: str = Body(..., embed=True), admin: dict = Depends(require_admin)):
     """
     Re-index all files in a Google Drive folder.
     """
@@ -336,7 +339,7 @@ async def reindex_folder(folder_id: str = Body(..., embed=True)):
 
 
 @router.get("/status", response_model=StatusResponse)
-async def get_status():
+async def get_status(admin: dict = Depends(require_admin)):
     """Get RAG indexing status and statistics."""
     try:
         rag = get_rag_service()
@@ -346,7 +349,7 @@ async def get_status():
 
 
 @router.delete("/chunks/{file_id}")
-async def delete_file_chunks(file_id: str):
+async def delete_file_chunks(file_id: str, admin: dict = Depends(require_admin)):
     """Delete all indexed chunks for a specific file."""
     try:
         rag = get_rag_service()

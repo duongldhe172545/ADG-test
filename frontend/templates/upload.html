@@ -1,1556 +1,412 @@
-<!DOCTYPE html>
-<html lang="vi">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Knowledge Asset - ADG Marketing Hub</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-primary: #f8fafc;
-            --bg-secondary: #ffffff;
-            --bg-sidebar: #1e293b;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --text-light: #94a3b8;
-            --accent: #3b82f6;
-            --accent-dark: #2563eb;
-            --accent-light: rgba(59, 130, 246, 0.08);
-            --border: #e2e8f0;
-            --border-light: #f1f5f9;
-            --success: #22c55e;
-            --success-light: rgba(34, 197, 94, 0.08);
-            --warning: #f59e0b;
-            --warning-light: rgba(245, 158, 11, 0.08);
-            --error: #ef4444;
-            --error-light: rgba(239, 68, 68, 0.08);
-            --radius: 12px;
-            --radius-lg: 16px;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            display: flex;
-            min-height: 100vh;
-            color: var(--text-primary);
-        }
-
-        /* ===== Sidebar ===== */
-        .sidebar {
-            width: 240px;
-            background: var(--bg-sidebar);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            position: fixed;
-            left: 0;
-            top: 0;
-            z-index: 50;
-        }
-
-        .sidebar-header {
-            padding: 1.25rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .sidebar-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: white;
-        }
-
-        .sidebar-logo-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        .sidebar-logo-text {
-            font-weight: 700;
-            font-size: 0.9rem;
-        }
-
-        .sidebar-logo-sub {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .sidebar-nav {
-            padding: 1rem 0;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.25rem;
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-        }
-
-        .nav-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .nav-item.active {
-            background: rgba(59, 130, 246, 0.3);
-            color: white;
-            border-left: 3px solid var(--accent);
-        }
-
-        .sidebar-footer {
-            padding: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-        }
-
-        .user-details {
-            overflow: hidden;
-        }
-
-        .user-name {
-            font-size: 0.875rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-email {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.5);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* ===== Main Content ===== */
-        .main-content {
-            margin-left: 240px;
-            flex: 1;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Header */
-        .header {
-            padding: 0.875rem 2rem;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .breadcrumb {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.8125rem;
-            color: var(--text-secondary);
-        }
-
-        .breadcrumb a {
-            color: var(--text-secondary);
-            text-decoration: none;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--accent);
-        }
-
-        .breadcrumb .sep {
-            color: var(--text-light);
-        }
-
-        .breadcrumb .current {
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .auth-status {
-            display: none;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            padding: 0.4rem 0.75rem;
-            background: var(--bg-primary);
-            border-radius: 8px;
-        }
-
-        .btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .btn-outline {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-        }
-
-        .btn-outline:hover {
-            background: var(--bg-primary);
-            border-color: #cbd5e1;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-            border: none;
-        }
-
-        .btn-primary:hover {
-            background: var(--accent-dark);
-        }
-
-        .btn-primary:disabled {
-            background: #cbd5e1;
-            cursor: not-allowed;
-        }
-
-        .btn-sm {
-            padding: 0.35rem 0.75rem;
-            font-size: 0.75rem;
-        }
-
-        .btn-ghost {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            padding: 0.35rem 0.5rem;
-        }
-
-        .btn-ghost:hover {
-            color: var(--accent);
-            background: var(--accent-light);
-        }
-
-        /* Page */
-        .page-content {
-            padding: 1.5rem 2rem;
-            flex: 1;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1.5rem;
-        }
-
-        .page-title h1 {
-            font-size: 1.375rem;
-            font-weight: 800;
-        }
-
-        .page-title p {
-            font-size: 0.8125rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        /* ===== Upload Grid — 2 columns ===== */
-        .upload-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            align-items: start;
-        }
-
-        /* Card */
-        .card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.25rem;
-        }
-
-        .card-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text-secondary);
-        }
-
-        .file-badge {
-            font-size: 0.7rem;
-            font-weight: 600;
-            padding: 0.2rem 0.65rem;
-            border-radius: 999px;
-            background: var(--accent);
-            color: white;
-        }
-
-        .file-badge.empty {
-            background: var(--border);
-            color: var(--text-light);
-        }
-
-        /* Drop Zone */
-        .drop-zone {
-            border: 2px dashed var(--border);
-            border-radius: var(--radius);
-            padding: 2.5rem 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 1rem;
-        }
-
-        .drop-zone:hover,
-        .drop-zone.dragover {
-            border-color: var(--accent);
-            background: var(--accent-light);
-        }
-
-        .drop-zone-icon {
-            width: 52px;
-            height: 52px;
-            background: var(--accent-light);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            margin: 0 auto 0.75rem;
-        }
-
-        .drop-zone-text {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .drop-zone-hint {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 0.35rem;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        /* File List */
-        .file-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.65rem 0.875rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius);
-            transition: all 0.15s;
-        }
-
-        .file-item:hover {
-            border-color: var(--border);
-        }
-
-        .file-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.6rem;
-            font-weight: 700;
-            color: white;
-            flex-shrink: 0;
-        }
-
-        .file-icon.pdf {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-        }
-
-        .file-icon.docx {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-        }
-
-        .file-icon.pptx {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-        }
-
-        .file-icon.xlsx {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-        }
-
-        .file-icon.txt {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-        }
-
-        .file-details {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .file-name {
-            font-size: 0.8125rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .file-meta {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            margin-top: 0.125rem;
-        }
-
-        .file-remove {
-            background: none;
-            border: none;
-            color: var(--text-light);
-            cursor: pointer;
-            font-size: 0.875rem;
-            padding: 0.25rem;
-            border-radius: 6px;
-            transition: all 0.15s;
-        }
-
-        .file-remove:hover {
-            color: var(--error);
-            background: var(--error-light);
-        }
-
-        /* File Validation Warning */
-        .file-warning {
-            display: none;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 0.875rem;
-            background: var(--warning-light);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            border-radius: var(--radius);
-            font-size: 0.75rem;
-            color: #b45309;
-            margin-top: 0.5rem;
-        }
-
-        .file-warning.show {
-            display: flex;
-        }
-
-        /* Progress */
-        .upload-progress {
-            display: none;
-            margin-top: 1rem;
-        }
-
-        .upload-progress.active {
-            display: block;
-        }
-
-        .progress-bar {
-            height: 6px;
-            background: var(--border-light);
-            border-radius: 999px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), #8b5cf6);
-            border-radius: 999px;
-            transition: width 0.3s;
-        }
-
-        .progress-text {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-            text-align: center;
-        }
-
-        /* Upload Result */
-        .upload-result {
-            display: none;
-            padding: 1rem;
-            border-radius: var(--radius);
-            margin-top: 0.75rem;
-        }
-
-        .upload-result.success {
-            display: block;
-            background: var(--success-light);
-            border: 1px solid rgba(34, 197, 94, 0.2);
-        }
-
-        .upload-result.error {
-            display: block;
-            background: var(--error-light);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-
-        .result-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .result-text {
-            font-size: 0.8125rem;
-            color: var(--text-secondary);
-        }
-
-        .result-link {
-            color: var(--accent);
-            text-decoration: none;
-            font-size: 0.8125rem;
-        }
-
-        .result-link:hover {
-            text-decoration: underline;
-        }
-
-        /* ===== Right Panel: Settings ===== */
-        .section-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text-secondary);
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .section-title .required {
-            color: var(--error);
-        }
-
-        /* Folder Tree */
-        .folder-tree-container {
-            max-height: 220px;
-            overflow-y: auto;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .folder-tree-container::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .folder-tree-container::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 4px;
-        }
-
-        .folder-tree-item {
-            user-select: none;
-        }
-
-        .folder-tree-row {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.4rem 0.5rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8125rem;
-            transition: background 0.15s;
-        }
-
-        .folder-tree-row:hover {
-            background: var(--accent-light);
-        }
-
-        .folder-tree-row.selected {
-            background: var(--accent);
-            color: white;
-        }
-
-        .folder-toggle {
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.6rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        .folder-toggle.has-children {
-            cursor: pointer;
-        }
-
-        .folder-icon {
-            font-size: 0.875rem;
-            flex-shrink: 0;
-        }
-
-        .folder-name {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .folder-children {
-            display: none;
-            margin-left: 1.25rem;
-        }
-
-        .folder-children.expanded {
-            display: block;
-        }
-
-        .folder-path {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            padding: 0.35rem 0;
-        }
-
-        .folder-select {
-            display: none;
-        }
-
-        /* Classification */
-        .classification-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .classification-option {
-            position: relative;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
-            padding: 0.875rem 0.75rem;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-align: center;
-        }
-
-        .classification-option:hover {
-            border-color: #cbd5e1;
-        }
-
-        .classification-option.selected {
-            border-color: var(--accent);
-            background: var(--accent-light);
-        }
-
-        .classification-option input {
-            display: none;
-        }
-
-        .classification-icon {
-            font-size: 1.25rem;
-            margin-bottom: 0.35rem;
-        }
-
-        .classification-label {
-            font-size: 0.8125rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .classification-desc {
-            font-size: 0.65rem;
-            color: var(--text-secondary);
-            margin-top: 0.2rem;
-        }
-
-        .classification-check {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.6rem;
-            transition: all 0.15s;
-        }
-
-        .classification-option.selected .classification-check {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: white;
-        }
-
-        /* Form fields */
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-label {
-            font-size: 0.8125rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.35rem;
-            display: block;
-        }
-
-        .form-label .required {
-            color: var(--error);
-        }
-
-        .form-hint {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 0.6rem 0.875rem;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 0.8125rem;
-            color: var(--text-primary);
-            background: var(--bg-secondary);
-            transition: border-color 0.15s;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
-        }
-
-        .form-input-icon {
-            position: relative;
-        }
-
-        .form-input-icon .icon {
-            position: absolute;
-            left: 0.75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.875rem;
-        }
-
-        .form-input-icon .form-input {
-            padding-left: 2.25rem;
-        }
-
-        textarea.form-input {
-            resize: vertical;
-            min-height: 70px;
-        }
-
-        /* Card footer */
-        .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 1rem;
-            margin-top: 1rem;
-            border-top: 1px solid var(--border-light);
-        }
-
-        .card-footer .hint {
-            font-size: 0.7rem;
-            color: var(--text-light);
-        }
-
-        /* Recent Uploads */
-        .recent-uploads {
-            margin-top: 1.5rem;
-        }
-
-        .recent-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.6rem 0;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .recent-item:last-child {
-            border-bottom: none;
-        }
-
-        .recent-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.55rem;
-            font-weight: 700;
-            color: white;
-            flex-shrink: 0;
-        }
-
-        .recent-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .recent-name {
-            font-size: 0.8rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .recent-meta {
-            font-size: 0.65rem;
-            color: var(--text-secondary);
-        }
-
-        .recent-status {
-            font-size: 0.65rem;
-            font-weight: 500;
-            padding: 0.15rem 0.5rem;
-            border-radius: 999px;
-        }
-
-        .status-approved {
-            background: var(--success-light);
-            color: #16a34a;
-        }
-
-        .status-pending {
-            background: var(--warning-light);
-            color: #d97706;
-        }
-
-        .status-direct {
-            background: var(--accent-light);
-            color: var(--accent);
-        }
-
-        /* Toast */
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            padding: 0.75rem 1.25rem;
-            border-radius: var(--radius);
-            font-size: 0.8125rem;
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 200;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .toast-success {
-            background: #065f46;
-            color: #d1fae5;
-        }
-
-        .toast-error {
-            background: #991b1b;
-            color: #fee2e2;
-        }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-            .upload-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header" style="display:flex;align-items:center;justify-content:space-between;">
-            <a href="/dashboard" class="sidebar-logo">
-                <div class="sidebar-logo-icon">✨</div>
-                <div>
-                    <div class="sidebar-logo-text">ADG Admin</div>
-                    <div class="sidebar-logo-sub">Knowledge Hub</div>
+{% extends "base.html" %}
+
+{% block title %}Upload Knowledge Asset - ADG Marketing Hub{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --text-light: #94a3b8;
+        --accent-dark: #2563eb;
+        --border-light: #f1f5f9;
+        --radius: 12px;
+        --radius-lg: 16px;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+        --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Header */
+    .header { padding: 0.875rem 2rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--text-secondary); }
+    .breadcrumb a { color: var(--text-secondary); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb .sep { color: var(--text-light); }
+    .breadcrumb .current { color: var(--text-primary); font-weight: 600; }
+    .header-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .auth-status { display: none; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); padding: 0.4rem 0.75rem; background: var(--bg-primary); border-radius: 8px; }
+
+    .btn { padding: 0.5rem 1rem; border: none; border-radius: 8px; font-family: inherit; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 0.4rem; }
+    .btn-outline { background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-primary); }
+    .btn-outline:hover { background: var(--bg-primary); border-color: #cbd5e1; }
+    .btn-primary { background: var(--accent); color: white; border: none; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-primary:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.75rem; }
+    .btn-ghost { background: none; border: none; color: var(--text-secondary); padding: 0.35rem 0.5rem; }
+    .btn-ghost:hover { color: var(--accent); background: rgba(59,130,246,0.08); }
+
+    .page-content { padding: 1.5rem 2rem; flex: 1; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+    .page-title h1 { font-size: 1.375rem; font-weight: 800; }
+    .page-title p { font-size: 0.8125rem; color: var(--text-secondary); margin-top: 0.25rem; }
+
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+    .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+    .card-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
+    .file-badge { font-size: 0.7rem; font-weight: 600; padding: 0.2rem 0.65rem; border-radius: 999px; background: var(--accent); color: white; }
+    .file-badge.empty { background: var(--border); color: var(--text-light); }
+
+    .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 1rem; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+    .drop-zone-icon { width: 52px; height: 52px; background: rgba(59,130,246,0.08); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin: 0 auto 0.75rem; }
+    .drop-zone-text { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
+    .drop-zone-hint { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.35rem; }
+    .file-input { display: none; }
+
+    .file-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .file-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0.875rem; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: var(--radius); transition: all 0.15s; }
+    .file-item:hover { border-color: var(--border); }
+    .file-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; color: white; flex-shrink: 0; }
+    .file-icon.pdf { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .file-icon.docx { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .file-icon.pptx { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .file-icon.xlsx { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    .file-icon.txt { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .file-details { flex: 1; min-width: 0; }
+    .file-name { font-size: 0.8125rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-meta { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.125rem; }
+    .file-remove { background: none; border: none; color: var(--text-light); cursor: pointer; font-size: 0.875rem; padding: 0.25rem; border-radius: 6px; transition: all 0.15s; }
+    .file-remove:hover { color: var(--error); background: rgba(239,68,68,0.08); }
+
+    .file-warning { display: none; align-items: center; gap: 0.5rem; padding: 0.6rem 0.875rem; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: var(--radius); font-size: 0.75rem; color: #b45309; margin-top: 0.5rem; }
+    .file-warning.show { display: flex; }
+
+    .upload-progress { display: none; margin-top: 1rem; }
+    .upload-progress.active { display: block; }
+    .progress-bar { height: 6px; background: var(--border-light); border-radius: 999px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #8b5cf6); border-radius: 999px; transition: width 0.3s; }
+    .progress-text { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem; text-align: center; }
+
+    .upload-result { display: none; padding: 1rem; border-radius: var(--radius); margin-top: 0.75rem; }
+    .upload-result.success { display: block; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
+    .upload-result.error { display: block; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
+    .result-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.25rem; }
+    .result-text { font-size: 0.8125rem; color: var(--text-secondary); }
+    .result-link { color: var(--accent); text-decoration: none; font-size: 0.8125rem; }
+    .result-link:hover { text-decoration: underline; }
+
+    .section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+    .section-title .required { color: var(--error); }
+
+    .folder-tree-container { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem; margin-bottom: 0.5rem; }
+    .folder-tree-container::-webkit-scrollbar { width: 4px; }
+    .folder-tree-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .folder-tree-item { user-select: none; }
+    .folder-tree-row { display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.8125rem; transition: background 0.15s; }
+    .folder-tree-row:hover { background: rgba(59,130,246,0.08); }
+    .folder-tree-row.selected { background: var(--accent); color: white; }
+    .folder-toggle { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--text-secondary); cursor: pointer; flex-shrink: 0; }
+    .folder-toggle.has-children { cursor: pointer; }
+    .folder-icon { font-size: 0.875rem; flex-shrink: 0; }
+    .folder-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .folder-children { display: none; margin-left: 1.25rem; }
+    .folder-children.expanded { display: block; }
+    .folder-path { font-size: 0.75rem; color: var(--text-secondary); padding: 0.35rem 0; }
+    .folder-select { display: none; }
+
+    .classification-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+    .classification-option { position: relative; border: 2px solid var(--border); border-radius: var(--radius); padding: 0.875rem 0.75rem; cursor: pointer; transition: all 0.15s; text-align: center; }
+    .classification-option:hover { border-color: #cbd5e1; }
+    .classification-option.selected { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+    .classification-option input { display: none; }
+    .classification-icon { font-size: 1.25rem; margin-bottom: 0.35rem; }
+    .classification-label { font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); }
+    .classification-desc { font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.2rem; }
+    .classification-check { position: absolute; top: 0.5rem; right: 0.5rem; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; transition: all 0.15s; }
+    .classification-option.selected .classification-check { background: var(--accent); border-color: var(--accent); color: white; }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-label { font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem; display: block; }
+    .form-label .required { color: var(--error); }
+    .form-hint { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem; }
+    .form-input { width: 100%; padding: 0.6rem 0.875rem; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 0.8125rem; color: var(--text-primary); background: var(--bg-secondary); transition: border-color 0.15s; }
+    .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
+    .form-input-icon { position: relative; }
+    .form-input-icon .icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.875rem; }
+    .form-input-icon .form-input { padding-left: 2.25rem; }
+    textarea.form-input { resize: vertical; min-height: 70px; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; margin-top: 1rem; border-top: 1px solid var(--border-light); }
+
+    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 0.75rem 1.25rem; border-radius: var(--radius); font-size: 0.8125rem; transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 200; box-shadow: var(--shadow-lg); }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: #065f46; color: #d1fae5; }
+    .toast-error { background: #991b1b; color: #fee2e2; }
+
+    @media (max-width: 900px) { .upload-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block header %}
+<header class="header">
+    <div class="breadcrumb">
+        <a href="/">Home</a><span class="sep">›</span><a href="/sources">Library</a><span class="sep">›</span><span class="current">Upload</span>
+    </div>
+    <div class="header-actions">
+        <div class="auth-status" id="authStatus" style="display: none;">
+            <span id="authIcon">⏳</span><span id="authText">Checking...</span>
+        </div>
+        <button class="btn btn-outline btn-sm" id="loginBtn" style="display: none;">🔐 Sign in with Google</button>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <div class="page-header">
+        <div class="page-title"><h1>📤 Upload Knowledge Asset</h1><p>Add new documents to the knowledge base with automated validation.</p></div>
+    </div>
+
+    <div class="upload-grid">
+        <!-- Left Panel: File Source -->
+        <div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">📁 File Source</span><span class="file-badge empty" id="fileBadge">No file</span></div>
+                <input type="file" class="file-input" id="fileInput" multiple accept=".pdf,.doc,.docx,.pptx,.xlsx,.txt">
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-icon">☁️</div>
+                    <div class="drop-zone-text">Drag & drop files here</div>
+                    <div class="drop-zone-hint">or click to browse • PDF, DOCX, PPTX, XLSX, TXT</div>
                 </div>
-            </a>
-            <div style="position:relative;">
-                <a href="javascript:void(0)" id="notifBell" onclick="toggleNotifDropdown()"
-                    style="color:rgba(255,255,255,0.7);font-size:1.1rem;cursor:pointer;position:relative;">🔔<span id="notifBadge">0</span></a>
-                <div id="notifDropdown" class="notif-dropdown">
-                    <div class="notif-header">
-                        <strong>🔔 Thông báo</strong>
-                        <a href="javascript:markAllRead()">Đọc hết</a>
+                <div class="file-list" id="fileList"></div>
+                <div class="file-warning" id="fileWarning"><span>⚠️</span><span id="fileWarningText">File quá lớn</span></div>
+                <div class="upload-progress" id="uploadProgress">
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width: 0%;"></div></div>
+                    <div class="progress-text" id="progressText">Uploading...</div>
+                </div>
+                <div class="upload-result" id="uploadResult"></div>
+
+                <!-- Folder Destination -->
+                <div class="form-group" style="margin-top:1rem;">
+                    <div class="section-title">📁 Upload Destination <span class="required">*</span></div>
+                    <div class="folder-tree-container">
+                        <div class="folder-tree" id="folderTree"><div style="text-align:center;padding:1rem;color:var(--text-secondary);font-size:0.8125rem;">Loading folders...</div></div>
                     </div>
-                    <div class="notif-tabs">
-                        <button class="notif-tab active" data-filter="all" onclick="setNotifFilter('all')">Tất cả</button>
-                        <button class="notif-tab" data-filter="unread" onclick="setNotifFilter('unread')">Chưa đọc</button>
-                    </div>
-                    <div id="notifList" style="padding:0.375rem;"></div>
+                    <select class="folder-select" id="folderSelect" style="display: none;"><option value="">Select folder</option></select>
+                    <div class="folder-path" id="folderPath">Select a folder for your upload</div>
                 </div>
             </div>
         </div>
-        <nav class="sidebar-nav">
-            <a href="/" class="nav-item" data-roles="all"><span>🏠</span> Trang chủ</a>
-            <a href="/dashboard" class="nav-item" data-roles="super_admin,admin,manager,employer"
-                style="display:none;"><span>📊</span> Dashboard</a>
-            <a href="/sources" class="nav-item" data-roles="admin,manager,employer"
-                style="display:none;"><span>📁</span> Tài liệu</a>
-            <a href="/upload" class="nav-item active" data-roles="admin,manager,employer"
-                style="display:none;"><span>📤</span> Upload</a>
-            <a href="/approval-history" class="nav-item" data-roles="admin,manager,employer"
-                style="display:none;"><span>📋</span> Lịch sử duyệt</a>
-            <a href="/admin-dashboard" class="nav-item" data-roles="super_admin,admin"
-                style="display:none;"><span>⚙️</span> Admin Panel</a>
-            <a href="/admin-dashboard" class="nav-item" data-roles="manager" style="display:none;"><span>📋</span>
-                Manager Panel</a>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <div class="user-avatar" id="userAvatar">?</div>
-                <div class="user-details">
-                    <div class="user-name" id="userName">Loading...</div>
-                    <div class="user-email" id="userEmail">-</div>
-                </div>
-            </div>
-            <a href="javascript:void(0)" onclick="logout()"
-                style="display:block;margin-top:0.5rem;color:rgba(255,255,255,0.5);font-size:0.75rem;text-decoration:none;text-align:center;">🚪
-                Đăng xuất</a>
-        </div>
-    </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="header">
-            <div class="breadcrumb">
-                <a href="/">Home</a>
-                <span class="sep">›</span>
-                <a href="/sources">Library</a>
-                <span class="sep">›</span>
-                <span class="current">Upload</span>
-            </div>
-            <div class="header-actions">
-                <div class="auth-status" id="authStatus" style="display: none;">
-                    <span id="authIcon">⏳</span>
-                    <span id="authText">Checking...</span>
-                </div>
-                <button class="btn btn-outline btn-sm" id="loginBtn" style="display: none;">
-                    🔐 Sign in with Google
-                </button>
-            </div>
-        </header>
-
-        <div class="page-content">
-            <div class="page-header">
-                <div class="page-title">
-                    <h1>📤 Upload Knowledge Asset</h1>
-                    <p>Add new documents to the knowledge base with automated validation.</p>
-                </div>
-            </div>
-
-            <div class="upload-grid">
-                <!-- ===== Left Panel: File Source ===== -->
-                <div>
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-title">📁 File Source</span>
-                            <span class="file-badge empty" id="fileBadge">No file</span>
-                        </div>
-
-                        <input type="file" class="file-input" id="fileInput" multiple
-                            accept=".pdf,.doc,.docx,.pptx,.xlsx,.txt">
-
-                        <div class="drop-zone" id="dropZone">
-                            <div class="drop-zone-icon">☁️</div>
-                            <div class="drop-zone-text">Drag & drop files here</div>
-                            <div class="drop-zone-hint">or click to browse • PDF, DOCX, PPTX, XLSX, TXT</div>
-                        </div>
-
-                        <div class="file-list" id="fileList"></div>
-
-                        <div class="file-warning" id="fileWarning">
-                            <span>⚠️</span>
-                            <span id="fileWarningText">File quá lớn</span>
-                        </div>
-
-                        <div class="upload-progress" id="uploadProgress">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
-                            </div>
-                            <div class="progress-text" id="progressText">Uploading...</div>
-                        </div>
-
-                        <div class="upload-result" id="uploadResult"></div>
-
-                        <!-- Folder Destination -->
-                        <div class="form-group" style="margin-top:1rem;">
-                            <div class="section-title">📁 Upload Destination <span class="required">*</span></div>
-                            <div class="folder-tree-container">
-                                <div class="folder-tree" id="folderTree">
-                                    <div
-                                        style="text-align:center;padding:1rem;color:var(--text-secondary);font-size:0.8125rem;">
-                                        Loading folders...</div>
-                                </div>
-                            </div>
-                            <select class="folder-select" id="folderSelect" style="display: none;">
-                                <option value="">Select folder</option>
-                            </select>
-                            <div class="folder-path" id="folderPath">Select a folder for your upload</div>
-                        </div>
+        <!-- Right Panel: Upload Settings -->
+        <div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">⚙️ Upload Settings</span></div>
+                <div class="form-group">
+                    <div class="section-title">🔒 Data Classification <span class="required">*</span></div>
+                    <div class="classification-grid">
+                        <label class="classification-option" onclick="selectClassification(this, 'public')">
+                            <input type="radio" name="classification" value="public">
+                            <div class="classification-check"></div><div class="classification-icon">🌐</div>
+                            <div class="classification-label">Public</div><div class="classification-desc">External distribution</div>
+                        </label>
+                        <label class="classification-option selected" onclick="selectClassification(this, 'internal')">
+                            <input type="radio" name="classification" value="internal" checked>
+                            <div class="classification-check">✓</div><div class="classification-icon">🏢</div>
+                            <div class="classification-label">Internal</div><div class="classification-desc">Employee access only</div>
+                        </label>
+                        <label class="classification-option" onclick="selectClassification(this, 'confidential')">
+                            <input type="radio" name="classification" value="confidential">
+                            <div class="classification-check"></div><div class="classification-icon">🔐</div>
+                            <div class="classification-label">Confidential</div><div class="classification-desc">Restricted access</div>
+                        </label>
                     </div>
                 </div>
-
-                <!-- ===== Right Panel: Upload Settings ===== -->
-                <div>
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-title">⚙️ Upload Settings</span>
-                        </div>
-
-                        <!-- Data Classification -->
-                        <div class="form-group">
-                            <div class="section-title">🔒 Data Classification <span class="required">*</span></div>
-                            <div class="classification-grid">
-                                <label class="classification-option" onclick="selectClassification(this, 'public')">
-                                    <input type="radio" name="classification" value="public">
-                                    <div class="classification-check"></div>
-                                    <div class="classification-icon">🌐</div>
-                                    <div class="classification-label">Public</div>
-                                    <div class="classification-desc">External distribution</div>
-                                </label>
-                                <label class="classification-option selected"
-                                    onclick="selectClassification(this, 'internal')">
-                                    <input type="radio" name="classification" value="internal" checked>
-                                    <div class="classification-check">✓</div>
-                                    <div class="classification-icon">🏢</div>
-                                    <div class="classification-label">Internal</div>
-                                    <div class="classification-desc">Employee access only</div>
-                                </label>
-                                <label class="classification-option"
-                                    onclick="selectClassification(this, 'confidential')">
-                                    <input type="radio" name="classification" value="confidential">
-                                    <div class="classification-check"></div>
-                                    <div class="classification-icon">🔐</div>
-                                    <div class="classification-label">Confidential</div>
-                                    <div class="classification-desc">Restricted access</div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Document Owner -->
-                        <div class="form-group">
-                            <label class="form-label">👤 Document Owner <span class="required">*</span></label>
-                            <div class="form-input-icon">
-                                <span class="icon">👤</span>
-                                <input type="text" class="form-input" id="docOwner" readonly
-                                    placeholder="Auto-filled from login">
-                            </div>
-                            <div class="form-hint">Person responsible for maintaining this asset.</div>
-                        </div>
-
-                        <!-- Notes -->
-                        <div class="form-group">
-                            <label class="form-label">📋 Notes <span
-                                    style="color:var(--text-light);font-weight:400;">(optional)</span></label>
-                            <textarea class="form-input" id="docNotes"
-                                placeholder="Describe what this document contains, purpose, or any special notes..."></textarea>
-                        </div>
-
-                        <!-- Footer -->
-                        <div class="card-footer">
-                            <button class="btn btn-outline" id="clearBtn">✕ Clear All</button>
-                            <button class="btn btn-primary" id="uploadBtn" disabled>
-                                📤 Upload to Drive →
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <div class="form-group"><label class="form-label">👤 Document Owner <span class="required">*</span></label><div class="form-input-icon"><span class="icon">👤</span><input type="text" class="form-input" id="docOwner" readonly placeholder="Auto-filled from login"></div><div class="form-hint">Person responsible for maintaining this asset.</div></div>
+                <div class="form-group"><label class="form-label">📋 Notes <span style="color:var(--text-light);font-weight:400;">(optional)</span></label><textarea class="form-input" id="docNotes" placeholder="Describe what this document contains, purpose, or any special notes..."></textarea></div>
+                <div class="card-footer"><button class="btn btn-outline" id="clearBtn">✕ Clear All</button><button class="btn btn-primary" id="uploadBtn" disabled>📤 Upload to Drive →</button></div>
             </div>
         </div>
-    </main>
+    </div>
+</div>
 
-    <!-- Toast -->
-    <div class="toast" id="toast"></div>
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+{% endblock %}
 
-    <script>
-        const API_BASE = window.location.origin;
-        const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+{% block extra_js %}
+<script>
+    const API_BASE = window.location.origin;
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
-        // Elements
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const fileList = document.getElementById('fileList');
-        const fileBadge = document.getElementById('fileBadge');
-        const folderSelect = document.getElementById('folderSelect');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const uploadProgress = document.getElementById('uploadProgress');
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-        const uploadResult = document.getElementById('uploadResult');
-        const authStatus = document.getElementById('authStatus');
-        const authIcon = document.getElementById('authIcon');
-        const authText = document.getElementById('authText');
-        const loginBtn = document.getElementById('loginBtn');
-        const fileWarning = document.getElementById('fileWarning');
-        const fileWarningText = document.getElementById('fileWarningText');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const fileBadge = document.getElementById('fileBadge');
+    const folderSelect = document.getElementById('folderSelect');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const uploadResult = document.getElementById('uploadResult');
+    const authStatus = document.getElementById('authStatus');
+    const authIcon = document.getElementById('authIcon');
+    const authText = document.getElementById('authText');
+    const loginBtn = document.getElementById('loginBtn');
+    const fileWarning = document.getElementById('fileWarning');
+    const fileWarningText = document.getElementById('fileWarningText');
 
-        let selectedFiles = [];
-        let selectedFolderId = '';
-        let selectedFolderName = '';
-        let isAuthenticated = false;
-        let userRoles = [];
-        let notebooks = [];
+    let selectedFiles = [];
+    let selectedFolderId = '';
+    let selectedFolderName = '';
+    let isAuthenticated = false;
+    let userRoles = [];
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuthStatus();
-            loadFolders();
-            setupDragDrop();
-        });
+    // Init — uses base.html auth for sidebar, but also needs local isAuthenticated flag
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAuthStatus();
+        loadFolders();
+        setupDragDrop();
+    });
 
-        // ============================================================
-        // Authentication
-        // ============================================================
-        async function checkAuthStatus() {
-            try {
-                const response = await fetch('/api/v1/rbac/check');
-                const data = await response.json();
-
-                if (data.authenticated) {
-                    isAuthenticated = true;
-                    userRoles = data.roles || [];
-                    const email = data.email || '';
-
-                    authStatus.style.display = 'none';
-                    loginBtn.style.display = 'none';
-                    document.getElementById('userName').textContent = data.name || email.split('@')[0] || 'User';
-                    document.getElementById('userEmail').textContent = email;
-                    document.getElementById('userAvatar').textContent = email.substring(0, 2).toUpperCase();
-                    document.getElementById('docOwner').value = email;
-
-                    if (userRoles.includes('super_admin') || userRoles.includes('admin') || userRoles.includes('manager') || userRoles.includes('employer')) {
-                        // Show nav items based on roles
-                        document.querySelectorAll('.sidebar-nav .nav-item[data-roles]').forEach(link => {
-                            const allowed = link.getAttribute('data-roles');
-                            if (allowed === 'all') { link.style.display = 'flex'; return; }
-                            const allowedRoles = allowed.split(',');
-                            if (userRoles.some(r => allowedRoles.includes(r))) {
-                                link.style.display = 'flex';
-                            }
-                        });
-                    }
-                } else {
-                    isAuthenticated = false;
-                    userRoles = [];
-                    authStatus.style.display = 'flex';
-                    authStatus.className = 'auth-status unauthenticated';
-                    authIcon.textContent = '⚠️';
-                    authText.textContent = 'Chưa đăng nhập';
-                    loginBtn.style.display = 'flex';
-                    document.getElementById('userName').textContent = 'Guest';
-                    document.getElementById('userEmail').textContent = 'Chưa đăng nhập';
-                }
-                updateUploadButton();
-            } catch (e) {
-                isAuthenticated = false;
-                userRoles = [];
-                authStatus.style.display = 'flex';
-                authStatus.className = 'auth-status unauthenticated';
-                authIcon.textContent = '❌';
-                authText.textContent = 'Lỗi xác thực';
+    async function checkAuthStatus() {
+        try {
+            const response = await fetch('/api/v1/rbac/check');
+            const data = await response.json();
+            if (data.authenticated) {
+                isAuthenticated = true;
+                userRoles = data.roles || [];
+                authStatus.style.display = 'none';
+                loginBtn.style.display = 'none';
+                document.getElementById('docOwner').value = data.email || '';
+            } else {
+                isAuthenticated = false; userRoles = [];
+                authStatus.style.display = 'flex'; authStatus.className = 'auth-status unauthenticated';
+                authIcon.textContent = '⚠️'; authText.textContent = 'Chưa đăng nhập';
                 loginBtn.style.display = 'flex';
-                document.getElementById('userName').textContent = 'Guest';
-                document.getElementById('userEmail').textContent = 'Chưa đăng nhập';
             }
+            updateUploadButton();
+        } catch (e) {
+            isAuthenticated = false; userRoles = [];
+            authStatus.style.display = 'flex'; authStatus.className = 'auth-status unauthenticated';
+            authIcon.textContent = '❌'; authText.textContent = 'Lỗi xác thực';
+            loginBtn.style.display = 'flex';
         }
+    }
 
-        loginBtn.addEventListener('click', () => { window.location.href = '/login'; });
+    loginBtn.addEventListener('click', () => { window.location.href = '/login'; });
 
-        // ============================================================
-        // Folder Tree
-        // ============================================================
-        const folderTree = document.getElementById('folderTree');
+    // Folder Tree
+    const folderTree = document.getElementById('folderTree');
+    async function loadFolders() {
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/documents/folders`);
+            const data = await response.json();
+            folderTree.innerHTML = '';
+            function createTreeItem(folder, isRoot = false) {
+                const hasChildren = folder.children && folder.children.length > 0;
+                const item = document.createElement('div'); item.className = 'folder-tree-item';
+                const row = document.createElement('div'); row.className = 'folder-tree-row'; row.dataset.folderId = folder.id; row.dataset.folderName = folder.name;
+                const toggle = document.createElement('span'); toggle.className = 'folder-toggle' + (hasChildren ? ' has-children' : ''); toggle.textContent = hasChildren ? '▶' : '';
+                const icon = document.createElement('span'); icon.className = 'folder-icon'; icon.textContent = '📁';
+                const name = document.createElement('span'); name.className = 'folder-name'; name.textContent = folder.name;
+                row.appendChild(toggle); row.appendChild(icon); row.appendChild(name); item.appendChild(row);
+                if (hasChildren) {
+                    const children = document.createElement('div'); children.className = 'folder-children' + (isRoot ? ' expanded' : '');
+                    for (const child of folder.children) children.appendChild(createTreeItem(child));
+                    item.appendChild(children);
+                    toggle.addEventListener('click', (e) => { e.stopPropagation(); const isExpanded = children.classList.toggle('expanded'); toggle.textContent = isExpanded ? '▼' : '▶'; });
+                    if (isRoot) toggle.textContent = '▼';
+                }
+                row.addEventListener('click', () => {
+                    document.querySelectorAll('.folder-tree-row.selected').forEach(el => el.classList.remove('selected'));
+                    row.classList.add('selected'); selectedFolderId = folder.id; selectedFolderName = folder.name;
+                    document.getElementById('folderPath').textContent = `Will upload to: 📁 ${folder.name}`;
+                    updateUploadButton();
+                });
+                return item;
+            }
+            if (data.folders) { for (const folder of data.folders) folderTree.appendChild(createTreeItem(folder, true)); }
+        } catch (e) { folderTree.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--error);font-size:0.8125rem;">Failed to load folders</div>'; }
+    }
 
-        async function loadFolders() {
+    // Drag & Drop
+    function setupDragDrop() {
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+        fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); });
+    }
+
+    function handleFiles(files) {
+        let warnings = [];
+        for (const file of files) {
+            if (selectedFiles.find(f => f.name === file.name)) continue;
+            if (file.size > MAX_FILE_SIZE) { warnings.push(`"${file.name}" vượt quá 50MB`); continue; }
+            selectedFiles.push(file);
+        }
+        renderFileList(); updateUploadButton();
+        if (warnings.length > 0) { fileWarningText.textContent = warnings.join(', '); fileWarning.classList.add('show'); setTimeout(() => fileWarning.classList.remove('show'), 5000); }
+    }
+
+    function renderFileList() {
+        if (selectedFiles.length === 0) { fileList.innerHTML = ''; fileBadge.textContent = 'No file'; fileBadge.className = 'file-badge empty'; dropZone.style.display = ''; return; }
+        fileBadge.textContent = `${selectedFiles.length} File${selectedFiles.length > 1 ? 's' : ''} Selected`; fileBadge.className = 'file-badge'; dropZone.style.display = 'none';
+        fileList.innerHTML = selectedFiles.map((file, index) => {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const iconClass = ext === 'pdf' ? 'pdf' : ext === 'docx' || ext === 'doc' ? 'docx' : ext === 'pptx' ? 'pptx' : ext === 'xlsx' ? 'xlsx' : 'txt';
+            return `<div class="file-item"><div class="file-icon ${iconClass}">${ext.toUpperCase().slice(0, 3)}</div><div class="file-details"><div class="file-name">${file.name}</div><div class="file-meta">${formatFileSize(file.size)} • Uploaded just now</div></div><button class="file-remove" onclick="removeFile(${index})">✕</button></div>`;
+        }).join('') + `<div style="text-align:center;margin-top:0.5rem;"><button class="btn btn-ghost btn-sm" onclick="document.getElementById('fileInput').click()">+ Add more files</button></div>`;
+    }
+
+    window.removeFile = function(index) { selectedFiles.splice(index, 1); renderFileList(); updateUploadButton(); };
+    function formatFileSize(bytes) { if (bytes < 1024) return bytes + ' B'; if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'; return (bytes / (1024 * 1024)).toFixed(1) + ' MB'; }
+
+    // Classification
+    function selectClassification(el, value) {
+        document.querySelectorAll('.classification-option').forEach(opt => { opt.classList.remove('selected'); opt.querySelector('.classification-check').textContent = ''; });
+        el.classList.add('selected'); el.querySelector('.classification-check').textContent = '✓'; el.querySelector('input').checked = true;
+    }
+
+    // Upload
+    function updateUploadButton() { uploadBtn.disabled = !(selectedFiles.length > 0 && selectedFolderId && isAuthenticated); }
+    function isAdmin() { return userRoles.includes('super_admin') || userRoles.includes('admin'); }
+
+    clearBtn.addEventListener('click', () => {
+        selectedFiles = []; fileInput.value = ''; renderFileList(); updateUploadButton();
+        uploadResult.className = 'upload-result'; uploadResult.innerHTML = ''; dropZone.style.display = '';
+    });
+
+    uploadBtn.addEventListener('click', async () => {
+        if (!selectedFiles.length || !selectedFolderId) return;
+        uploadBtn.disabled = true; uploadProgress.className = 'upload-progress active'; uploadResult.className = 'upload-result';
+        const useApproval = !isAdmin();
+        let successCount = 0, errorCount = 0; const results = [];
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            progressText.textContent = `${useApproval ? 'Gửi duyệt' : 'Uploading'} ${file.name}... (${i + 1}/${selectedFiles.length})`;
+            progressFill.style.width = `${((i + 0.5) / selectedFiles.length) * 100}%`;
             try {
-                const response = await fetch(`${API_BASE}/api/v1/documents/folders`);
-                const data = await response.json();
-                folderTree.innerHTML = '';
-
-                function createTreeItem(folder, isRoot = false) {
-                    const hasChildren = folder.children && folder.children.length > 0;
-                    const item = document.createElement('div');
-                    item.className = 'folder-tree-item';
-
-                    const row = document.createElement('div');
-                    row.className = 'folder-tree-row';
-                    row.dataset.folderId = folder.id;
-                    row.dataset.folderName = folder.name;
-
-                    const toggle = document.createElement('span');
-                    toggle.className = 'folder-toggle' + (hasChildren ? ' has-children' : '');
-                    toggle.textContent = hasChildren ? '▶' : '';
-
-                    const icon = document.createElement('span');
-                    icon.className = 'folder-icon';
-                    icon.textContent = '📁';
-
-                    const name = document.createElement('span');
-                    name.className = 'folder-name';
-                    name.textContent = folder.name;
-
-                    row.appendChild(toggle);
-                    row.appendChild(icon);
-                    row.appendChild(name);
-                    item.appendChild(row);
-
-                    if (hasChildren) {
-                        const children = document.createElement('div');
-                        children.className = 'folder-children' + (isRoot ? ' expanded' : '');
-                        for (const child of folder.children) {
-                            children.appendChild(createTreeItem(child));
-                        }
-                        item.appendChild(children);
-
-                        toggle.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const isExpanded = children.classList.toggle('expanded');
-                            toggle.textContent = isExpanded ? '▼' : '▶';
-                        });
-                        if (isRoot) toggle.textContent = '▼';
-                    }
-
-                    row.addEventListener('click', () => {
-                        document.querySelectorAll('.folder-tree-row.selected').forEach(el => el.classList.remove('selected'));
-                        row.classList.add('selected');
-                        selectedFolderId = folder.id;
-                        selectedFolderName = folder.name;
-                        document.getElementById('folderPath').textContent = `Will upload to: 📁 ${folder.name}`;
-                        updateUploadButton();
-                    });
-
-                    return item;
+                const formData = new FormData(); formData.append('file', file);
+                let endpoint;
+                if (useApproval) { endpoint = '/api/v1/approvals/submit'; formData.append('target_folder_id', selectedFolderId); formData.append('target_folder_name', selectedFolderName || ''); }
+                else { endpoint = '/api/v1/documents/upload'; formData.append('folder_id', selectedFolderId);
+                    const selectedNotebooks = Array.from(document.querySelectorAll('.notebook-checkbox:checked')).map(cb => cb.value);
+                    if (selectedNotebooks.length > 0) formData.append('notebook_ids', selectedNotebooks.join(','));
                 }
-
-                if (data.folders) {
-                    for (const folder of data.folders) {
-                        folderTree.appendChild(createTreeItem(folder, true));
-                    }
-                }
-            } catch (e) {
-                folderTree.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--error);font-size:0.8125rem;">Failed to load folders</div>';
-            }
+                const response = await fetch(endpoint, { method: 'POST', body: formData });
+                if (response.ok) { const data = await response.json(); results.push(useApproval ? { name: file.name, success: true, pending: true } : { name: file.name, success: true, link: data.webViewLink }); successCount++; }
+                else { const err = await response.json(); results.push({ name: file.name, success: false, error: err.detail }); errorCount++; }
+            } catch (e) { results.push({ name: file.name, success: false, error: e.message }); errorCount++; }
         }
-
-        // ============================================================
-        // Drag & Drop + File Handling
-        // ============================================================
-        function setupDragDrop() {
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-            dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
-            dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
-            fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); });
-        }
-
-        function handleFiles(files) {
-            let warnings = [];
-            for (const file of files) {
-                if (selectedFiles.find(f => f.name === file.name)) continue;
-                if (file.size > MAX_FILE_SIZE) {
-                    warnings.push(`"${file.name}" vượt quá 50MB`);
-                    continue;
-                }
-                selectedFiles.push(file);
+        progressFill.style.width = '100%'; progressText.textContent = 'Hoàn tất!';
+        setTimeout(() => {
+            uploadProgress.className = 'upload-progress';
+            if (errorCount === 0) {
+                uploadResult.className = 'upload-result success';
+                uploadResult.innerHTML = useApproval
+                    ? `<div class="result-title">📋 Đã gửi yêu cầu duyệt!</div><div class="result-text">${successCount} file đang chờ admin phê duyệt.</div>`
+                    : `<div class="result-title">✅ Upload thành công!</div><div class="result-text">${successCount} file đã upload lên Google Drive.</div>${results.filter(r => r.link).map(r => `<a href="${r.link}" target="_blank" class="result-link">${r.name}</a>`).join('<br>')}`;
+            } else {
+                uploadResult.className = 'upload-result error';
+                uploadResult.innerHTML = `<div class="result-title">⚠️ Upload có lỗi</div><div class="result-text">${successCount} thành công, ${errorCount} thất bại.</div>`;
             }
-            renderFileList();
+            if (errorCount === 0) { selectedFiles = []; fileInput.value = ''; renderFileList(); dropZone.style.display = ''; }
             updateUploadButton();
+        }, 500);
+    });
 
-            if (warnings.length > 0) {
-                fileWarningText.textContent = warnings.join(', ');
-                fileWarning.classList.add('show');
-                setTimeout(() => fileWarning.classList.remove('show'), 5000);
-            }
-        }
-
-        function renderFileList() {
-            if (selectedFiles.length === 0) {
-                fileList.innerHTML = '';
-                fileBadge.textContent = 'No file';
-                fileBadge.className = 'file-badge empty';
-                dropZone.style.display = '';
-                return;
-            }
-
-            fileBadge.textContent = `${selectedFiles.length} File${selectedFiles.length > 1 ? 's' : ''} Selected`;
-            fileBadge.className = 'file-badge';
-            dropZone.style.display = 'none';
-
-            fileList.innerHTML = selectedFiles.map((file, index) => {
-                const ext = file.name.split('.').pop().toLowerCase();
-                const iconClass = ext === 'pdf' ? 'pdf' : ext === 'docx' || ext === 'doc' ? 'docx' : ext === 'pptx' ? 'pptx' : ext === 'xlsx' ? 'xlsx' : 'txt';
-                const size = formatFileSize(file.size);
-                return `
-                    <div class="file-item">
-                        <div class="file-icon ${iconClass}">${ext.toUpperCase().slice(0, 3)}</div>
-                        <div class="file-details">
-                            <div class="file-name">${file.name}</div>
-                            <div class="file-meta">${size} • Uploaded just now</div>
-                        </div>
-                        <button class="file-remove" onclick="removeFile(${index})">✕</button>
-                    </div>
-                `;
-            }).join('') + `
-                <div style="text-align:center;margin-top:0.5rem;">
-                    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fileInput').click()">+ Add more files</button>
-                </div>
-            `;
-        }
-
-        window.removeFile = function (index) {
-            selectedFiles.splice(index, 1);
-            renderFileList();
-            updateUploadButton();
-        };
-
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-        }
-
-        // ============================================================
-        // Classification
-        // ============================================================
-        function selectClassification(el, value) {
-            document.querySelectorAll('.classification-option').forEach(opt => {
-                opt.classList.remove('selected');
-                opt.querySelector('.classification-check').textContent = '';
-            });
-            el.classList.add('selected');
-            el.querySelector('.classification-check').textContent = '✓';
-            el.querySelector('input').checked = true;
-        }
-
-        // ============================================================
-        // Upload Logic
-        // ============================================================
-        function updateUploadButton() {
-            const canUpload = selectedFiles.length > 0 && selectedFolderId && isAuthenticated;
-            uploadBtn.disabled = !canUpload;
-        }
-
-        function isAdmin() {
-            return userRoles.includes('super_admin') || userRoles.includes('admin');
-        }
-
-        clearBtn.addEventListener('click', () => {
-            selectedFiles = [];
-            fileInput.value = '';
-            renderFileList();
-            updateUploadButton();
-            uploadResult.className = 'upload-result';
-            uploadResult.innerHTML = '';
-            dropZone.style.display = '';
-        });
-
-        uploadBtn.addEventListener('click', async () => {
-            if (!selectedFiles.length || !selectedFolderId) return;
-
-            uploadBtn.disabled = true;
-            uploadProgress.className = 'upload-progress active';
-            uploadResult.className = 'upload-result';
-
-            const useApproval = !isAdmin();
-            let successCount = 0;
-            let errorCount = 0;
-            const results = [];
-
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const file = selectedFiles[i];
-                const action = useApproval ? 'Gửi duyệt' : 'Uploading';
-                progressText.textContent = `${action} ${file.name}... (${i + 1}/${selectedFiles.length})`;
-                progressFill.style.width = `${((i + 0.5) / selectedFiles.length) * 100}%`;
-
-                try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    let endpoint;
-                    if (useApproval) {
-                        endpoint = '/api/v1/approvals/submit';
-                        formData.append('target_folder_id', selectedFolderId);
-                        formData.append('target_folder_name', selectedFolderName || '');
-                    } else {
-                        endpoint = '/api/v1/documents/upload';
-                        formData.append('folder_id', selectedFolderId);
-
-                        const selectedNotebooks = Array.from(
-                            document.querySelectorAll('.notebook-checkbox:checked')
-                        ).map(cb => cb.value);
-                        if (selectedNotebooks.length > 0) {
-                            formData.append('notebook_ids', selectedNotebooks.join(','));
-                        }
-                    }
-
-                    const response = await fetch(endpoint, { method: 'POST', body: formData });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (useApproval) {
-                            results.push({ name: file.name, success: true, pending: true });
-                        } else {
-                            results.push({ name: file.name, success: true, link: data.webViewLink });
-                        }
-                        successCount++;
-                    } else {
-                        const err = await response.json();
-                        results.push({ name: file.name, success: false, error: err.detail });
-                        errorCount++;
-                    }
-                } catch (e) {
-                    results.push({ name: file.name, success: false, error: e.message });
-                    errorCount++;
-                }
-            }
-
-            progressFill.style.width = '100%';
-            progressText.textContent = 'Hoàn tất!';
-
-            setTimeout(() => {
-                uploadProgress.className = 'upload-progress';
-
-                if (errorCount === 0) {
-                    if (useApproval) {
-                        uploadResult.className = 'upload-result success';
-                        uploadResult.innerHTML = `
-                            <div class="result-title">📋 Đã gửi yêu cầu duyệt!</div>
-                            <div class="result-text">${successCount} file đang chờ admin phê duyệt.</div>
-                        `;
-                    } else {
-                        uploadResult.className = 'upload-result success';
-                        uploadResult.innerHTML = `
-                            <div class="result-title">✅ Upload thành công!</div>
-                            <div class="result-text">${successCount} file đã upload lên Google Drive.</div>
-                            ${results.filter(r => r.link).map(r => `<a href="${r.link}" target="_blank" class="result-link">${r.name}</a>`).join('<br>')}
-                        `;
-                    }
-                } else {
-                    uploadResult.className = 'upload-result error';
-                    uploadResult.innerHTML = `
-                        <div class="result-title">⚠️ Upload có lỗi</div>
-                        <div class="result-text">${successCount} thành công, ${errorCount} thất bại.</div>
-                    `;
-                }
-
-                if (errorCount === 0) {
-                    selectedFiles = [];
-                    fileInput.value = '';
-                    renderFileList();
-                    dropZone.style.display = '';
-                }
-                updateUploadButton();
-            }, 500);
-        });
-
-        // ============================================================
-        // Toast & Utilities
-        // ============================================================
-        function showToast(msg, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.className = `toast toast-${type} show`;
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-    </script>
-    <script src="/static/js/notification.js"></script>
-    <script>
-
-        async function logoutRBAC() {
-            await fetch('/api/v1/rbac/logout', { method: 'POST' });
-            window.location.href = '/login';
-        }
-        const logout = logoutRBAC;
-    </script>
-</body>
-
-</html>
+    function showToast(msg, type = 'success') { const toast = document.getElementById('toast'); toast.textContent = msg; toast.className = `toast toast-${type} show`; setTimeout(() => toast.classList.remove('show'), 3000); }
+</script>
+{% endblock %}

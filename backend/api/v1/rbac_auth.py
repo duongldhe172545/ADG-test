@@ -139,10 +139,10 @@ async def rbac_callback(
         
         # Redirect based on role
         roles = result['user']['roles']
-        if 'super_admin' in roles:
-            redirect_url = "/admin/users"
-        elif 'admin' in roles:
-            redirect_url = "/dashboard"
+        if 'super_admin' in roles or 'admin' in roles:
+            redirect_url = "/admin-dashboard"
+        elif 'manager' in roles:
+            redirect_url = "/admin-dashboard"
         else:
             redirect_url = "/dashboard"
         

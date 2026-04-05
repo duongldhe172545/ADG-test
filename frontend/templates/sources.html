@@ -1283,18 +1283,17 @@
 
             <div class="chat-messages" id="chatMessages">
                 <div class="chat-welcome" id="chatWelcome">
-                    <div class="chat-welcome-icon">💬</div>
+                    <div class="chat-welcome-icon">🔍</div>
                     <h3>ADG Knowledge Assistant</h3>
-                    <p>Hỏi bất cứ điều gì — AI sẽ tìm trong <strong>toàn bộ tài liệu</strong> đã được index.</p>
-                    <p style="font-size:0.75rem;color:#94a3b8;margin-top:0.25rem;">💡 Muốn hỏi về file cụ thể? Click
-                        file bên trái rồi ấn 📎 để thêm nguồn.</p>
+                    <p>Hỏi bất cứ điều gì — AI sẽ <strong>tự động tìm kiếm tài liệu</strong> trên Google Drive và trả lời cho bạn.</p>
+                    <p style="font-size:0.75rem;color:#94a3b8;margin-top:0.25rem;">💡 Không cần index trước! AI sẽ tự tìm file liên quan. Muốn hỏi về file cụ thể? Click file bên trái rồi ấn 📎.</p>
                 </div>
             </div>
 
             <div class="chat-suggestions" id="chatSuggestions">
-                <button class="chat-suggest-btn" onclick="sendChatSuggestion(this)">📊 Tóm tắt B2B Strategy</button>
-                <button class="chat-suggest-btn" onclick="sendChatSuggestion(this)">📋 List key competitors</button>
-                <button class="chat-suggest-btn" onclick="sendChatSuggestion(this)">✉️ Draft email</button>
+                <button class="chat-suggest-btn" onclick="sendChatSuggestion(this)">🏠 Tài liệu về tủ bếp</button>
+                <button class="chat-suggest-btn" onclick="sendChatSuggestion(this)">📊 Báo cáo marketing</button>
+                <button class="chat-suggest-btn" onclick="sendChatSuggestion(this)">📋 Chiến lược B2B</button>
             </div>
 
             <div class="chat-input-area">
@@ -2119,9 +2118,9 @@
             const chatMessages = document.getElementById('chatMessages');
             chatMessages.innerHTML = `
                 <div class="chat-welcome" id="chatWelcome">
-                    <div class="chat-welcome-icon">💬</div>
+                    <div class="chat-welcome-icon">🔍</div>
                     <h3>Xin chào!</h3>
-                    <p>Hỏi bất cứ điều gì về tài liệu. AI sẽ trả lời dựa trên nguồn tài liệu trong thư mục.</p>
+                    <p>Hỏi bất cứ điều gì — AI sẽ <strong>tự động tìm kiếm tài liệu</strong> trên Google Drive và trả lời cho bạn.</p>
                 </div>
             `;
             const sug = document.getElementById('chatSuggestions');
@@ -2380,12 +2379,18 @@
                         if (!line.startsWith('data: ')) continue;
                         try {
                             const event = JSON.parse(line.substring(6));
-                            if (event.type === 'meta') {
+                            if (event.type === 'status') {
+                                // Show search status (e.g. "Searching Drive...")
+                                streamText.innerHTML = `<div style="color:#94a3b8;font-size:0.85em;">${event.message}</div>`;
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            } else if (event.type === 'meta') {
                                 citations = event.citations || [];
                                 // Build lookup map for inline citation refs
                                 citations.forEach(function (c) {
                                     window._citationsMap[String(c.number)] = c;
                                 });
+                                // Clear status message when meta arrives
+                                streamText.innerHTML = '';
                             } else if (event.type === 'text') {
                                 fullText += event.chunk;
                                 streamText.innerHTML = renderMarkdown(fullText);
@@ -2405,10 +2410,22 @@
                     citationsHtml += '<div class="chat-citations">';
                     citations.forEach(c => {
                         const chunkInfo = c.chunks_used > 1 ? ` (${c.chunks_used} đoạn)` : '';
-                        citationsHtml += `<div class="chat-citation" title="${escapeHtml(c.chunk_text || '')}">
-                            <span class="citation-num">[${c.number}]</span>
-                            <span class="citation-file">${escapeHtml(c.file_name)}${chunkInfo}</span>
-                        </div>`;
+                        const titleAttr = `title="${escapeHtml(c.chunk_text || '')}"`;
+                        const fileId = c.file_id || '';
+                        const webLink = c.web_link || '';
+                        const fileName = escapeHtml(c.file_name);
+                        const folderPath = escapeHtml(c.folder_path || '');
+                        if (fileId) {
+                            citationsHtml += `<div class="chat-citation" ${titleAttr} style="cursor:pointer;" onclick="previewFile('${fileId}', '${fileName}', null, '${webLink}', '${folderPath}')">
+                                <span class="citation-num">[${c.number}]</span>
+                                <span class="citation-file">📄 ${fileName}${chunkInfo}</span>
+                            </div>`;
+                        } else {
+                            citationsHtml += `<div class="chat-citation" ${titleAttr}>
+                                <span class="citation-num">[${c.number}]</span>
+                                <span class="citation-file">${fileName}${chunkInfo}</span>
+                            </div>`;
+                        }
                     });
                     citationsHtml += '</div></div>';
                 }
